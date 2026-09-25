@@ -88,6 +88,22 @@ describe("swing levels and confluence", () => {
     expect(z[0].low).toBe(100);
   });
 
+  it("counts a restated relationship once (same leg and ratio, or same type at one degree)", () => {
+    const mk = (price: number, key: string, label: string, degree: "minor" | "primary" = "primary", weight = 3): FibLevel => ({
+      price, kind: key.split(":")[0] as FibLevel["kind"], ratio: 0.618, label, source: "Essentials", degree, candidateId: null,
+      wave: "next", primary: true, key, weight, reached: false,
+    });
+    const levels = {
+      minor: [mk(100.1, "channel:-:a>b>c", "Wave 5 channel (line 2–4 through 3)", "minor", 1), mk(100.2, "channel:-:d>e>f", "Wave 5 channel (line 2–4 through 3)", "minor", 1)],
+      intermediate: [],
+      primary: [mk(100, "projection:0.618:x>y", "Wave D = 61.8% of wave C"), mk(100, "retracement:0.618:x>y", "Correction retraces 61.8% of waves 1–5")],
+    };
+    const z = confluence(levels, 120, 0.5);
+    expect(z).toHaveLength(1);
+    expect(z[0].count).toBe(2); // one primary 61.8% of x>y, one minor channel
+    expect(z[0].strength).toBe(4);
+  });
+
   it("runs end to end on a synthetic series, deterministically", () => {
     const bars: PivotBar[] = [];
     let px = 50, seed = 3;

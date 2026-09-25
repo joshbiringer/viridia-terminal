@@ -18,7 +18,7 @@ import type { Degree, Pivot, PivotBar, PendingSwing } from "./pivots.ts";
 import type { Candidate, CandidateSet } from "./candidates.ts";
 import type { Direction } from "./rules.ts";
 
-export const FIB_VERSION = "fib-1.0.0";
+export const FIB_VERSION = "fib-1.0.1";
 
 export type LevelKind =
   | "retracement"     // a correction measured against the wave it corrects
@@ -287,10 +287,7 @@ export function confluence(levels: Record<Degree, FibLevel[]>, close: number, to
   while (i < pool.length) {
     let j = i;
     while (j + 1 < pool.length && pool[j + 1].price - pool[i].price <= 2 * tolerance) j++;
-    const group = pool.slice(i, j + 1);
-    const keys = new Map<string, FibLevel>();
-    for (const l of group) if (!keys.has(l.key)) keys.set(l.key, l);
-    const distinct = [...keys.values()];
+    const distinct = independent(pool.slice(i, j + 1));
     const legs = new Set(distinct.map((l) => l.key.split(":").slice(2).join(":")));
     if (distinct.length >= 2 && legs.size >= 2) {
       const low = Math.min(...distinct.map((l) => l.price)), high = Math.max(...distinct.map((l) => l.price));
@@ -309,6 +306,33 @@ export function confluence(levels: Record<Degree, FibLevel[]>, close: number, to
   }
   return zones.sort((a, b) => b.strength - a.strength || Math.abs(a.distancePct) - Math.abs(b.distancePct)).slice(0, max);
 }
+
+/**
+ * The independent relationships in a group of nearby levels. A relationship is counted once when:
+ *   - the same ratio of the same measured leg appears under two names (e.g. "61.8% of wave C" and
+ *     "61.8% of waves 1–5" when both measure the same two pivots),
+ *   - the same relationship type appears at the same degree from alternative counts (e.g. several
+ *     wave 5 channels), or
+ *   - the same relationship lands on the same price at two degrees (shared pivots).
+ * The heaviest instance is kept, so a zone's strength is not inflated by restatements.
+ */
+function independent(group: FibLevel[]): FibLevel[] {
+  const sorted = [...group].sort((a, b) => b.weight - a.weight || (a.key < b.key ? -1 : 1));
+  const byLeg = new Set<string>(), byType = new Set<string>(), byPrice = new Set<string>();
+  const out: FibLevel[] = [];
+  for (const l of sorted) {
+    const leg = `${l.ratio ?? l.kind}:${legOf(l)}`;
+    const type = `${l.degree}|${l.label.replace(/\s*\(\d{4}-\d{2}-\d{2}\)/, "")}`;
+    const price = `${l.label}|${l.price.toPrecision(8)}`;
+    if (byLeg.has(leg) || byType.has(type) || byPrice.has(price)) continue;
+    byLeg.add(leg); byType.add(type); byPrice.add(price);
+    out.push(l);
+  }
+  return out;
+}
+
+/** The measured points of a level's key (everything after kind and ratio). */
+const legOf = (l: FibLevel) => l.key.split(":").slice(2).join(":");
 
 function atr14(bars: PivotBar[]): number {
   let atr = 0;
