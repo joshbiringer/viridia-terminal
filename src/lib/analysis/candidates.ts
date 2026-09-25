@@ -1,19 +1,23 @@
 /**
- * App-side view of candidate wave counts (engine Phase 5). The engine lives in
- * supabase/functions/_shared/engine/candidates.ts, shared with the analysis-worker and the tests.
+ * App-side view of candidate wave counts (engine Phase 5) and their Fibonacci targets (Phase 6).
+ * The engine lives in supabase/functions/_shared/engine, shared with the analysis-worker and the tests.
  */
-import {
-  ANALYSIS_VERSION, CANDIDATES_VERSION, PATTERN_LABEL, compactSet, generateCandidates,
-  type CandidatePattern, type CandidateSet, type CompactCandidateSet,
-} from "@engine/candidates";
-import { DEGREES, analyzePivots, type Degree, type PivotBar, type Timeframe } from "@engine/pivots";
+import { CANDIDATES_VERSION, PATTERN_LABEL, type CandidatePattern, type CandidateSet, type CompactCandidateSet } from "@engine/candidates";
+import { ANALYSIS_VERSION, computeAnalysis } from "@engine/analyze";
+import type { ConfluenceZone } from "@engine/fib";
+import { DEGREES, type Degree, type PivotBar, type Timeframe } from "@engine/pivots";
 import { RULEBOOK } from "@engine/rules";
 
 export { ANALYSIS_VERSION, CANDIDATES_VERSION, PATTERN_LABEL };
-export type { CandidatePattern };
+export type { CandidatePattern, ConfluenceZone };
 
 export const CANDIDATE_METHOD =
   "Every chain of 3–6 alternating pivots ending at the latest confirmed pivot is tested as each pattern; only counts with zero hard-rule failures are kept. Listed by waves explained, not ranked.";
+
+export const FIB_METHOD =
+  "Targets come from the Fibonacci relationships the sources describe for the wave in progress, Elliott trend channels, the prior fourth wave of lesser degree, and 38.2–78.6% retracements of the latest swing. A zone is where two or more independent relationships fall within max(¼ ATR, 0.4%) of each other; strength counts them, weighting primary ratios and higher degrees. It is not a probability.";
+
+export interface ClientTarget { price: number; label: string; primary: boolean }
 
 /** A candidate count as sent to the browser. */
 export interface ClientCandidate {
@@ -26,6 +30,7 @@ export interface ClientCandidate {
   next: { label: string; direction: "up" | "down"; hold: number | null; holdSide: "above" | "below" | null; holdReason: string | null };
   invalidation: number | null;
   evidence: { passed: number; evaluated: number; fibMatches: number; fibTotal: number };
+  targets: ClientTarget[];
 }
 
 export interface ClientCandidateSet {
@@ -38,6 +43,8 @@ export interface ClientCandidateSet {
 }
 
 export type ClientCandidates = Record<Degree, ClientCandidateSet>;
+
+export interface ClientFib { close: number; tolerance: number; zones: ConfluenceZone[] }
 
 const LABELS: Record<CandidatePattern, string[]> = {
   impulse: ["0", "1", "2", "3", "4", "5"], leading_diagonal: ["0", "1", "2", "3", "4", "5"], ending_diagonal: ["0", "1", "2", "3", "4", "5"],
@@ -56,15 +63,15 @@ export function fromCompactSet(s: CompactCandidateSet | null | undefined): Clien
       next: { label: c.nx.l, direction: c.nx.d === "u" ? "up" : "down", hold: c.nx.h, holdSide: c.nx.hs, holdReason: c.nx.hr },
       invalidation: c.inv,
       evidence: { passed: c.ev[0], evaluated: c.ev[1], fibMatches: c.ev[2], fibTotal: c.ev[3] },
+      targets: (c.tg ?? []).map(([price, label, primary]) => ({ price, label, primary })),
     })),
   };
 }
 
-/** Computes candidates live from bars, when the cache is missing or stale. Same engine as the worker. */
-export function candidatesForClient(bars: PivotBar[], timeframe: Timeframe): ClientCandidates {
-  const a = analyzePivots(bars, timeframe);
-  return Object.fromEntries(DEGREES.map((d) => {
-    const s = a.degrees[d];
-    return [d, fromCompactSet(compactSet(generateCandidates({ timeframe, degree: d, pivots: s.pivots, bars, pending: s.pending })))];
-  })) as ClientCandidates;
+export function candidatesForClient(bars: PivotBar[], timeframe: Timeframe): { candidates: ClientCandidates; fib: ClientFib } {
+  const r = computeAnalysis(bars, timeframe);
+  return {
+    candidates: Object.fromEntries(DEGREES.map((d) => [d, fromCompactSet(r.candidate_counts_json[d])])) as ClientCandidates,
+    fib: r.confluence_zones_json,
+  };
 }

@@ -12,6 +12,7 @@ import { StructureSummary } from "@/components/StructureSummary";
 import { AskViridiaButton } from "@/components/AskViridiaPanel";
 import { getDailyAnalysis } from "@/lib/analysis/server";
 import { WaveCounts } from "@/components/WaveCounts";
+import { ConfluenceZones } from "@/components/ConfluenceZones";
 
 type Props = { params: Promise<{ symbol: string }> };
 
@@ -132,12 +133,14 @@ export default async function StockTerminal({ params }: Props) {
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <PriceChart symbol={sec.symbol} />
+        <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} />
         <StructureSummary snap={snap} swings={swings} />
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <WaveCounts data={swings?.candidates ?? null} asOf={swings?.asOf} version={swings?.version} source={swings?.source} />
+        <div className="flex min-w-0 flex-col gap-6">
+        <ConfluenceZones fib={swings?.fib ?? null} />
         <div className="card">
           <div className="card-h"><h2 className="card-t">Details</h2></div>
           <dl className="kv px-5 py-5">
@@ -150,6 +153,7 @@ export default async function StockTerminal({ params }: Props) {
             <dt>Listing changes</dt><dd>{evts.length ? `${evts.length} recorded` : `None since ${fmtDate(sec.first_seen_at)}`}</dd>
           </dl>
           <SourceFooter source="Nasdaq Trader, SEC, Massive" updated={fmtDateTime(sec.last_seen_at)} method="Security master, daily snapshot diff" />
+        </div>
         </div>
       </section>
     </>

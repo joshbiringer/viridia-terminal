@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CandlestickSeries, ColorType, CrosshairMode, HistogramSeries, LineSeries, LineStyle, createChart, createSeriesMarkers,
-  type IChartApi, type ISeriesApi, type ISeriesMarkersPluginApi, type SeriesMarker, type Time,
+  type IChartApi, type IPriceLine, type ISeriesApi, type ISeriesMarkersPluginApi, type SeriesMarker, type Time,
 } from "lightweight-charts";
 import {
   TIMEFRAMES, chartTime, fmtPrice, fmtVolume, isIntraday,
@@ -12,6 +12,7 @@ import {
 } from "@/lib/market-data/bars";
 import { DEGREES, DEGREE_LABEL, PIVOT_ALGORITHM_VERSION, SWING_LABEL, type ClientPivots, type Degree } from "@/lib/analysis/pivots";
 import { SourceFooter } from "./SourceFooter";
+import type { ConfluenceZone } from "@/lib/analysis/candidates";
 
 type Legend = { o: number; h: number; l: number; c: number; v: number; label: string } | null;
 
@@ -22,12 +23,11 @@ function alpha(hex: string, a: number) {
   return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})`;
 }
 function palette() {
-  return { panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2") };
+  return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2") };
 }
 
 const PLANNED_OVERLAYS = [
   { id: "waves", label: "Waves", color: "var(--wave)", phase: "Wave labels arrive with candidate counts (Phases 4–8)" },
-  { id: "fib", label: "Fib", color: "var(--fib)", phase: "Fibonacci levels arrive with the Fibonacci engine (Phase 6)" },
   { id: "channels", label: "Channels", color: "var(--alt)", phase: "Channels arrive with the chart overlays (Phase 8)" },
 ];
 
@@ -39,7 +39,7 @@ const METHOD: Record<ChartTimeframe, string> = {
   "1mo": "Resampled from daily bars",
 };
 
-export function PriceChart({ symbol }: { symbol: string }) {
+export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: ConfluenceZone[] }) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -59,6 +59,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
   const [legend, setLegend] = useState<Legend>(null);
   const [pivots, setPivots] = useState<ClientPivots | null>(null);
   const [showPivots, setShowPivots] = useState(true);
+  const [showFib, setShowFib] = useState(true);
+  const zoneLines = useRef<IPriceLine[]>([]);
   const [degree, setDegree] = useState<Degree>("intermediate");
   const [themeTick, setThemeTick] = useState(0);
 
@@ -170,6 +172,22 @@ export function PriceChart({ symbol }: { symbol: string }) {
     })));
   }, [pivots, showPivots, degree, bars, tf, themeTick]);
 
+  // Fibonacci confluence zones (engine Phase 6): a solid line at each zone's midpoint and dashed lines
+  // at its edges, labeled with the number of relationships that meet there.
+  useEffect(() => {
+    const candles = candleRef.current;
+    if (!candles) return;
+    for (const l of zoneLines.current) candles.removePriceLine(l);
+    zoneLines.current = [];
+    if (!showFib || !bars.length) return;
+    const color = palette().fib;
+    for (const z of zones) {
+      zoneLines.current.push(candles.createPriceLine({ price: z.mid, color, lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: `Zone ×${z.count}` }));
+      if (z.high - z.low > 1e-9) for (const edge of [z.low, z.high])
+        zoneLines.current.push(candles.createPriceLine({ price: edge, color: alpha(color, 0.45), lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: false, title: "" }));
+    }
+  }, [zones, showFib, bars, themeTick]);
+
   const last = bars.at(-1);
   const shown = legend ?? (last ? { o: last.open, h: last.high, l: last.low, c: last.close, v: last.volume, label: last.ts } : null);
   const queued = history?.status === "queued";
@@ -197,6 +215,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
                 <span className="h-2 w-2 rounded-[2px]" style={{ background: o.color }} aria-hidden />{o.label}
               </button>
             ))}
+            <button aria-pressed={showFib} disabled={!zones.length} onClick={() => setShowFib((v) => !v)} title={zones.length ? "Fibonacci confluence zones (daily analysis)" : "No confluence zones for this security yet"}>
+              <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--fib)" }} aria-hidden />Fib
+            </button>
             <button aria-pressed={showPivots} onClick={() => setShowPivots((v) => !v)} title="Adaptive swing pivots">
               <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--neutral)" }} aria-hidden />Pivots
             </button>

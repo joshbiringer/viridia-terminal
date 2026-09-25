@@ -21,15 +21,12 @@
  * Deterministic: the same pivots, bars and options always give the same candidates in the same order.
  * No look-ahead: the input is whatever bars the caller passes; the engine never reads beyond them.
  */
-import { PIVOT_ALGORITHM_VERSION, type Degree, type Pivot, type PivotBar, type PendingSwing, type Timeframe } from "./pivots.ts";
+import type { Degree, Pivot, PivotBar, PendingSwing, Timeframe } from "./pivots.ts";
 import {
   RULES_VERSION, validate, type Direction, type Invalidation, type Pattern, type Validation, type WavePoint,
 } from "./rules.ts";
 
 export const CANDIDATES_VERSION = "candidates-1.0.0";
-
-/** Version stamped on every cached analysis row: a change to any engine stage recomputes the cache. */
-export const ANALYSIS_VERSION = `${PIVOT_ALGORITHM_VERSION}+${RULES_VERSION}+${CANDIDATES_VERSION}`;
 
 /** Patterns generated in Phase 5. Combinations need lower-degree component counts (Phase 9). */
 export const CANDIDATE_PATTERNS = ["impulse", "leading_diagonal", "ending_diagonal", "zigzag", "flat", "triangle"] as const;
@@ -245,6 +242,8 @@ export interface CompactCandidate {
   id: string; pt: CandidatePattern; st: string | null; d: "u" | "d"; c: boolean;
   p: [string, number][]; nx: { l: string; d: "u" | "d"; h: number | null; hs: "above" | "below" | null; hr: string | null };
   inv: number | null; ev: [number, number, number, number];
+  /** Fibonacci targets for the wave in progress (Phase 6): [price, label, primary]. */
+  tg?: [number, string, boolean][];
 }
 
 export function compactCandidate(c: Candidate): CompactCandidate {

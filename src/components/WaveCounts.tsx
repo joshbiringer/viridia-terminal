@@ -121,6 +121,19 @@ function CountRow({ c, open, onToggle }: { c: ClientCandidate; open: boolean; on
                 {c.evidence.fibTotal ? `; ${c.evidence.fibMatches} of ${c.evidence.fibTotal} ratios near a Fibonacci value` : ""}.
               </p>
             </div>
+            {c.targets.length > 0 && (
+              <div>
+                <div className="label">Fibonacci targets for {c.complete ? "the next move" : `wave ${c.next.label}`}</div>
+                <ul className="num mt-1 flex flex-col gap-0.5">
+                  {c.targets.map((t) => (
+                    <li key={t.label} className="flex gap-3">
+                      <span className={`w-20 shrink-0 text-right ${t.primary ? "font-semibold text-fg" : "text-fg-2"}`}>{fmtPrice(t.price)}</span>
+                      <span className="text-fg-2">{t.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {c.next.hold != null && (
               <div>
                 <div className="label">Must hold</div>

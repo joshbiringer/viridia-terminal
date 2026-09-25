@@ -24,7 +24,7 @@ const ENGINE: [string, string][] = [
   ["Pivot detection", "Live"],
   ["Hard-rule validation", "Live"],
   ["Candidate counts", "Live"],
-  ["Fibonacci and confluence", "Phase 6"],
+  ["Fibonacci and confluence", "Live"],
   ["Preferred and alternate ranking", "Phase 7"],
 ];
 

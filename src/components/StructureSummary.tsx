@@ -64,8 +64,8 @@ export function StructureSummary({ snap, swings }: { snap: Snapshot | null; swin
           </div>
           <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
             Candidate counts below are built on these swings and each one passes every rule in the{" "}
-            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. They are not ranked yet: Fibonacci
-            confluence and ranking arrive in Phases 6–7, so no count is presented as the preferred one.
+            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. Fibonacci targets and confluence zones
+            are live; ranking arrives in Phase 7, so no count is presented as the preferred one yet.
           </p>
         </div>
       </div>

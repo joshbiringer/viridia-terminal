@@ -4,16 +4,17 @@
  * Runs every five minutes (pg_cron → trigger_analysis_worker). Each run:
  *   1. takes a lease so runs never overlap
  *   2. asks Postgres for securities whose cached analysis is missing or stale (analysis_batch)
- *   3. runs the engine on their bars: pivots (Phase 3), then candidate wave counts validated against
- *      the hard rules (Phases 4–5). These are the same engine files the app and tests use.
+ *   3. runs the engine on their bars (engine/analyze.ts): pivots (Phase 3), candidate wave counts
+ *      validated against the hard rules (Phases 4–5), Fibonacci levels and confluence zones (Phase 6).
+ *      These are the same engine files the app and tests use.
  *   4. stores results (store_analysis_results), until the time budget is spent
  *
  * The engine is deterministic and uses only the bars it is given; nothing is estimated or generated.
  * Auth: x-cron-secret (Vault "kestrel_cron_secret").
  */
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { DEGREES, analyzePivots, compact, swingStructure, type PivotBar, type Timeframe } from "../_shared/engine/pivots.ts";
-import { ANALYSIS_VERSION, compactSet, generateCandidates } from "../_shared/engine/candidates.ts";
+import type { PivotBar, Timeframe } from "../_shared/engine/pivots.ts";
+import { ANALYSIS_VERSION, computeAnalysis } from "../_shared/engine/analyze.ts";
 
 const TIME_BUDGET_MS = 100_000;
 // Small batches: after a version change every row is stale and cold bar reads approach the 8 s statement limit.
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
     // Alternate timeframes batch by batch so neither starves when the budget runs out.
     const done: Record<string, number> = Object.fromEntries(TIMEFRAMES.map((tf) => [tf, 0]));
     const active = new Set<Timeframe>(TIMEFRAMES);
-    let counts = 0;
+    let counts = 0, zones = 0;
     while (active.size && Date.now() - started < TIME_BUDGET_MS) {
       for (const tf of [...active]) {
         if (Date.now() - started >= TIME_BUDGET_MS) break;
@@ -63,26 +64,18 @@ Deno.serve(async (req) => {
 
         const out = rows.map((r) => {
           const bars: PivotBar[] = r.bars.map(([ts, open, high, low, close]) => ({ ts, open, high, low, close }));
-          const a = analyzePivots(bars, tf);
-          const pivots_json = Object.fromEntries(DEGREES.map((d) => {
-            const s = a.degrees[d];
-            return [d, { params: s.params, pivots: s.pivots.map(compact), pending: s.pending }];
-          }));
-          const swing_structure = Object.fromEntries(DEGREES.map((d) => [d, swingStructure(a.degrees[d].pivots).structure]));
-          let candidate_count = 0;
-          const candidate_counts_json = Object.fromEntries(DEGREES.map((d) => {
-            const s = a.degrees[d];
-            const set = generateCandidates({ timeframe: tf, degree: d, pivots: s.pivots, bars, pending: s.pending });
-            candidate_count += set.candidates.length;
-            return [d, compactSet(set)];
-          }));
-          counts += candidate_count;
+          const a = computeAnalysis(bars, tf);
+          counts += a.candidate_count;
+          zones += a.confluence_zones_json.zones.length;
           return {
             security_id: r.security_id, timeframe: tf, algorithm_version: ANALYSIS_VERSION,
             // a security with no usable bars still gets a row, so it is not reselected every run
-            analysis_timestamp: a.lastTs ?? r.source_last_ts ?? new Date().toISOString(),
+            analysis_timestamp: a.pivots.lastTs ?? r.source_last_ts ?? new Date().toISOString(),
             source_first_ts: r.source_first_ts, source_last_ts: r.source_last_ts,
-            input_bars: a.bars, expires_at: null, swing_structure, pivots_json, candidate_counts_json, candidate_count,
+            input_bars: a.pivots.bars, expires_at: null,
+            swing_structure: a.swing_structure, pivots_json: a.pivots_json,
+            candidate_counts_json: a.candidate_counts_json, candidate_count: a.candidate_count,
+            fib_levels_json: a.fib_level_counts, confluence_zones_json: a.confluence_zones_json,
           };
         });
         const { error: storeErr } = await db.rpc("store_analysis_results", { p_rows: out });
@@ -92,6 +85,7 @@ Deno.serve(async (req) => {
     }
     Object.assign(summary, done);
     summary.candidates = counts;
+    summary.zones = zones;
     summary.ms = Date.now() - started;
     await db.rpc("analysis_release_lease", { p_summary: summary });
     return json(summary);

@@ -18,7 +18,7 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
   { group: "Analysis", items: [
     { label: "Wave Scanner", href: "/scanner", live: true },
     { label: "Rulebook", href: "/analysis/rulebook", live: true },
-    { label: "Fibonacci", href: "/analysis/fibonacci", live: false },
+    { label: "Fibonacci", href: "/analysis/fibonacci", live: true },
     { label: "Market Structure", href: "/analysis/structure", live: false },
     { label: "Quant Rankings", href: "/analysis/rankings", live: false },
   ]},
