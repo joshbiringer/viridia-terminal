@@ -10,8 +10,8 @@ import { SourceFooter } from "@/components/SourceFooter";
 import { PriceChart } from "@/components/PriceChart";
 import { StructureSummary } from "@/components/StructureSummary";
 import { AskViridiaButton } from "@/components/AskViridiaPanel";
-import { getDailySwings } from "@/lib/analysis/server";
-import { PIVOT_ALGORITHM_VERSION } from "@/lib/analysis/pivots";
+import { getDailyAnalysis } from "@/lib/analysis/server";
+import { WaveCounts } from "@/components/WaveCounts";
 
 type Props = { params: Promise<{ symbol: string }> };
 
@@ -68,7 +68,7 @@ export default async function StockTerminal({ params }: Props) {
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
     db().rpc("get_snapshot", { p_symbol: sec.symbol }),
-    getDailySwings(sec.symbol, PIVOT_ALGORITHM_VERSION).catch(() => null),
+    getDailyAnalysis(sec.symbol).catch(() => null),
   ]);
   const sum = (summaryRes.data ?? null) as BarSummary | null;
   const snap = (snapRes.data ?? null) as Snapshot | null;
@@ -137,28 +137,7 @@ export default async function StockTerminal({ params }: Props) {
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="card">
-          <div className="card-h"><h2 className="card-t">Analysis</h2></div>
-          <div className="flex flex-col gap-4 px-5 py-5 text-[14px] leading-relaxed">
-            <p className="text-fg-2">
-              When the engine is live, this section explains the preferred wave count in plain language: which Elliott Wave rules it
-              satisfies, the Fibonacci relationships that support it, the price that would invalidate it, and the strongest alternate
-              interpretation beside it.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                ["Evidence", "Each rule and guideline checked, with the measured values."],
-                ["Invalidation", "The exact price that breaks the count, and why."],
-                ["Alternate", "The next-best valid count and how it would play out."],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-[12px] bg-panel-2 px-4 py-3.5">
-                  <div className="text-[13.5px] font-medium">{k}</div>
-                  <p className="mt-1 text-[12.5px] text-fg-2">{v}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <WaveCounts data={swings?.candidates ?? null} asOf={swings?.asOf} version={swings?.version} source={swings?.source} />
         <div className="card">
           <div className="card-h"><h2 className="card-t">Details</h2></div>
           <dl className="kv px-5 py-5">

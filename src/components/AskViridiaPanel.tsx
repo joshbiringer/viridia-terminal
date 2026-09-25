@@ -68,8 +68,8 @@ export function AskViridiaButton({ symbol }: { symbol: string }) {
             <div className="rounded-[12px] bg-panel-2 px-4 py-4 text-[13.5px] leading-relaxed">
               <div className="mb-1.5 font-medium">{asked}</div>
               <p className="text-fg-2">
-                There&apos;s no calculated wave count for {symbol} yet, so there&apos;s nothing to explain. The wave engine is being built
-                in Phases 5–7 (swing pivots and rule validation are live); once it produces a preferred count, this answer will walk through the rules it satisfied, its
+                There&apos;s no preferred wave count for {symbol} yet, so there&apos;s nothing to explain. The engine already lists every
+                candidate count that passes the hard rules (see Candidate wave counts on this page); ranking arrives in Phase 7. Once it picks a preferred count, this answer will walk through the rules it satisfied, its
                 invalidation level and the Fibonacci evidence, citing the engine&apos;s own output.
               </p>
             </div>

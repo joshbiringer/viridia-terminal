@@ -10,7 +10,7 @@ const TONE: Record<SwingStructure, string> = {
   higher_highs_lows: "text-pos", lower_highs_lows: "text-neg", expanding: "text-fg", contracting: "text-fg", insufficient: "text-fg-3",
 };
 
-/** The panel beside the chart. Moving-average trend, engine swing structure; Elliott Wave fields arrive with Phases 4–7. */
+/** The panel beside the chart. Moving-average trend, engine swing structure; candidate wave counts render in WaveCounts. */
 export function StructureSummary({ snap, swings }: { snap: Snapshot | null; swings: SwingSummary | null }) {
   const vs50 = snap?.sma50 && snap.close && snap.n50 >= 50 ? snap.close / snap.sma50 - 1 : null;
   const vs200 = snap?.sma200 && snap.close && snap.n200 >= 200 ? snap.close / snap.sma200 - 1 : null;
@@ -63,13 +63,13 @@ export function StructureSummary({ snap, swings }: { snap: Snapshot | null; swin
             <span className="h-2.5 w-2.5 rounded-[3px] bg-brand" aria-hidden /> Elliott Wave
           </div>
           <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
-            Wave counts are built on the swings above and checked against the{" "}
-            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. Candidate counts, Fibonacci and
-            ranking arrive in Phases 5–7; until then no wave label is shown, so nothing on this page is a guess.
+            Candidate counts below are built on these swings and each one passes every rule in the{" "}
+            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. They are not ranked yet: Fibonacci
+            confluence and ranking arrive in Phases 6–7, so no count is presented as the preferred one.
           </p>
         </div>
       </div>
-      <div className="src mt-auto"><span><b>Method</b>{TREND_METHOD} Swings: adaptive ZigZag on daily bars{swings ? `, ${swings.pivots.version}` : ""}.</span></div>
+      <div className="src mt-auto"><span><b>Method</b>{TREND_METHOD} Swings: adaptive ZigZag on daily bars{swings ? `, ${swings.version}` : ""}.</span></div>
     </aside>
   );
 }

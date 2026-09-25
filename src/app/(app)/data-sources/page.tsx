@@ -4,7 +4,8 @@ import { db } from "@/lib/supabase";
 import type { SyncRun } from "@/lib/types";
 import { exchangeLabel, fmtDateTime, fmtInt, stockHref, timeAgo } from "@/lib/format";
 import { SourceFooter } from "@/components/SourceFooter";
-import { PIVOT_ALGORITHM_VERSION, PIVOT_METHOD } from "@/lib/analysis/pivots";
+import { PIVOT_METHOD } from "@/lib/analysis/pivots";
+import { ANALYSIS_VERSION, CANDIDATE_METHOD } from "@/lib/analysis/candidates";
 
 export const metadata: Metadata = { title: "Data Sources" };
 export const dynamic = "force-dynamic"; // always show the latest sync state
@@ -24,8 +25,8 @@ const PHASES: [string, string, "live" | "next" | "planned"][] = [
   ["2", "Historical market data ingestion and cache", "live"],
   ["3", "Adaptive pivot detection", "live"],
   ["4", "Elliott Wave hard-rule validation", "live"],
-  ["5", "Candidate count generation", "next"],
-  ["6", "Fibonacci engine and confluence zones", "planned"],
+  ["5", "Candidate count generation", "live"],
+  ["6", "Fibonacci engine and confluence zones", "next"],
   ["7", "Preferred and alternate count ranking", "planned"],
   ["8", "Interactive chart overlays", "planned"],
   ["9", "Multi-timeframe analysis", "planned"],
@@ -250,15 +251,15 @@ function AnalysisCard({ a }: { a: AnalysisStatus }) {
     <section className="card">
       <div className="card-h">
         <span className="card-t">Analysis cache</span>
-        <span className={`chip ${run?.error ? "neg" : "pos"}`}>{run?.error ? "Worker error" : "Pivot engine live"}</span>
-        <span className="card-s ml-auto">Worker runs every 5 minutes · {PIVOT_ALGORITHM_VERSION}</span>
+        <span className={`chip ${run?.error ? "neg" : "pos"}`}>{run?.error ? "Worker error" : "Pivots and wave counts live"}</span>
+        <span className="card-s ml-auto">Worker runs every 5 minutes · {ANALYSIS_VERSION}</span>
       </div>
       <div className="grid grid-cols-2 gap-px border-b border-line bg-line lg:grid-cols-4">
         {tfs.map(([k, label]) => {
           const t = a.timeframes[k];
           return (
             <div key={k} className="bg-panel px-5 py-4">
-              <div className="text-[13px] text-fg-2">{label} pivots cached</div>
+              <div className="text-[13px] text-fg-2">{label} analyses cached</div>
               <div className="num mt-1 text-[20px] font-[600] tracking-[-0.02em]">{fmtInt(t?.stored ?? 0)}</div>
               <div className="mt-0.5 text-[12.5px] text-fg-3">{fmtInt(t?.current ?? 0)} current with stored bars</div>
             </div>
@@ -277,10 +278,10 @@ function AnalysisCard({ a }: { a: AnalysisStatus }) {
       </div>
       <p className="px-5 py-4 text-[12.5px] leading-relaxed text-fg-3">
         A result is recomputed when new bars arrive, when the backfill adds older history, or when the algorithm version changes.
-        While the backfill runs, most rows are refreshed every few minutes. 1H, 4H and 1M pivots are computed when a chart is opened.
+        While the backfill runs, most rows are refreshed every few minutes. 1H, 4H and 1M pivots are computed when a chart is opened. Each daily and weekly result includes the candidate wave counts at all three degrees.
         {run?.error && <span className="text-neg"> Last error: {run.error}</span>}
       </p>
-      <SourceFooter source="Viridia pivot engine on stored Massive bars" updated={fmtDateTime(run?.finished_at)} method={PIVOT_METHOD} />
+      <SourceFooter source="Viridia engine on stored Massive bars" updated={fmtDateTime(run?.finished_at)} method={`${PIVOT_METHOD} ${CANDIDATE_METHOD}`} />
     </section>
   );
 }
