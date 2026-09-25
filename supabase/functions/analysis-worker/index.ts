@@ -16,7 +16,8 @@ import { DEGREES, analyzePivots, compact, swingStructure, type PivotBar, type Ti
 import { ANALYSIS_VERSION, compactSet, generateCandidates } from "../_shared/engine/candidates.ts";
 
 const TIME_BUDGET_MS = 100_000;
-const BATCH = 40;
+// Small batches: after a version change every row is stale and cold bar reads approach the 8 s statement limit.
+const BATCH = 15;
 const TIMEFRAMES: Timeframe[] = ["1d", "1w"];
 
 type BatchRow = {
