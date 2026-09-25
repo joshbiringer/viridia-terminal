@@ -9,13 +9,14 @@ import { CANDIDATE_METHOD, PATTERN_LABEL, type ClientCandidate, type ClientCandi
 
 type Degree = keyof ClientCandidates;
 const ORDER: Degree[] = ["primary", "intermediate", "minor"];
+const PREFERRED_TAB: Degree[] = ["intermediate", "minor", "primary"];
 
 /**
  * Candidate wave counts (engine Phase 5). Every count shown passes every hard rule. They are listed by
  * how much of the recent structure they explain; which is preferred is decided by ranking in Phase 7.
  */
 export function WaveCounts({ data, asOf, version, source }: { data: ClientCandidates | null; asOf?: string; version?: string; source?: string }) {
-  const first = data ? ORDER.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
+  const first = data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
   const [deg, setDeg] = useState<Degree>(first);
   const [open, setOpen] = useState<string | null>(null);
   const set = data?.[deg];
@@ -94,7 +95,7 @@ function CountRow({ c, open, onToggle }: { c: ClientCandidate; open: boolean; on
           {PATTERN_LABEL[c.pattern]}{c.subtype ? <span className="text-fg-3"> · {c.subtype.replace("_", " ")}</span> : null}
           <span className="text-fg-3"> {c.direction === "up" ? "up" : "down"}</span>
         </span>
-        <span className="num text-[13px] text-fg-2">{done.join("-")}</span>
+        <span className="num text-[13px] text-fg-2">{done.join("-")} <span className="text-fg-3">from {fmtPrice(c.points[0].price)}, {fmtDate(c.points[0].ts)}</span></span>
         <span className="text-[13px] text-fg-2">{nextText}</span>
         <span className="num ml-auto text-[13px]">
           {c.invalidation != null ? <>Invalid past <b className="font-semibold">{fmtPrice(c.invalidation)}</b></> : <span className="text-fg-3">No rule level</span>}
