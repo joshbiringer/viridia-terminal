@@ -140,4 +140,4 @@ begin
 end $function$;
 revoke all on function public.backtest_tick(text, integer) from public, anon, authenticated;
 
-select cron.schedule('viridia-backtest', '* * * * *', $$select public.backtest_tick()$$);
+select cron.schedule('viridia-backtest', '* * * * *', $$select public.backtest_tick('backtest-1.0.0', 15)$$);
