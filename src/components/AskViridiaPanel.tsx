@@ -23,8 +23,10 @@ export function AskViridiaButton({ symbol }: { symbol: string }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("viridia:ask", onOpen);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("viridia:ask", onOpen); };
   }, []);
 
   return (

@@ -1,45 +1,38 @@
-export interface NavItem { label: string; href: string; live: boolean }
+import type { IconName } from "@/components/Icon";
 
-export const TOP_NAV: NavItem[] = [
-  { label: "Terminal", href: "/terminal", live: true },
-  { label: "Markets", href: "/markets", live: true },
-  { label: "Scanner", href: "/scanner", live: true },
-  { label: "Research", href: "/research", live: true },
-  { label: "Watchlist", href: "/watchlist", live: false },
-];
+export interface NavItem { label: string; href: string; icon: IconName; live: boolean; auth?: boolean; keywords?: string }
 
+/**
+ * Terminal navigation. Only sections that work today are listed; planned sections live on the
+ * roadmap (Data Sources) instead of sending people to placeholder pages.
+ */
 export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
-  { group: null, items: [{ label: "Overview", href: "/terminal", live: true }] },
+  { group: null, items: [{ label: "Home", href: "/terminal", icon: "home", live: true, keywords: "overview dashboard" }] },
   { group: "Markets", items: [
-    { label: "Market Overview", href: "/markets", live: true },
-    { label: "Stocks", href: "/markets/stocks", live: true },
-    { label: "ETFs", href: "/markets/etfs", live: true },
+    { label: "Markets", href: "/markets", icon: "markets", live: true, keywords: "overview breadth indices" },
+    { label: "Stocks", href: "/markets/stocks", icon: "stocks", live: true, keywords: "equities list" },
+    { label: "ETFs", href: "/markets/etfs", icon: "etf", live: true, keywords: "funds" },
   ]},
-  { group: "Analysis", items: [
-    { label: "Wave Scanner", href: "/scanner", live: true },
-    { label: "Rulebook", href: "/analysis/rulebook", live: true },
-    { label: "Fibonacci", href: "/analysis/fibonacci", live: true },
-    { label: "Market Structure", href: "/analysis/structure", live: false },
-    { label: "Quant Rankings", href: "/analysis/rankings", live: false },
+  { group: "Structure", items: [
+    { label: "Wave Scanner", href: "/scanner", icon: "scanner", live: true, keywords: "screen screener filter" },
+    { label: "Fibonacci", href: "/analysis/fibonacci", icon: "fib", live: true, keywords: "confluence zones retracement" },
+    { label: "Rulebook", href: "/analysis/rulebook", icon: "rulebook", live: true, keywords: "elliott wave rules guidelines" },
   ]},
   { group: "Research", items: [
-    { label: "Company Research", href: "/research", live: true },
-    { label: "Earnings", href: "/research/earnings", live: false },
-    { label: "Filings", href: "/research/filings", live: false },
-    { label: "Institutional", href: "/research/institutional", live: false },
-    { label: "Insiders", href: "/research/insiders", live: false },
+    { label: "Company Research", href: "/research", icon: "research", live: true, keywords: "company search" },
   ]},
   { group: "Personal", items: [
-    { label: "Watchlist", href: "/watchlist", live: false },
-    { label: "Portfolio", href: "/portfolio", live: false },
-    { label: "Alerts", href: "/alerts", live: false },
+    { label: "Watchlist", href: "/watchlist", icon: "watchlist", live: true, auth: true, keywords: "favorites saved" },
   ]},
 ];
 
 export const SIDEBAR_FOOTER: NavItem[] = [
-  { label: "Settings", href: "/settings", live: false },
-  { label: "Data Sources", href: "/data-sources", live: true },
+  { label: "Account", href: "/account", icon: "account", live: true, auth: true, keywords: "profile billing plan settings" },
+  { label: "Data Sources", href: "/data-sources", icon: "data", live: true, keywords: "roadmap status coverage" },
+  { label: "Help", href: "/help", icon: "help", live: true, keywords: "shortcuts keyboard support" },
 ];
+
+export const ALL_NAV: NavItem[] = [...SIDEBAR.flatMap((g) => g.items), ...SIDEBAR_FOOTER];
 
 /** What each planned section will contain and which build phase delivers it. Keyed by path. */
 export const PLANNED: Record<string, { title: string; phase: string; summary: string; items: string[] }> = {
