@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { SearchHit } from "@/lib/types";
 import { exchangeLabel, fmtDate, stockHref } from "@/lib/format";
 import { fmtPrice } from "@/lib/market-data/bars";
@@ -48,8 +48,9 @@ export function WatchlistView({ userId, initial, asOf }: { userId: string; initi
     try { await removeFromWatchlist(id); } catch (e) { setRows(before); setErr((e as Error).message); }
   };
 
-  // after a refresh the server sends complete market data for newly added rows
-  useEffect(() => { setRows(initial); }, [initial]);
+  // after a refresh the server sends complete market data for newly added rows (derived during render)
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) { setSeen(initial); setRows(initial); }
 
   return (
     <div className="card">

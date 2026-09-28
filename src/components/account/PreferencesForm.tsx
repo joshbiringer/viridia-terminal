@@ -23,7 +23,7 @@ function Choice({ k, value, onChange }: { k: Key; value: string; onChange: (v: s
   return (
     <div className="seg" role="radiogroup">
       {OPTIONS[k].map(([v, l]) => (
-        <button key={v} role="radio" aria-checked={value === v} aria-pressed={value === v} onClick={() => onChange(v)}>{l}</button>
+        <button key={v} role="radio" aria-checked={value === v} onClick={() => onChange(v)}>{l}</button>
       ))}
     </div>
   );

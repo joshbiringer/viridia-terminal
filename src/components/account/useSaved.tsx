@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useLayoutEffect } from "react";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -13,7 +13,7 @@ export function useSaved(save: () => Promise<{ error: unknown } | void>, delay =
   const [message, setMessage] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const saveRef = useRef(save);
-  saveRef.current = save;
+  useLayoutEffect(() => { saveRef.current = save; });
 
   const flush = useCallback(async () => {
     setState("saving");

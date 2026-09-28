@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import type { SearchHit } from "@/lib/types";
 import { exchangeLabel } from "@/lib/format";
 import { Icon } from "./Icon";
@@ -18,6 +18,7 @@ export function SecuritySearch({ onPick, exclude = [], placeholder = "Search tic
   const [sel, setSel] = useState(0);
   const [loading, setLoading] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const listId = useId();
 
   useEffect(() => {
     const term = q.trim();
@@ -57,12 +58,12 @@ export function SecuritySearch({ onPick, exclude = [], placeholder = "Search tic
             else if (e.key === "Escape") setOpen(false);
           }}
           placeholder={placeholder} className="palette-input h-full min-w-0 flex-1 bg-transparent"
-          role="combobox" aria-expanded={open && shown.length > 0} aria-autocomplete="list" autoComplete="off" spellCheck={false}
+          role="combobox" aria-controls={listId} aria-expanded={open && shown.length > 0} aria-autocomplete="list" autoComplete="off" spellCheck={false}
         />
         {loading && <span className="text-[11.5px] text-fg-3">…</span>}
       </div>
       {open && q.trim() && (
-        <div role="listbox" className="menu absolute left-0 right-0 top-[calc(100%+6px)] z-40 max-h-[320px] overflow-y-auto">
+        <div id={listId} role="listbox" className="menu absolute left-0 right-0 top-[calc(100%+6px)] z-40 max-h-[320px] overflow-y-auto">
           {shown.length === 0 && !loading && <div className="px-2.5 py-2 text-[13px] text-fg-3">No listed security matches “{q.trim()}”.</div>}
           {shown.map((h, i) => (
             <button

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { gzipSync } from "node:zlib";
 import { analyzePivots, DEGREES, detectPivots, type PivotBar, type Pivot } from "../supabase/functions/_shared/engine/pivots";
 import { generateCandidates, type Candidate } from "../supabase/functions/_shared/engine/candidates";
 import { analyzeFib, candidateTargets, confluence, swingLevels, type FibLevel } from "../supabase/functions/_shared/engine/fib";
@@ -146,7 +147,7 @@ describe("stored analysis row", () => {
     const a = computeAnalysis(bars, "1d");
     const ms = performance.now() - t0;
     const size = JSON.stringify({ c: a.candidate_counts_json, f: a.fib_level_counts, z: a.confluence_zones_json, p: a.pivots_json }).length;
-    const z = (o: unknown) => (require("node:zlib").gzipSync(JSON.stringify(o)).length / 1024).toFixed(1);
+    const z = (o: unknown) => (gzipSync(JSON.stringify(o)).length / 1024).toFixed(1);
     console.log(`analysis: ${ms.toFixed(0)} ms, ${(size / 1024).toFixed(1)} KB raw; gzip cand ${z(a.candidate_counts_json)} KB, zones ${z(a.confluence_zones_json)} KB, pivots ${z(a.pivots_json)} KB`);
     expect(size).toBeLessThan(120_000);
     expect(ms).toBeLessThan(2000);
