@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { pct } from "@/lib/market-data/snapshot";
 import { DEGREES, DEGREE_LABEL, type Degree } from "@/lib/analysis/pivots";
@@ -14,7 +15,9 @@ const dist = (price: number, close: number | null) => (close ? price / close - 1
  * The buy or sell setup the preferred count implies at the page's degree: entry, stop, target and
  * reward:risk, all taken from the count. Shows nothing invented when the count defines no setup.
  */
-export function SetupCard({ setups, reasons, close }: { setups: Setups | null; reasons?: SetupReasons | null; close: number | null }) {
+export interface KindStat { kind: string; side: string; resolved: number; hit_rate: number | null; avg_r: number | null }
+
+export function SetupCard({ setups, reasons, close, record }: { setups: Setups | null; reasons?: SetupReasons | null; close: number | null; record?: KindStat[] | null }) {
   const { degree, setDegree } = useDegree("intermediate");
   const s = setups?.[degree] ?? null;
   const others = DEGREES.filter((d) => d !== degree && setups?.[d]);
@@ -67,6 +70,7 @@ export function SetupCard({ setups, reasons, close }: { setups: Setups | null; r
               <div className="num text-[26px] font-[650] tracking-[-0.02em]">{s.rr.toFixed(1)}<span className="text-[15px] text-fg-3"> : 1</span></div>
               <p className="text-[12px] text-fg-3">Risk to the stop: {pct(s.riskPct, 1).replace("+", "")} of the entry price</p>
             </div>
+            <TrackLine stat={record?.find((r) => r.kind === s.kind && r.side === s.side) ?? null} />
             {s.cautions.length > 0 && (
               <ul className="flex flex-col gap-1.5 text-[12.5px] leading-snug">
                 {s.cautions.map((c) => <li key={c} className="flex gap-2 text-fg-2"><span className="text-[var(--warn)]" aria-hidden>!</span><span>{c}</span></li>)}
@@ -90,5 +94,22 @@ function Row({ name, value, d, note, tone }: { name: string; value: string; d: n
       <div className="num mt-0.5 text-[16px] font-[620] tracking-[-0.015em]" style={tone ? { color: `var(--${tone})` } : undefined}>{value}</div>
       <p className="text-[12px] leading-snug text-fg-3">{note}</p>
     </div>
+  );
+}
+
+/** How this kind of setup has done historically (engine backtest), or a note that the sample is small. */
+function TrackLine({ stat }: { stat: KindStat | null }) {
+  if (!stat || stat.resolved === 0) {
+    return <p className="text-[12px] leading-snug text-fg-3">Track record: not enough replayed history for this setup yet. <Link href="/setups/track-record" className="text-brand hover:underline">Track record</Link></p>;
+  }
+  const r = stat.avg_r ?? 0;
+  return (
+    <p className="text-[12px] leading-snug text-fg-2">
+      <b className="font-medium text-fg">Track record:</b> this setup reached its target first in{" "}
+      <b className="num">{((stat.hit_rate ?? 0) * 100).toFixed(0)}%</b> of {stat.resolved.toLocaleString("en-US")} past cases, averaging{" "}
+      <b className={`num ${r >= 0 ? "text-pos" : "text-neg"}`}>{r >= 0 ? "+" : "−"}{Math.abs(r).toFixed(2)}R</b>.
+      {stat.resolved < 30 && " Small sample."}{" "}
+      <Link href="/setups/track-record" className="text-brand hover:underline">Method</Link>
+    </p>
   );
 }

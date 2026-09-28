@@ -58,6 +58,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
       <PageHeader
         title="Setups"
         description="Buy and sell setups from each security's preferred daily wave count: where to enter, where the count is wrong, and where it points."
+        actions={<Link href="/setups/track-record" className="btn">Track record</Link>}
       />
 
       <section className="card">
