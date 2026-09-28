@@ -14,13 +14,20 @@ import { getViewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
 import { countLabel } from "@/components/ScannerTable";
 import { stockHref } from "@/lib/format";
+import { fmtPrice } from "@/lib/market-data/bars";
+import { pct } from "@/lib/market-data/snapshot";
+import { describeChange, getChanges } from "@/lib/analysis/brief";
+import { setupScan } from "@/lib/analysis/setup-scan";
+import { entryText } from "@/lib/analysis/setups";
+import { SETUP_LABEL } from "@/lib/analysis/candidates";
+import { SideChip } from "@/components/analysis/SideChip";
 
 const SWING_ORDER: [SwingStructure, string][] = [
   ["higher_highs_lows", "var(--pos-chart)"], ["expanding", "var(--alt)"], ["contracting", "var(--fib)"],
   ["lower_highs_lows", "var(--neg)"], ["insufficient", "var(--border-2)"],
 ];
 
-export const metadata: Metadata = { title: "Terminal" };
+export const metadata: Metadata = { title: "Brief" };
 export const dynamic = "force-dynamic";
 
 type Status = { sessions_open: number; first_session: string | null; last_session: string | null; floor: string; coverage_full: number };
@@ -38,6 +45,16 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
     ? ((await (await authClient()).from("watchlist_items").select("security_id", { count: "exact", head: true })).count ?? 0)
     : 0;
   const showFirstRun = !viewer || watchedCount === 0 || (await searchParams).welcome === "1";
+  const watched = viewer && watchedCount > 0
+    ? (((await (await authClient()).rpc("my_watchlist")).data ?? []) as { symbol: string }[]).map((r) => r.symbol)
+    : [];
+  const [changes, watchChanges, gainers, losers, topSetups] = await Promise.all([
+    getChanges({ minDollarVolume: LIQUID, limit: 8 }).catch(() => []),
+    watched.length ? getChanges({ symbols: watched, limit: 8 }).catch(() => []) : Promise.resolve([]),
+    scan({ p_sort: "change", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
+    scan({ p_sort: "change_asc", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
+    setupScan({ p_sort: "confidence", p_limit: 5, p_min_rr: 1.5, p_min_dollar_volume: LIQUID }).catch(() => []),
+  ]);
   const [overview, breadth, active, statusRes, swingRes, setups, ...presetRows] = await Promise.all([
     getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }), db().rpc("market_data_status"),
     db().rpc("swing_breadth", { p_timeframe: "1d", p_degree: "intermediate" }),
@@ -57,13 +74,14 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader
-        title={greeting()}
+        title={`${greeting()}${viewer?.firstName ? `, ${viewer.firstName}` : ""}`}
         description={
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex flex-wrap items-center gap-x-2">
             <span className="dot" style={{ background: m.state === "open" ? "var(--pos-chart)" : "var(--border-2)" }} />
-            {m.label} Prices are end of day, as of {fmtDate(overview[0]?.last_ts)}.
+            Your Viridia Brief. {m.label} Prices are end of day, as of {fmtDate(overview[0]?.last_ts)}.
           </span>
         }
+        actions={<Link href="/portfolio" className="btn">Portfolio X-Ray</Link>}
       />
 
       {showFirstRun && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
@@ -77,6 +95,59 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
       </section>
 
       {breadth && <BreadthSummary b={breadth} />}
+
+      <section className="card" aria-labelledby="changed-title">
+        <div className="card-h">
+          <div>
+            <h2 id="changed-title" className="card-t">What changed</h2>
+            <p className="card-s mt-0.5">Since the previous session: wave structure and setups for securities over $25M a day{watched.length ? ", and your watchlist" : ""}</p>
+          </div>
+        </div>
+        <div className="grid gap-px bg-line lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="bg-panel px-5 py-4">
+            {watched.length > 0 && (
+              <ChangeList title="Your watchlist" rows={watchChanges} empty="No structure changes on your watchlist since the previous session." />
+            )}
+            <ChangeList
+              title="Across the market" rows={changes}
+              empty="No structure changes to report yet. Viridia started recording each security's count on September 28, 2026; day-over-day changes appear after the next session."
+            />
+          </div>
+          <div className="flex flex-col gap-4 bg-panel px-5 py-4">
+            <MoveList title="Biggest gains" rows={gainers} />
+            <MoveList title="Biggest declines" rows={losers} />
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-h">
+          <div>
+            <h2 className="card-t">Setups to review</h2>
+            <p className="card-s mt-0.5">Highest-confidence setups at 1.5 : 1 or better, securities over $25M a day</p>
+          </div>
+          <span className="ml-auto flex gap-2">
+            <Link href="/setups/track-record" className="btn sm">Track record</Link>
+            <Link href="/setups" className="btn sm">All setups</Link>
+          </span>
+        </div>
+        {topSetups.length ? (
+          <ul className="divide-y divide-line">
+            {topSetups.map((r) => (
+              <li key={r.symbol}>
+                <Link href={stockHref(r.symbol)} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-hover">
+                  <span className="tk w-16">{r.symbol}</span>
+                  <SideChip side={r.side} short />
+                  <span className="min-w-0 flex-1 truncate text-[13px]">{SETUP_LABEL[r.kind] ?? r.kind}{r.status === "waiting" ? <span className="text-fg-3"> · waiting</span> : null}</span>
+                  <span className="num text-[12.5px] text-fg-3">entry {r.setup ? entryText(r.setup) : "—"} · stop {r.setup ? fmtPrice(r.setup.stop.price) : "—"}</span>
+                  <span className="num w-14 text-right text-[13px] font-[650]">{r.rr.toFixed(1)} : 1</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="px-5 py-6 text-[13px] text-fg-2">No liquid setup at 1.5 : 1 or better right now.</p>}
+        <div className="src"><span><b>Note</b>Setups restate a wave count as entry, stop and target. They are research output, not recommendations; see the track record for how each kind has done.</span></div>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="card">
@@ -176,5 +247,40 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
         <div className="src"><span><b>Note</b>Pattern Confidence ranks how well a count fits Elliott guidelines. It is not a forecast, a probability or a recommendation.</span></div>
       </section>
     </>
+  );
+}
+
+function ChangeList({ title, rows, empty }: { title: string; rows: Awaited<ReturnType<typeof getChanges>>; empty: string }) {
+  return (
+    <div className="mb-4 last:mb-0">
+      <div className="label mb-2">{title}</div>
+      {rows.length ? (
+        <ul className="flex flex-col gap-2">
+          {rows.map((r) => (
+            <li key={r.symbol} className="text-[13px] leading-snug">
+              <Link href={stockHref(r.symbol)} className="tk mr-2 hover:text-brand">{r.symbol}</Link>
+              <span className="text-fg-2">{describeChange(r).join(" ")}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-[13px] leading-relaxed text-fg-3">{empty}</p>}
+    </div>
+  );
+}
+
+function MoveList({ title, rows }: { title: string; rows: Awaited<ReturnType<typeof scan>> }) {
+  return (
+    <div>
+      <div className="label mb-2">{title}</div>
+      <ul className="flex flex-col gap-1.5">
+        {rows.map((r) => (
+          <li key={r.symbol} className="flex items-baseline gap-3 text-[13px]">
+            <Link href={stockHref(r.symbol)} className="tk w-14 hover:text-brand">{r.symbol}</Link>
+            <span className="min-w-0 flex-1 truncate text-fg-3">{r.name}</span>
+            <span className={`num font-medium ${(r.change_pct ?? 0) >= 0 ? "text-pos" : "text-neg"}`}>{pct(r.change_pct, 1)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

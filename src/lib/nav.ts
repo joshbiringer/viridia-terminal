@@ -7,7 +7,7 @@ export interface NavItem { label: string; href: string; icon: IconName; live: bo
  * roadmap (Data Sources) instead of sending people to placeholder pages.
  */
 export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
-  { group: null, items: [{ label: "Home", href: "/terminal", icon: "home", live: true, keywords: "overview dashboard" }] },
+  { group: null, items: [{ label: "Brief", href: "/terminal", icon: "home", live: true, keywords: "home overview dashboard what changed briefing" }] },
   { group: "Markets", items: [
     { label: "Markets", href: "/markets", icon: "markets", live: true, keywords: "overview breadth indices" },
     { label: "Stocks", href: "/markets/stocks", icon: "stocks", live: true, keywords: "equities list" },

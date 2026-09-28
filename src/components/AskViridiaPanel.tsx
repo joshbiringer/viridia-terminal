@@ -5,7 +5,7 @@ import { ViridiaMark } from "./ViridiaMark";
 import { Icon } from "./Icon";
 import { useDegree } from "./analysis/DegreeContext";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
-import { QUESTIONS, answer, route, type Answer, type Block, type ExplainContext, type QuestionId } from "@/lib/analysis/explain";
+import { QUESTIONS, answer, answerText, clientAnswer, route, type Answer, type Audience, type Block, type ExplainContext, type QuestionId } from "@/lib/analysis/explain";
 
 type Props = Omit<ExplainContext, "degree">;
 
@@ -31,7 +31,13 @@ export function AskViridiaButton(props: Props) {
 
   // weekly and history answers need their data; hide those questions until it is loaded
   const available = QUESTIONS.filter((q) => (q.id === "weekly" ? props.weekly !== undefined : q.id === "changed" ? props.history !== undefined : true));
-  const result: Answer | null = asked?.id ? answer(asked.id, { ...props, degree }) : null;
+  const [audience, setAudience] = useState<Audience>("advisor");
+  const [copied, setCopied] = useState(false);
+  const result: Answer | null = asked?.id ? (audience === "client" ? clientAnswer : answer)(asked.id, { ...props, degree }) : null;
+  const copy = async () => {
+    if (!result) return;
+    try { await navigator.clipboard.writeText(answerText(result)); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard blocked */ }
+  };
 
   const ask = (id: QuestionId | null, text: string) => {
     setAsked({ id, text });
@@ -72,6 +78,13 @@ export function AskViridiaButton(props: Props) {
           {asked && (
             <article className="rounded-[var(--r-lg)] border border-line bg-panel-2 px-4 py-4 text-[13.5px] leading-relaxed" aria-live="polite">
               <div className="mb-2 text-[12px] text-fg-3">{asked.text}</div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="seg" role="tablist" aria-label="Audience">
+                  <button role="tab" aria-selected={audience === "advisor"} onClick={() => setAudience("advisor")}>Advisor</button>
+                  <button role="tab" aria-selected={audience === "client"} onClick={() => setAudience("client")}>Explain to client</button>
+                </div>
+                {result && <button className="btn ghost sm ml-auto" onClick={copy}>{copied ? "Copied" : "Copy"}</button>}
+              </div>
               {result ? <AnswerView a={result} /> : (
                 <>
                   <h3 className="mb-1.5 font-semibold">That one isn&apos;t something the engine can answer</h3>

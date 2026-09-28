@@ -325,3 +325,87 @@ function changed(ctx: ExplainContext): Answer {
     sources: ["Viridia analysis history"],
   };
 }
+
+// ------------------------------------------------------------------------------------------ client version
+
+export type Audience = "advisor" | "client";
+
+const CLIENT_NOTE = "This describes a price pattern Viridia measures. It isn't a prediction or a recommendation, and patterns can fail.";
+
+/** Plain-language move description: "rising", "pulling back" and so on, without Elliott terms. */
+function plainState(g: Glance["preferred"]): string {
+  const up = g.waveDirection === "up";
+  const corrective = g.pattern === "zigzag" || g.pattern === "flat" || g.pattern === "triangle";
+  if (g.complete) {
+    return corrective
+      ? `a pullback that looks finished, which usually means the earlier ${up ? "rise" : "decline"} can resume`
+      : `a strong ${g.direction === "up" ? "advance" : "decline"} that looks complete, which is often followed by a ${up ? "rebound" : "pullback"}`;
+  }
+  if (g.pattern === "triangle") return "a sideways, narrowing range that usually resolves with a sharper move";
+  if (corrective) return `a temporary ${up ? "bounce" : "pullback"} against the bigger trend`;
+  if (g.wave === "3") return `the middle and usually strongest part of a ${up ? "rise" : "decline"}`;
+  if (g.wave === "5") return `the late stage of a ${up ? "rise" : "decline"}, when moves often slow down`;
+  if (g.wave === "2" || g.wave === "4") return `a pause within a larger ${g.direction === "up" ? "rise" : "decline"}`;
+  return `an early stage of a new ${up ? "rise" : "decline"}`;
+}
+
+/** A client-ready version of an answer: short, no jargon, framed as a description, easy to copy. */
+export function clientAnswer(id: QuestionId, ctx: ExplainContext): Answer {
+  const { g } = pick(ctx);
+  const sym = ctx.symbol;
+  const title = "For a client";
+  if (!g) return { title, blocks: [p(`We don't have a clear pattern to describe for ${sym} right now, so there's nothing to add beyond the price itself.`)], sources: [] };
+  const pg = g.preferred;
+  const level = pg.hold ?? pg.reassess;
+  const levelSide = pg.hold != null ? pg.holdSide : pg.reassessSide;
+  const levelLine = level != null
+    ? `The level we're watching is ${fmtPrice(level)}${dist(level, ctx.close)}: if the price moves ${levelSide} it, this reading no longer holds and we'd reassess.`
+    : "There isn't a specific price level that would rule this reading out yet.";
+  switch (id) {
+    case "why":
+    case "wave":
+      return { title, blocks: [
+        p(`Looking at how ${sym}'s price has moved over recent months, the pattern looks like ${plainState(pg)}.`),
+        p(g.closeCall ? "That said, another reading fits almost as well, so we treat this as unsettled." : "Several measurements support this reading over the alternatives, though no pattern is certain."),
+        p(levelLine), p(CLIENT_NOTE),
+      ], sources: [] };
+    case "invalidate":
+      return { title, blocks: [p(levelLine), p("Having a level like this defined in advance is how we keep an analysis honest: it tells us when to change our minds."), p(CLIENT_NOTE)], sources: [] };
+    case "targets": {
+      const t = pg.target;
+      return { title, blocks: [
+        p(t ? `If the pattern plays out, the next area where the price has historically tended to pause is around ${fmtPrice(t.price)}${dist(t.price, ctx.close)}.` : "The pattern doesn't point to a specific next level right now."),
+        p("These areas come from common proportions between past price swings. They are reference points, not forecasts."), p(CLIENT_NOTE),
+      ], sources: [] };
+    }
+    case "alternate":
+      return { title, blocks: [
+        p(g.alternate ? `There is a second way to read the pattern: ${plainState(g.alternate)}. We keep it in view in case the price moves against the main reading.` : "Right now the readings all point the same way, so there isn't a meaningful second scenario."),
+        p(CLIENT_NOTE),
+      ], sources: [] };
+    case "setup": {
+      const s = ctx.setups?.[ctx.degree] ?? null;
+      return { title, blocks: [
+        p(s ? `The pattern defines a clear risk point at ${fmtPrice(s.stop.price)} and a reference level at ${fmtPrice(s.target.price)}. For every dollar of downside to the risk point, the distance to the reference level is about ${s.rr.toFixed(1)} dollars.` : "The pattern doesn't define a clear risk point and reference level right now."),
+        p("Whether that matters depends on your goals, time horizon and the role this holding plays in your plan."), p(CLIENT_NOTE),
+      ], sources: [] };
+    }
+    case "weekly": {
+      const w = ctx.weekly ?? null;
+      return { title, blocks: [
+        p(w ? (w.preferred.waveDirection === pg.waveDirection
+          ? "The longer-term picture and the shorter-term picture point the same way."
+          : "The shorter-term move is going against the longer-term picture, which often means it's a temporary swing inside the bigger trend.")
+          : "There isn't enough longer-term history to compare the two views yet."),
+        p(CLIENT_NOTE),
+      ], sources: [] };
+    }
+    case "changed":
+      return { title, blocks: [p("We compare each day's reading with the one before and flag anything meaningful. Your advisor can walk you through anything that changed."), p(CLIENT_NOTE)], sources: [] };
+  }
+}
+
+/** Plain text of an answer, for copying into an email or notes. */
+export function answerText(a: Answer): string {
+  return a.blocks.map((b) => b.kind === "p" ? b.text : b.kind === "list" ? b.items.map((x) => `• ${x.text}`).join("\n") : b.rows.map((r) => `${r.name}: ${r.value} (${r.note})`).join("\n")).join("\n\n");
+}

@@ -34,3 +34,19 @@ describe("Ask Viridia", () => {
     expect(JSON.stringify(none)).toContain("previous day");
   });
 });
+
+describe("Explain to client", () => {
+  it("avoids Elliott jargon and always carries the not-a-recommendation note", async () => {
+    const { clientAnswer, answerText } = await import("../src/lib/analysis/explain");
+    const g = { degree: "intermediate", valid: 3, agree: 3, closeCall: false, alternate: null,
+      preferred: { id: "x", pattern: "impulse", subtype: null, direction: "up", complete: false, wave: "3", waveDirection: "up", score: 72, band: "high",
+        hold: 100, holdSide: "below", target: { price: 150, label: "t" }, reassess: null, reassessSide: null, last: { ts: "2026-09-01", price: 110 } } };
+    const ctx = { symbol: "TEST", degree: "intermediate" as const, close: 120, glances: { auto: g, intermediate: g, primary: null, minor: null } as never, candidates: null, zones: [], setups: null };
+    for (const id of ["why", "invalidate", "targets", "setup"] as const) {
+      const t = answerText(clientAnswer(id, ctx));
+      expect(t).not.toMatch(/wave|impulse|zigzag|Fibonacci|Pattern Confidence/i);
+      expect(t).toContain("isn't a prediction or a recommendation");
+    }
+    expect(answerText(clientAnswer("why", ctx))).toContain("strongest part of a rise");
+  });
+});
