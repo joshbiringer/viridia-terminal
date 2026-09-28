@@ -10,6 +10,8 @@ import { entryText } from "@/lib/analysis/setups";
 import { setupScan } from "@/lib/analysis/setup-scan";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SideChip } from "@/components/analysis/SideChip";
+import { HistoryTag } from "@/components/analysis/HistoryTag";
+import { getTrackRecord } from "@/lib/analysis/track-record";
 
 export const metadata: Metadata = { title: "Setups" };
 export const dynamic = "force-dynamic";
@@ -34,13 +36,14 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const wk = pick(ALIGN, sp.wk);
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const [rows, cov] = await Promise.all([
+  const [rows, cov, record] = await Promise.all([
     setupScan({
       p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
       p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null,
       p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE, p_aligned: wk ? wk === "with" : null,
     }).catch(() => null),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
+    getTrackRecord().catch(() => []),
   ]);
   const coverage = (cov.data ?? null) as { ranked: number; total: number } | null;
   const total = rows?.[0]?.total ?? 0;
@@ -116,6 +119,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                   <th className="r">Stop</th>
                   <th className="r">Target</th>
                   <th className="r" title="Reward ÷ risk from the middle of the entry range">R : R</th>
+                  <th className="r hidden xl:table-cell" title="How this kind of setup has done in the replayed history">History</th>
                   <th className="r hidden sm:table-cell" title="Distance from entry to stop">Risk</th>
                   <th className="r hidden sm:table-cell" title="Pattern Confidence of the preferred count">Conf.</th>
                   <th className="hidden md:table-cell" title="Does the weekly preferred count's move in progress point the same way?">Weekly</th>
@@ -140,6 +144,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                     <td className="r num text-neg">{r.setup ? fmtPrice(r.setup.stop.price) : "—"}</td>
                     <td className="r num text-pos">{r.setup ? fmtPrice(r.setup.target.price) : "—"}</td>
                     <td className="r num font-medium">{r.rr.toFixed(1)}</td>
+                    <td className="r hidden xl:table-cell"><HistoryTag h={record.find((x) => x.kind === r.kind && x.side === r.side)} /></td>
                     <td className="r num hidden text-fg-2 sm:table-cell">{pct(r.risk_pct, 1).replace("+", "")}</td>
                     <td className="r num hidden sm:table-cell">{r.score ?? "—"}</td>
                     <td className="hidden whitespace-nowrap text-[12.5px] md:table-cell">

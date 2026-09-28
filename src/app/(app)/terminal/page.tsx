@@ -21,6 +21,8 @@ import { setupScan } from "@/lib/analysis/setup-scan";
 import { entryText } from "@/lib/analysis/setups";
 import { SETUP_LABEL } from "@/lib/analysis/candidates";
 import { SideChip } from "@/components/analysis/SideChip";
+import { HistoryTag } from "@/components/analysis/HistoryTag";
+import { getTrackRecord } from "@/lib/analysis/track-record";
 
 const SWING_ORDER: [SwingStructure, string][] = [
   ["higher_highs_lows", "var(--pos-chart)"], ["expanding", "var(--alt)"], ["contracting", "var(--fib)"],
@@ -48,13 +50,15 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
   const watched = viewer && watchedCount > 0
     ? (((await (await authClient()).rpc("my_watchlist")).data ?? []) as { symbol: string }[]).map((r) => r.symbol)
     : [];
-  const [changes, watchChanges, gainers, losers, topSetups] = await Promise.all([
+  const [changes, watchChanges, gainers, losers, topSetups, record] = await Promise.all([
     getChanges({ minDollarVolume: LIQUID, limit: 8 }).catch(() => []),
     watched.length ? getChanges({ symbols: watched, limit: 8 }).catch(() => []) : Promise.resolve([]),
     scan({ p_sort: "change", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
     scan({ p_sort: "change_asc", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
     setupScan({ p_sort: "confidence", p_limit: 5, p_min_rr: 1.5, p_min_dollar_volume: LIQUID }).catch(() => []),
+    getTrackRecord().catch(() => []),
   ]);
+  const hist = (kind: string, side: string) => record.find((x) => x.kind === kind && x.side === side);
   const [overview, breadth, active, statusRes, swingRes, setups, ...presetRows] = await Promise.all([
     getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }), db().rpc("market_data_status"),
     db().rpc("swing_breadth", { p_timeframe: "1d", p_degree: "intermediate" }),
@@ -140,6 +144,7 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
                   <SideChip side={r.side} short />
                   <span className="min-w-0 flex-1 truncate text-[13px]">{SETUP_LABEL[r.kind] ?? r.kind}{r.status === "waiting" ? <span className="text-fg-3"> · waiting</span> : null}</span>
                   <span className="num text-[12.5px] text-fg-3">entry {r.setup ? entryText(r.setup) : "—"} · stop {r.setup ? fmtPrice(r.setup.stop.price) : "—"}</span>
+                  <HistoryTag h={hist(r.kind, r.side)} />
                   <span className="num w-14 text-right text-[13px] font-[650]">{r.rr.toFixed(1)} : 1</span>
                 </Link>
               </li>
