@@ -398,3 +398,146 @@ Typed questions route to these. Anything else gets a plain statement of what it 
 3. **Multi-degree reconciliation.** Check that waves 2 and 4 subdivide into threes at the lower degree, and reconcile weekly and daily counts into one.
 4. **Database plan.** Retention for price bars, and CI deploys for the worker.
 5. **Alerts for watchlists,** when accounts come back into scope: setup triggered, stop hit, target reached.
+
+---
+
+## Cycle 4
+
+**Date:** 2026-09-28
+**Direction:** Josh's positioning directive, saved as `docs/viridia-positioning.md`. Viridia becomes the intelligence terminal for advisors, RIAs and asset managers: "from market signal to client conversation." Every cycle from here should read it.
+
+**Commits**
+
+| Phase | Commits |
+|---|---|
+| 1 | `16cca3e`, `02e76d0` |
+| 2 | `7c259e3` |
+| 3 | `a31fab0`, `cf8c0df` (QA fix) |
+| 4 | `783a5b3` |
+| 5 | `842fe88`, `aefa2da`, this commit |
+
+**Migrations:** 0018, 0018b, 0019, 0019b, 0020.
+
+### Choosing the phases
+
+The directive describes six stages. This cycle took the parts that are buildable now with data Viridia actually has:
+- **Stage 1**, the research terminal: made trustworthy with a backtest, and given context through Signals.
+- **Stage 2**, portfolio intelligence: Portfolio X-Ray.
+- **The four questions** ("What changed? Why does it matter? Where should I look? How do I communicate it?"): the Brief and "Explain to client".
+
+Client households, meetings, CRM, IC workspace and model portfolios need data sources and integrations that don't exist yet. They are labeled "Planned" on the landing page, not mocked.
+
+### Phase 1: Setup track record (backtest-1.0.0)
+
+**Engine** (`backtest.ts`)
+- At every fifth session after the first 250, the full engine runs on the bars up to that day only. The setup it would have shown is then followed for 60 sessions.
+- The first of stop or target decides the outcome. When one bar touches both, it counts as a stop.
+- Other outcomes:
+  - **Expired:** marked to the close at the end of the window.
+  - **Missed:** a waiting entry that never filled.
+  - **Pending:** the window isn't over yet, so it's left out of the stats.
+- Results are in R (multiples of the initial risk).
+- A test proves there's no look-ahead: changing prices after the last signal doesn't change any signal.
+
+**Where it runs.** `/api/backtest/[symbol]` runs on Vercel. Postgres calls it through pg_net once a minute, 15 securities in flight (`backtest_tick`), and stores the trials. Two reasons for this design:
+- It keeps a heavy replay off the analysis worker's edge-function CPU budget.
+- It deploys with every push, without a manual bundle.
+
+**Where it shows**
+- The Track Record page, by kind and side, with confidence and R:R filters.
+- A track-record line on the setup card.
+- A "history" tag beside every setup on the Brief and the Setups screen.
+
+### Phase 2: Viridia Signals
+
+A context row on each security page instead of a rating:
+- **Structure:** preferred count direction, weekly agreement, close calls.
+- **Trend:** 50/200-day.
+- **Momentum:** 3-month return and its lead over SPY.
+- **Risk:** volatility regime, 1-year drawdown, beta, nearness to the count's level.
+- **Fundamentals and Valuation:** marked "Not available yet".
+
+The row ends with that security's own replayed setup history. A shared `stats.ts` module holds returns, volatility, drawdown, beta and correlation.
+
+### Phase 3: Portfolio X-Ray
+
+**Input:** paste or upload holdings. It accepts CSV with headers, plain lines, quoted dollar amounts, total or per-share cost, and US or ISO dates. Duplicates are combined.
+
+**Output**
+- value, concentration (largest, top 5, effective holdings, flags over 10% and 20%) and asset mix;
+- beta, volatility, drawdown and 3-month return, from today's weights applied to past returns;
+- the most correlated pairs;
+- unrealized gains and losses, with holding periods;
+- each holding's wave structure, weekly agreement and setup.
+
+Holdings are processed per request and never stored.
+
+Not yet available, and stated on the page: sector, factor and geographic exposure, ETF look-through, and income. The security master has no sector data.
+
+**QA fix.** The API's 1,000-row cap truncated daily closes for portfolios with more than a few holdings, so beta, volatility and correlations came back empty. `closes_for` now returns one row per symbol, fetched 8 symbols per call in parallel, inside the 3-second anonymous statement limit.
+
+### Phase 4: Viridia Brief and Explain to client
+
+**The Brief (home page)**
+- a greeting by name;
+- markets;
+- **What changed**, comparing each security's last two recorded sessions, same engine version only:
+  - count flips and a count moving on;
+  - setups that are new or no longer apply;
+  - confidence moves of 10 or more;
+  - market-wide over $25M a day, plus your watchlist;
+- biggest gains and declines;
+- setups to review, each with its kind's history.
+
+**Explain to client:** a toggle in Ask Viridia that rewrites each answer in plain language:
+- no Elliott terms;
+- the level that would change the view;
+- a not-a-recommendation note;
+- a Copy button.
+
+### Phase 5: Positioning and QA
+
+**Landing page**
+- Hero: "From market signal to client conversation."
+- Four outcomes, each linked to a live feature.
+- The six modules with honest status: Research and Markets live; Portfolio and AI partly live; Advisor and Enterprise planned.
+- The live scanner now shows wave structure.
+- Disclosures now cover the track record.
+- Roadmap updated.
+
+**Kept on purpose.** The CTA stays "Start free", not the directive's "Request access". The beta is open, so "Request access" would imply a gate that doesn't exist. Switch it when access is actually gated.
+
+### Tests
+
+- **Automated:** 64 unit tests (51 before). New suites cover the backtest (including no look-ahead), stats and Signals, X-Ray parsing and measures, and Explain to client (no jargon, the disclaimer always present). TypeScript, lint (0 errors) and the build pass.
+- **Live on production**
+  - The backtest route: MSFT returns 6 trials in 1.4 s, and the pg_net pipeline is storing results.
+  - X-Ray on a 7-holding example returns in 2.4 s:
+    - beta 1.27;
+    - QQQ and VGT correlated at 0.96 (this surfaces the fund overlap even without look-through);
+    - tax lots computed.
+  - The Brief, Track Record and landing page render.
+  - No horizontal overflow at 375px.
+
+### Findings to act on
+
+- **Early track record (442 resolved, 120 of 4,000 securities replayed): 20% reached the target first, averaging −0.01R.**
+- "Correction complete, sell" is the weakest kind so far: 4% hit, −0.44R across 68 cases. Several of the highest-confidence setups on the Brief today are that kind.
+- The replay window is the past year (a rising market), so sell setups are disadvantaged. The sample is still small.
+- **Do not tune on this yet.** Wait for the full universe, then consider gating or down-ranking kinds with a negative average result. The history tags already make this visible to users.
+
+### Unresolved
+
+- **The replay is running.** 120 of 4,000 securities were done at the time of writing; the rest takes about 4.5 hours.
+- **What changed has no previous session yet.** It fills in from the next session.
+- **Stored history is only about 500 daily bars,** so each security's replay window is about one year. A longer history would give a sturdier track record, but it needs database space: 425 MB of 500 MB.
+- **No sector or fundamentals data,** which blocks the Signals fundamentals and valuation dimensions and X-Ray sector exposure. SEC data (SIC codes and XBRL company facts) is free and is the likely source.
+- Carried over: manual worker deploys, Supabase auth URL and SMTP, database size.
+
+### Recommended Cycle 5 phases
+
+1. **Fundamentals from SEC data.** SIC sector and XBRL company facts (revenue, earnings, margins). This unlocks the Signals fundamentals dimension, X-Ray sector exposure and valuation context.
+2. **Setup quality from the track record.** Once the full universe has replayed, rank setups by their kind's history and confidence together, and gate kinds with negative expectancy. Report out-of-sample by splitting by date.
+3. **Saved portfolios and models.** Store X-Ray portfolios for signed-in users, set target weights, and flag drift (Stage 2).
+4. **Meeting prep, first version.** For a saved portfolio: since last review, holdings with changes, concentration and tax items, talking points and a client version. Everything is built from X-Ray and the Brief, with no invented client data.
+5. **Database plan.** Price-bar retention or a plan upgrade, so the history and replay window can grow.
