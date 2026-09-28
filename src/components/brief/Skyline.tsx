@@ -105,20 +105,20 @@ export function Skyline({ id, className }: { id: HubId; className?: string }) {
     <svg viewBox={`0 0 ${W} 220`} preserveAspectRatio="xMidYMax slice" className={className} aria-hidden>
       <defs>
         <linearGradient id={`sk-b-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#123D2E" />
-          <stop offset="1" stopColor="#051410" />
+          <stop offset="0" stopColor="#1C5B44" />
+          <stop offset="1" stopColor="#0A2A20" />
         </linearGradient>
         <linearGradient id={`sk-w-${id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#0B2A21" stopOpacity="0.9" />
           <stop offset="1" stopColor="#04100C" />
         </linearGradient>
       </defs>
-      {shapes.filter((s) => s.kind === "back").map((s, i) => <path key={`b${i}`} d={s.d} fill="#1A4436" opacity="0.55" />)}
+      {shapes.filter((s) => s.kind === "back").map((s, i) => <path key={`b${i}`} d={s.d} fill="#24584A" opacity="0.5" />)}
       {shapes.filter((s) => s.kind === "bldg").map((s, i) => <path key={`g${i}`} d={s.d} fill={`url(#sk-b-${id})`} />)}
       {shapes.filter((s) => s.kind === "mark").map((s, i) => (
-        <path key={`m${i}`} d={s.d} fill="#0F3A2B" stroke="#3CB483" strokeOpacity="0.45" strokeWidth="0.8" />
+        <path key={`m${i}`} d={s.d} fill="#1D5E47" stroke="#5FD3A0" strokeOpacity="0.6" strokeWidth="0.9" />
       ))}
-      {wins.map((w, i) => <rect key={i} x={w.x} y={w.y} width="2.4" height="2.8" fill={w.warm ? "#F4D38A" : "#7FE0B0"} opacity={w.warm ? 0.55 : 0.45} />)}
+      {wins.map((w, i) => <rect key={i} x={w.x} y={w.y} width="2.4" height="2.8" fill={w.warm ? "#F4D38A" : "#7FE0B0"} opacity={w.warm ? 0.85 : 0.7} />)}
       <rect x="0" y={G} width={W} height="20" fill={`url(#sk-w-${id})`} />
       <path d={`M0 ${G + 0.5}H${W}`} stroke="#3CB483" strokeOpacity="0.35" strokeWidth="1" />
     </svg>

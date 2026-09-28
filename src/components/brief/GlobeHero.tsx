@@ -195,7 +195,7 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
   return (
     <section ref={wrapRef} className="globe-hero relative isolate overflow-hidden rounded-[var(--r-lg)] text-white" aria-label="Viridia Brief">
       <div className="globe-stars pointer-events-none absolute inset-0 -z-10" aria-hidden />
-      <div className="relative grid min-h-[360px] gap-4 px-5 pb-[108px] pt-6 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:pt-8">
+      <div className="relative grid min-h-[360px] gap-4 px-5 pb-[150px] pt-6 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:pt-8">
         <div className="relative z-10 flex min-w-0 flex-col gap-4">
           <div>
             <p className="text-[12px] font-[600] uppercase tracking-[0.14em] text-[#7FE0B0]">Viridia Brief</p>
@@ -235,6 +235,8 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
             })}
           </nav>
 
+          <p className="-mt-2 text-[11px] text-white/40">Regular session hours; exchange holidays outside the U.S. aren&apos;t shown.</p>
+
           <div className="mt-auto flex flex-wrap gap-2">
             <Link href="/portfolio" className="btn sm border-white/20 bg-white/10 text-white hover:bg-white/15">Portfolio X-Ray</Link>
             <Link href="/setups" className="btn sm border-white/20 bg-white/10 text-white hover:bg-white/15">Setups</Link>
@@ -246,11 +248,10 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[120px]" aria-hidden>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px]" aria-hidden>
         {prev && prev !== focus && <Skyline key={`p-${prev}`} id={prev} className="skyline-out absolute inset-0 h-full w-full" />}
         <Skyline key={`f-${focus}`} id={focus} className="skyline-in absolute inset-0 h-full w-full" />
       </div>
-      <p className="absolute bottom-1.5 right-3 z-10 text-[10.5px] text-white/35">Regular session hours; exchange holidays outside the U.S. aren&apos;t shown.</p>
     </section>
   );
 }
