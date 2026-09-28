@@ -228,3 +228,173 @@ Viridia already had a disciplined visual base: consistent color tokens, tabular 
 3. **Auth hardening and trust.** Custom SMTP, Google sign-in, two-factor authentication, and E2E tests of the whole signed-in path. It needs Josh's credentials for SMTP and Google.
 4. **Scanner 2.0.** Structure filters (potential wave 3 or 5, ABC completion, near a zone, near invalidation), built on the cached candidates and zones, with saved scans for signed-in users.
 5. **Engineering foundation.** ESLint and CI, Playwright, all migrations and Edge Functions in the repo, automated function deploys, and a database size plan.
+
+---
+
+## Cycle 2
+
+**Date:** 2026-09-28
+**Commits:** `e075f77` (Phases 1–2), `0e0b7f3` (Phase 3), `c27769e` (Phases 4–5)
+**Deployed:** production. Migrations 0014, 0015 (+0015b, 0015c).
+
+Recorded after the fact at the start of Cycle 3; the commit messages are the primary record.
+
+1. **Pattern Confidence ranking (rank-1.0.0).** Rule-valid counts ranked by guideline evidence plus wave-personality checks (wave 3 speed and volume, wave 5 volume, alternation in time, start at the prior extreme). The worker sends volume and stores a preferred/alternate summary as scanner columns.
+2. **Structure at a glance.** The preferred and alternate counts, invalidation, target and nearest zone at the top of every security page. Also: a shared degree state, the count overlay with its invalidation line on the daily chart, and an engine parity health check (`/api/health/engine`).
+3. **Scanner 2.0.** Structure presets (wave 3, 5 or C in progress; correction or five waves complete; near a zone; near invalidation), direction and confidence filters, and a Wave structure column view. `scan_securities` became dynamic SQL (1.8 s down to 0.1 s).
+4. **Structure-first home.** Wave structure today, and the highest-confidence structures.
+5. **ESLint and CI.** A GitHub Actions workflow for typecheck, lint, tests and build.
+
+Alerts and auth hardening were deferred: Josh asked to focus on the research terminal and leave accounts as they are.
+
+---
+
+## Cycle 3
+
+**Date:** 2026-09-28
+**Focus:** The research terminal, per Josh: "skip the account information part for now, focus on building the website." Accounts are left working as they are.
+**Commits:**
+
+| Commit | Phase |
+|---|---|
+| `38749c9` | 1 |
+| `f864a4e` | 2 |
+| `ef83ebe` | 3 |
+| `3a8ce0b` | 4 |
+| (this commit) | 5 |
+
+**Deployed:**
+- production (Vercel);
+- analysis-worker v9;
+- migrations 0016 and 0017.
+
+### Audit at the start
+
+- The AAPL page showed "Close call. The top two counts are within 0 points." Its preferred and alternate were the same story: a running flat down, complete, from two different starts. Many counts tied at 71.
+- The glance ignored the move since the count's last pivot. For example, a "correction complete, next move up" had already rallied 15%.
+- A finished pattern showed "Invalidation: None yet" with no level to watch.
+- Ask Viridia was a stub that still said "ranking arrives in Phase 7" and had a disabled input.
+- There were no buy or sell signals, even though this is the project's stated goal.
+- Provider symbols repeated four times on the Details card.
+
+### Phase 1: Sharper count ranking (rank-1.1.0)
+
+Two new evidence checks, both from Essentials:
+- **Alternate waves in Fibonacci ratio**, within 5%: wave 5 to wave 1, C to A, or triangle legs at 61.8%. Essentials calls these relationships more reliable than adjacent ones.
+- **Running flats are rare**, so a running flat now counts against the count.
+
+The alternate is now the best-ranked count that tells a different story, meaning a different pattern family, wave or direction. If every count tells the same story, the card says so.
+
+The glance gained three things:
+- a **Reassess** level for finished patterns: the pattern's end, beyond which its last wave is still extending;
+- the move since the count's last pivot, and whether it is going the way the count expects;
+- how many of the rule-valid counts agree on direction.
+
+### Phase 2: Wave setups (buy and sell signals, setup-1.0.1)
+
+A setup restates the preferred count as a trade.
+
+**Kinds**
+- **Active now:** wave 3, wave 5 or wave C under way; a correction complete; five waves complete. Entry is the close.
+- **Waiting for entry:** a wave 2 pullback (entry at 61.8%), a wave 4 pullback (38.2%) or a zigzag wave B bounce (61.8%). Pullbacks are for impulses only. The entry widens to a confluence zone when one contains it.
+
+**Levels**
+- **Stop:** a hard-rule level, or the end of a finished pattern (labeled as not a rule).
+- **Target:** the count's own Fibonacci relationship.
+
+**Gates.** There is no setup when:
+- the count defines no stop or target;
+- the stop or target lies on the wrong side of the entry;
+- price has already crossed the stop or reached the target;
+- a waiting entry has already been passed;
+- reward:risk is below 1:1.
+
+The card says which of these applies in plain language.
+
+**Cautions** appear for:
+- wave 5 (late in the trend; the Article's "reduce risk");
+- counter-trend trades;
+- close calls.
+
+**Where it shows**
+- a Wave setup card on each security page;
+- a new **Setups** screen (`/setups`) filtered by side, status, kind, R:R, confidence, liquidity and weekly alignment.
+
+Everything is labeled as research output, not a recommendation.
+
+**QA fix.** The first live data (setup-1.0.0) showed setups with 70–98% risk and R:R below 0.5, where wave C or 5 was nearly finished. It also showed a diagonal wave 4 "pullback" with R:R 22.9 that projected wave 5 = wave 1, which a contracting diagonal forbids. Both were fixed in setup-1.0.1.
+
+### Phase 3: Ask Viridia answers from the engine
+
+Deterministic answers, built only from the engine's results and the source material:
+- why this count is preferred (points, rule tally, checks met and not met);
+- what invalidates it;
+- the Fibonacci targets and nearest zones;
+- the alternate, and what would promote it;
+- the setup;
+- what the wave in progress is usually like (wave personality from the Article and Essentials, cited);
+- weekly versus daily;
+- what changed since the last session.
+
+Typed questions route to these. Anything else gets a plain statement of what it can answer. Answers follow the page's degree.
+
+### Phase 4: Weekly alignment and daily history
+
+- `analysis_history` records one row per security per session: the preferred daily count, score, level and setup. It is written by a trigger, seeded today and pruned at 180 days.
+- The glance card shows the weekly count and whether it points the same way.
+- Setups can be filtered to those with or against the weekly count.
+
+### Phase 5: QA, data fixes, roadmap
+
+- Provider symbols are deduplicated.
+- Roadmap statuses on Data Sources are updated (ranking, overlays, scanner and setups are live; backtesting is next).
+- Stale "Phase 7" text is removed from the rulebook.
+- The analysis worker now runs every 2 minutes instead of 5, so the full recompute takes hours rather than a day.
+
+### Files
+
+**New**
+- `supabase/functions/_shared/engine/setup.ts`
+- `src/lib/analysis/explain.ts`, `setups.ts`, `setup-scan.ts`
+- `src/components/analysis/SetupCard.tsx`, `SideChip.tsx`
+- `src/app/(app)/setups/page.tsx`
+- `supabase/migrations/0016_setups.sql`, `0017_history_alignment.sql`
+- `tests/setup.test.ts`, `tests/explain.test.ts`
+
+**Changed**
+- Engine: `rank.ts`, `glance.ts`, `candidates.ts`, `analyze.ts`, `version.ts`
+- Worker: `analysis-worker/index.ts`
+- Components: `AskViridiaPanel.tsx`, `StructureGlance.tsx`, `WaveCounts.tsx`
+- `src/lib/analysis/{candidates,server}.ts`
+- Symbol, data-sources and rulebook pages
+- `src/lib/nav.ts`, `Icon.tsx`, `vitest.config.ts`, `package.json` (`bundle:worker`), `.gitignore`
+
+### Tests
+
+- **Automated:** 51 unit tests pass (35 before). TypeScript, lint (0 errors) and the production build pass.
+- **Live on production**, checked on NVDA and `/setups`:
+  - no console errors;
+  - no horizontal overflow at 375px;
+  - the glance shows the reassess level, the move since the pivot, agreement and the weekly direction;
+  - the setup card reads SELL, correction complete, R:R 3.5, 4.3% risk;
+  - Ask Viridia's weekly, invalidation and what-changed answers render;
+  - `/setups` lists 222+ setups while the recompute runs.
+- **Engine parity:** `/api/health/engine` shows the worker's stored result and the app's live computation match (candidates and zones) at `…+rank-1.1.0+setup-1.0.1`.
+
+### Unresolved
+
+- **Recompute in progress.** At the time of writing, about 975 of 4,031 daily analyses were on the new engine, most-traded first. Setups and structure filters fill in as it runs.
+- **Worker deploys are manual.** The analysis worker is deployed as a bundle (`npm run bundle:worker`) through the Supabase connector. It needs a Supabase access token in GitHub secrets to deploy from CI.
+- **Database size:** 425 MB of 500 MB. The history adds about 0.5 MB a day. `price_bars` (302 MB) needs a retention decision soon.
+- **"What changed" has no previous day yet.** It starts working after the next session.
+- **Weekly and daily are counted independently.** Multi-degree reconciliation is a later engine phase.
+- **Setups are not backtested.** The R:R and confidence gates are geometric, not proven profitable.
+- Carried over from Cycle 1: Supabase Site URL and SMTP, and the untested signed-in flow on production.
+
+### Recommended Cycle 4 phases
+
+1. **Backtesting framework.** Replay setups and the preferred count's calls historically, with no look-ahead, to measure hit rate by setup kind. This is needed before anyone trusts the signals.
+2. **Setup chart overlay.** Draw the entry, stop and target on the price chart, with the alternate count's path.
+3. **Multi-degree reconciliation.** Check that waves 2 and 4 subdivide into threes at the lower degree, and reconcile weekly and daily counts into one.
+4. **Database plan.** Retention for price bars, and CI deploys for the worker.
+5. **Alerts for watchlists,** when accounts come back into scope: setup triggered, stop hit, target reached.

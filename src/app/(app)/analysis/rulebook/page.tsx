@@ -102,7 +102,7 @@ export default function RulebookPage() {
                 ))}
               </div>
               <p className="text-[12px] text-fg-3">
-                Pattern confidence is added by the ranking engine (Phase 7). Until then no score is shown.
+                This is the rulebook&apos;s worked example. On a security page, every rule-valid count also gets a Pattern Confidence score that ranks it against the other counts.
               </p>
             </div>
           </section>

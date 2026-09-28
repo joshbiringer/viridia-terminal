@@ -28,11 +28,11 @@ const PHASES: [string, string, "live" | "next" | "planned"][] = [
   ["4", "Elliott Wave hard-rule validation", "live"],
   ["5", "Candidate count generation", "live"],
   ["6", "Fibonacci engine and confluence zones", "live"],
-  ["7", "Preferred and alternate count ranking", "next"],
-  ["8", "Interactive chart overlays", "planned"],
-  ["9", "Multi-timeframe analysis", "planned"],
-  ["10", "Market-wide Elliott Wave scanner", "planned"],
-  ["11", "Historical backtesting framework", "planned"],
+  ["7", "Preferred and alternate count ranking", "live"],
+  ["8", "Chart overlays: wave count, invalidation, confluence zones", "live"],
+  ["9", "Multi-timeframe analysis (weekly alignment live; multi-degree reconciliation next)", "next"],
+  ["10", "Market-wide wave scanner and buy/sell setups", "live"],
+  ["11", "Historical backtesting framework", "next"],
 ];
 
 function nextScheduledSync(now = new Date()): Date {
