@@ -26,6 +26,8 @@ export function AskViridiaButton(props: Props) {
     const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
     window.addEventListener("viridia:ask", onOpen);
+    // arriving from Mission Control's "Ask Viridia" opens the panel straight away
+    if (new URLSearchParams(window.location.search).get("ask") === "1") queueMicrotask(onOpen);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("viridia:ask", onOpen); };
   }, []);
 

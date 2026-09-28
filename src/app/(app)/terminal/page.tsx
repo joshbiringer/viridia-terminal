@@ -1,270 +1,132 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { db } from "@/lib/supabase";
-import { getBreadth, getOverview, scan } from "@/lib/market-data/snapshot";
+import { getBreadth, scan } from "@/lib/market-data/snapshot";
+import { getPulse } from "@/lib/market-data/pulse";
 import { greeting, marketState } from "@/lib/market-hours";
-import { fmtDate, fmtInt } from "@/lib/format";
-import { MarketStrip } from "@/components/MarketStrip";
-import { BreadthSummary } from "@/components/BreadthSummary";
-import { ScannerTable } from "@/components/ScannerTable";
-import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
+import { fmtDate } from "@/lib/format";
+import { fmtPrice } from "@/lib/market-data/bars";
 import { FirstRun } from "@/components/FirstRun";
 import { GlobeHero } from "@/components/brief/GlobeHero";
 import { getViewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
-import { countLabel } from "@/components/ScannerTable";
-import { stockHref } from "@/lib/format";
-import { fmtPrice } from "@/lib/market-data/bars";
-import { pct } from "@/lib/market-data/snapshot";
-import { describeChange, getChanges } from "@/lib/analysis/brief";
+import { getChanges } from "@/lib/analysis/brief";
 import { setupScan } from "@/lib/analysis/setup-scan";
 import { entryText } from "@/lib/analysis/setups";
 import { SETUP_LABEL } from "@/lib/analysis/candidates";
-import { SideChip } from "@/components/analysis/SideChip";
-import { HistoryTag } from "@/components/analysis/HistoryTag";
 import { getTrackRecord } from "@/lib/analysis/track-record";
+import {
+  PULSE_GROUPS, PULSE_SYMBOLS, changeSentence, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection,
+} from "@/lib/analysis/mission";
+import { DrawerProvider } from "@/components/mission/SecurityDrawer";
+import { MarketPulse } from "@/components/mission/MarketPulse";
+import { AskCommand, type Line } from "@/components/mission/AskCommand";
+import { PrepareMyDay } from "@/components/mission/PrepareMyDay";
+import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, WatchlistRail, WhatChangedFeed, type Tile } from "@/components/mission/Panels";
 
-const SWING_ORDER: [SwingStructure, string][] = [
-  ["higher_highs_lows", "var(--pos-chart)"], ["expanding", "var(--alt)"], ["contracting", "var(--fib)"],
-  ["lower_highs_lows", "var(--neg)"], ["insufficient", "var(--border-2)"],
-];
-
-export const metadata: Metadata = { title: "Brief" };
+export const metadata: Metadata = { title: "Mission Control" };
 export const dynamic = "force-dynamic";
 
-
-/** Structure presets shown on the home page, each linking to the scanner with that filter. */
-const PRESETS: [string, string][] = [
-  ["wave3", "Wave 3 in progress"], ["wave5", "Wave 5 in progress"], ["wave_c", "Wave C in progress"],
-  ["abc_done", "Correction complete"], ["five_done", "Five waves complete"], ["near_invalidation", "Near invalidation"],
+const LIQUID = 25_000_000; // $25M average daily dollar volume
+const DV = `dv=${LIQUID}`;
+const TILES: (Omit<Tile, "n"> & { params: Record<string, unknown> })[] = [
+  { label: "Strong structure", hint: "Preferred daily count with Pattern Confidence 70+", href: `/scanner?score=70&${DV}&sort=confidence`, params: { p_min_score: 70 } },
+  { label: "Near a Fib zone", hint: "Within 3% of a Fibonacci confluence zone", href: `/scanner?s=near_zone&${DV}`, params: { p_structure: "near_zone" } },
+  { label: "Near 52-week high", hint: "Trading near the 52-week high", href: `/scanner?near=high&${DV}`, params: { p_near: "high" } },
+  { label: "Wave 3 in progress", hint: "Preferred count is in wave 3", href: `/scanner?s=wave3&${DV}`, params: { p_structure: "wave3" } },
+  { label: "Correction complete", hint: "An A-B-C correction has completed", href: `/scanner?s=abc_done&${DV}`, params: { p_structure: "abc_done" } },
+  { label: "Near invalidation", hint: "Within 3% of the level that breaks the preferred count", href: `/scanner?s=near_invalidation&${DV}`, params: { p_structure: "near_invalidation" } },
 ];
-const LIQUID = 25_000_000; // $25M average daily dollar volume: setups a reader can actually trade
 
-export default async function TerminalHome({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+export default async function MissionControl({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   const viewer = await getViewer().catch(() => null);
-  const watchedCount = viewer
-    ? ((await (await authClient()).from("watchlist_items").select("security_id", { count: "exact", head: true })).count ?? 0)
-    : 0;
-  const showFirstRun = !viewer || watchedCount === 0 || (await searchParams).welcome === "1";
-  const watched = viewer && watchedCount > 0
+  const watched = viewer
     ? (((await (await authClient()).rpc("my_watchlist")).data ?? []) as { symbol: string }[]).map((r) => r.symbol)
     : [];
-  const [changes, watchChanges, gainers, losers, topSetups, record] = await Promise.all([
-    getChanges({ minDollarVolume: LIQUID, limit: 8 }).catch(() => []),
-    watched.length ? getChanges({ symbols: watched, limit: 8 }).catch(() => []) : Promise.resolve([]),
-    scan({ p_sort: "change", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
-    scan({ p_sort: "change_asc", p_limit: 4, p_min_dollar_volume: LIQUID }).catch(() => []),
-    setupScan({ p_sort: "confidence", p_limit: 5, p_min_rr: 1.5, p_min_dollar_volume: LIQUID }).catch(() => []),
+  const welcome = (await searchParams).welcome === "1";
+
+  const [pulse, breadth, changes, watchChanges, gainers, losers, topSetups, record, active, watchPulse, ...tileRows] = await Promise.all([
+    getPulse(PULSE_SYMBOLS).catch(() => []),
+    getBreadth().catch(() => null),
+    getChanges({ minDollarVolume: LIQUID, limit: 40 }).catch(() => []),
+    watched.length ? getChanges({ symbols: watched, limit: 20 }).catch(() => []) : Promise.resolve([]),
+    scan({ p_sort: "change", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
+    scan({ p_sort: "change_asc", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
+    setupScan({ p_sort: "confidence", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID }).catch(() => []),
     getTrackRecord().catch(() => []),
+    scan({ p_sort: "dollar_volume", p_limit: 8 }).catch(() => []),
+    watched.length ? getPulse(watched.slice(0, 40)).catch(() => []) : Promise.resolve([]),
+    ...TILES.map((t) => scan({ ...t.params, p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => [])),
   ]);
-  const hist = (kind: string, side: string) => record.find((x) => x.kind === kind && x.side === side);
-  const [overview, breadth, active, swingRes, setups, ...presetRows] = await Promise.all([
-    getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }),
-    db().rpc("swing_breadth", { p_timeframe: "1d", p_degree: "intermediate" }),
-    scan({ p_sort: "confidence", p_limit: 8, p_min_score: 70, p_min_dollar_volume: LIQUID }).catch(() => []),
-    ...PRESETS.map(([k]) => scan({ p_structure: k, p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => [])),
-  ]);
-  const presetCounts = PRESETS.map(([k, label], i) => ({ k, label, n: presetRows[i]?.[0]?.total ?? 0 }));
-  const swingCounts = ((swingRes.data as { counts?: Record<string, number> } | null)?.counts ?? {}) as Partial<Record<SwingStructure, number>>;
-  const swingTotal = Object.values(swingCounts).reduce((a, b) => a + (b ?? 0), 0);
+  const railMode = watched.length ? "watchlist" : viewer ? "empty" : "popular";
+  const railRows = watched.length ? watchPulse : await getPulse(active.map((r) => r.symbol)).catch(() => []);
+
+  const spy = pulse.find((r) => r.symbol === "SPY") ?? null;
+  const lastTs = spy?.last_ts ?? pulse[0]?.last_ts ?? null;
+  const since = closeLabel(lastTs);
+  const reg = regime(breadth, spy);
+  const marketChanges = changes.map(changeSentence);
+  const watchSentences = watchChanges.map(changeSentence);
+  const feed = whatChanged({
+    pulse, breadth, market: marketChanges, watchlist: watchSentences,
+    gainer: gainers[0] ?? null, loser: losers[0] ?? null,
+  });
+  const tiles: Tile[] = TILES.map((t, i) => ({ label: t.label, hint: t.hint, href: t.href, n: tileRows[i]?.[0]?.total ?? 0 }));
   const m = marketState();
+  const name = viewer?.firstName ? `, ${viewer.firstName}` : "";
+
+  // Ask Viridia and Prepare My Day answers, assembled from the same data as the page
+  const marketLines: Line[] = [
+    { text: reg.sentence },
+    ...feed.filter((f) => f.kind === "market" || f.kind === "rates" || f.kind === "macro" || f.kind === "breadth").map((f) => ({ text: f.text })),
+  ];
+  const improving: Line[] = marketChanges.filter((c) => c.improving).slice(0, 8).map((c) => ({ symbol: c.symbol, text: c.text }));
+  const watchLines: Line[] | null = viewer ? watchSentences.map((c) => ({ symbol: c.symbol, text: c.text })) : null;
+  const setupLines: Line[] = topSetups.map((r) => ({
+    symbol: r.symbol,
+    text: `${r.side === "buy" ? "Buy" : "Sell"} · ${SETUP_LABEL[r.kind] ?? r.kind}${r.status === "waiting" ? " (waiting)" : ""} · entry ${r.setup ? entryText(r.setup) : "—"}, stop ${r.setup ? fmtPrice(r.setup.stop.price) : "—"}, target ${r.setup ? fmtPrice(r.setup.target.price) : "—"} · ${r.rr.toFixed(1)} : 1`,
+  }));
+  const events = Object.fromEntries(watchSentences.map((c) => [c.symbol, c.text]));
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" });
+  const by = new Map(pulse.map((r) => [r.symbol, r]));
+  const day: DaySection[] = [
+    { heading: `Markets through ${since}`, lines: PULSE_GROUPS.map((g) => `${g.label}: ${g.items.map((it) => {
+      const r = by.get(it.symbol);
+      return r ? `${it.label} ${fmtPct(returns(r).d1)} day, ${fmtPct(returns(r).w1)} week` : null;
+    }).filter(Boolean).join("; ")}.`) },
+    { heading: "Regime", lines: [reg.sentence] },
+    { heading: "What changed", lines: feed.map((f) => (f.symbol && ["structure", "watchlist", "move"].includes(f.kind) ? `${f.symbol}: ${f.text}` : f.text)) },
+    { heading: "Watchlist", lines: viewer
+      ? watchPulse.map((r) => `${r.symbol} ${fmtPrice(r.close)} (${fmtPct(returns(r).d1)})${waveShort(r.glance_pattern, r.glance_complete, r.glance_wave, r.glance_wave_dir) ? ` · ${waveShort(r.glance_pattern, r.glance_complete, r.glance_wave, r.glance_wave_dir)}` : ""}${r.setup_side ? ` · ${r.setup_side} setup` : ""}${events[r.symbol] ? ` · ${events[r.symbol]}` : ""}`)
+      : ["Sign in to include your watchlist."] },
+    { heading: "Setups to review", lines: setupLines.map((l) => `${l.symbol}: ${l.text}`) },
+  ];
 
   return (
-    <>
+    <DrawerProvider>
       <GlobeHero
-        title={`${greeting().replace(/\.$/, "")}${viewer?.firstName ? `, ${viewer.firstName}` : ""}.`}
-        subtitle={`${m.label} Prices are end of day, as of ${fmtDate(overview[0]?.last_ts)}. Below: what changed, the setups worth a look, and where structure stands.`}
+        title={`${greeting().replace(/\.$/, "")}${name}.`}
+        subtitle={`Here's what changed through ${since}. ${m.label} Prices are end of day, as of ${fmtDate(lastTs)}.`}
+        actions={<PrepareMyDay title={`Prepare my day · ${today}`} sections={day} className="btn sm border-[#F4D38A]/60 bg-[#F4D38A]/15 text-white hover:bg-[#F4D38A]/25" />}
       />
 
-      {showFirstRun && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
+      {welcome && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="h3">Market overview</h2>
-          <span className="card-s">ETF proxies. Index levels aren&apos;t in the current data plan.</span>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <AskCommand market={marketLines} improving={improving} watchlist={watchLines} setups={setupLines} />
+          <MarketPulse rows={pulse} asOf={fmtDate(lastTs)} />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <MarketRegime r={reg} b={breadth} />
+            <WhatChangedFeed items={feed} since={since} />
+          </div>
+          <ScannerTiles tiles={tiles} />
+          <SetupsPanel rows={topSetups} record={record} />
         </div>
-        <MarketStrip rows={overview} />
-      </section>
-
-      {breadth && <BreadthSummary b={breadth} />}
-
-      <section className="card" aria-labelledby="changed-title">
-        <div className="card-h">
-          <div>
-            <h2 id="changed-title" className="card-t">What changed</h2>
-            <p className="card-s mt-0.5">Since the previous session: wave structure and setups for securities over $25M a day{watched.length ? ", and your watchlist" : ""}</p>
-          </div>
-        </div>
-        <div className="grid gap-px bg-line lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <div className="bg-panel px-5 py-4">
-            {watched.length > 0 && (
-              <ChangeList title="Your watchlist" rows={watchChanges} empty="No structure changes on your watchlist since the previous session." />
-            )}
-            <ChangeList
-              title="Across the market" rows={changes}
-              empty="No structure changes to report yet. Viridia started recording each security's count on September 28, 2026; day-over-day changes appear after the next session."
-            />
-          </div>
-          <div className="flex flex-col gap-4 bg-panel px-5 py-4">
-            <MoveList title="Biggest gains" rows={gainers} />
-            <MoveList title="Biggest declines" rows={losers} />
-          </div>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="card-h">
-          <div>
-            <h2 className="card-t">Setups to review</h2>
-            <p className="card-s mt-0.5">Highest-confidence setups at 1.5 : 1 or better, securities over $25M a day</p>
-          </div>
-          <span className="ml-auto flex gap-2">
-            <Link href="/setups/track-record" className="btn sm">Track record</Link>
-            <Link href="/setups" className="btn sm">All setups</Link>
-          </span>
-        </div>
-        {topSetups.length ? (
-          <ul className="divide-y divide-line">
-            {topSetups.map((r) => (
-              <li key={r.symbol}>
-                <Link href={stockHref(r.symbol)} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-hover">
-                  <span className="tk w-16">{r.symbol}</span>
-                  <SideChip side={r.side} short />
-                  <span className="min-w-0 flex-1 truncate text-[13px]">{SETUP_LABEL[r.kind] ?? r.kind}{r.status === "waiting" ? <span className="text-fg-3"> · waiting</span> : null}</span>
-                  <span className="num text-[12.5px] text-fg-3">entry {r.setup ? entryText(r.setup) : "—"} · stop {r.setup ? fmtPrice(r.setup.stop.price) : "—"}</span>
-                  <HistoryTag h={hist(r.kind, r.side)} />
-                  <span className="num w-14 text-right text-[13px] font-[650]">{r.rr.toFixed(1)} : 1</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : <p className="px-5 py-6 text-[13px] text-fg-2">No liquid setup at 1.5 : 1 or better right now.</p>}
-        <div className="src"><span><b>Note</b>Setups restate a wave count as entry, stop and target. They are research output, not recommendations; see the track record for how each kind has done.</span></div>
-      </section>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="card">
-          <div className="card-h">
-            <div>
-              <h2 className="card-t">Most active</h2>
-              <p className="card-s mt-0.5">Ranked by 20-day average dollar volume</p>
-            </div>
-            <Link href="/scanner" className="btn sm ml-auto">Open scanner</Link>
-          </div>
-          <ScannerTable rows={active} compact />
-        </section>
-
-        <section className="card flex flex-col">
-          <div className="card-h">
-            <div>
-              <h2 className="card-t">Wave structure today</h2>
-              <p className="card-s mt-0.5">Preferred daily counts, securities over $25M a day</p>
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col gap-5 px-5 py-5">
-            <ul className="grid grid-cols-2 gap-2">
-              {presetCounts.map((p) => (
-                <li key={p.k}>
-                  <Link href={`/scanner?s=${p.k}&dv=${LIQUID}`} className="flex h-full flex-col rounded-[var(--r-md)] border border-line px-3 py-2.5 transition-colors hover:border-line-2 hover:bg-hover">
-                    <span className="num text-[18px] font-[650] tracking-[-0.02em]">{fmtInt(p.n)}</span>
-                    <span className="text-[12.5px] text-fg-2">{p.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {swingTotal > 0 && (
-              <div>
-                <div className="flex items-baseline justify-between text-[13px]">
-                  <span className="font-medium">Intermediate swing structure, daily</span>
-                  <span className="num text-fg-3">{fmtInt(swingTotal)}</span>
-                </div>
-                <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-hover">
-                  {SWING_ORDER.map(([k, c]) => (
-                    <i key={k} style={{ width: `${((swingCounts[k] ?? 0) / swingTotal) * 100}%`, background: c }} title={SWING_LABEL[k]} />
-                  ))}
-                </div>
-                <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12.5px] sm:grid-cols-2 xl:grid-cols-1">
-                  {SWING_ORDER.map(([k, c]) => (
-                    <li key={k} className="flex items-center gap-2">
-                      <span className="dot" style={{ background: c }} />
-                      <span className="text-fg-2">{SWING_LABEL[k]}</span>
-                      <span className="num ml-auto font-medium">{fmtInt(swingCounts[k] ?? 0)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <p className="mt-auto text-[12.5px] text-fg-3">
-              Coverage and data status: <Link href="/data-sources" className="text-brand hover:underline">Data sources</Link>
-            </p>
-          </div>
-        </section>
+        <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[72px] xl:max-h-[calc(100vh-88px)] xl:self-start xl:overflow-y-auto" aria-label="Your workspace">
+          <WatchlistRail rows={railRows} events={events} mode={railMode} />
+          <PortfolioSlot />
+          <NotConnected />
+        </aside>
       </div>
-
-      <section className="card">
-        <div className="card-h">
-          <div>
-            <h2 className="card-t">Highest-confidence structures</h2>
-            <p className="card-s mt-0.5">Preferred daily counts with Pattern Confidence 70+, most confident first</p>
-          </div>
-          <Link href={`/scanner?score=70&dv=${LIQUID}&sort=confidence`} className="btn sm ml-auto">See all</Link>
-        </div>
-        {setups.length ? (
-          <ul className="divide-y divide-line">
-            {setups.map((r) => (
-              <li key={r.symbol}>
-                <Link href={stockHref(r.symbol)} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-hover">
-                  <span className="tk w-16">{r.symbol}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-fg-2">{r.name}</span>
-                  <span className="whitespace-nowrap text-[13px]">{countLabel(r)}</span>
-                  <span className="num w-20 text-right text-[12.5px] text-fg-3" title="Distance to the count's invalidation level">
-                    {r.hold_dist != null ? `${(r.hold_dist * 100).toFixed(1)}% inv.` : "—"}
-                  </span>
-                  <span className="num w-8 text-right text-[14px] font-[650]">{r.glance_score}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="px-5 py-6 text-[13px] text-fg-2">No liquid security has a preferred count at 70 or above right now. The ranking may still be computing; the scanner shows its progress.</p>
-        )}
-        <div className="src"><span><b>Note</b>Pattern Confidence ranks how well a count fits Elliott guidelines. It is not a forecast, a probability or a recommendation.</span></div>
-      </section>
-    </>
-  );
-}
-
-function ChangeList({ title, rows, empty }: { title: string; rows: Awaited<ReturnType<typeof getChanges>>; empty: string }) {
-  return (
-    <div className="mb-4 last:mb-0">
-      <div className="label mb-2">{title}</div>
-      {rows.length ? (
-        <ul className="flex flex-col gap-2">
-          {rows.map((r) => (
-            <li key={r.symbol} className="text-[13px] leading-snug">
-              <Link href={stockHref(r.symbol)} className="tk mr-2 hover:text-brand">{r.symbol}</Link>
-              <span className="text-fg-2">{describeChange(r).join(" ")}</span>
-            </li>
-          ))}
-        </ul>
-      ) : <p className="text-[13px] leading-relaxed text-fg-3">{empty}</p>}
-    </div>
-  );
-}
-
-function MoveList({ title, rows }: { title: string; rows: Awaited<ReturnType<typeof scan>> }) {
-  return (
-    <div>
-      <div className="label mb-2">{title}</div>
-      <ul className="flex flex-col gap-1.5">
-        {rows.map((r) => (
-          <li key={r.symbol} className="flex items-baseline gap-3 text-[13px]">
-            <Link href={stockHref(r.symbol)} className="tk w-14 hover:text-brand">{r.symbol}</Link>
-            <span className="min-w-0 flex-1 truncate text-fg-3">{r.name}</span>
-            <span className={`num font-medium ${(r.change_pct ?? 0) >= 0 ? "text-pos" : "text-neg"}`}>{pct(r.change_pct, 1)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </DrawerProvider>
   );
 }

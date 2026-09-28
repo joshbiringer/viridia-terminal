@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 
 export default async function MarketsPage() {
   const liquid = { p_min_dollar_volume: 25_000_000, p_limit: 8 };
-  const [overview, breadth, gainers, decliners] = await Promise.all([
+  const [overview, breadth, gainers, decliners, active] = await Promise.all([
     getOverview(), getBreadth(), scan({ ...liquid, p_sort: "change" }), scan({ ...liquid, p_sort: "change_asc" }),
+    scan({ p_sort: "dollar_volume", p_limit: 10 }),
   ]);
   return (
     <>
@@ -34,6 +35,13 @@ export default async function MarketsPage() {
           <ScannerTable rows={decliners} compact />
         </section>
       </div>
+      <section className="card" id="activity">
+        <div className="card-h">
+          <div><h2 className="card-t">Most active</h2><p className="card-s mt-0.5">Ranked by 20-day average dollar volume</p></div>
+          <Link href="/scanner" className="btn sm ml-auto">Open scanner</Link>
+        </div>
+        <ScannerTable rows={active} compact />
+      </section>
     </>
   );
 }

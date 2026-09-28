@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HUBS, hubStatus, type Hub, type HubId } from "@/lib/market-sessions";
 import { Skyline } from "./Skyline";
@@ -17,12 +16,12 @@ const STATE_COLOR = { open: "#3CC689", break: "#E0A84A", closed: "#7C8F88" } as 
 const delta = (a: number, b: number) => ((((b - a) % 360) + 540) % 360) - 180;
 
 /**
- * The Brief's hero: a dotted globe (Natural Earth land, public domain) that turns slowly, with the
+ * Mission Control's header band: a dotted globe (Natural Earth land, public domain) that turns slowly, with the
  * world's market hubs marked. As each hub comes round to the front its skyline rises below and its
  * session status shows; picking a city turns the globe to it. Motion stops for readers who prefer
  * reduced motion and whenever the hero is off screen.
  */
-export function GlobeHero({ title, subtitle }: { title: string; subtitle: string }) {
+export function GlobeHero({ title, subtitle, actions }: { title: string; subtitle: string; actions?: React.ReactNode }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [focus, setFocus] = useState<HubId>("ny");
@@ -193,40 +192,38 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
   const statuses = useMemo(() => (now ? Object.fromEntries(HUBS.map((h) => [h.id, hubStatus(h, now)])) : null), [now]);
 
   return (
-    <section ref={wrapRef} className="globe-hero relative isolate overflow-hidden rounded-[var(--r-lg)] text-white" aria-label="Viridia Brief">
+    <section ref={wrapRef} className="globe-hero relative isolate overflow-hidden rounded-[var(--r-lg)] text-white" aria-label="Mission Control">
       <div className="globe-stars pointer-events-none absolute inset-0 -z-10" aria-hidden />
-      <div className="relative grid min-h-[360px] gap-4 px-5 pb-[150px] pt-6 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:pt-8">
-        <div className="relative z-10 flex min-w-0 flex-col gap-4">
+      <div className="relative grid gap-3 px-5 pb-[78px] pt-5 sm:px-6 md:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="relative z-10 flex min-w-0 flex-col gap-3">
           <div>
-            <p className="text-[12px] font-[600] uppercase tracking-[0.14em] text-[#7FE0B0]">Viridia Brief</p>
-            <h1 className="mt-2 text-[30px] font-[650] leading-tight tracking-[-0.03em] sm:text-[34px]">{title}</h1>
-            <p className="mt-1.5 max-w-[560px] text-[14px] leading-relaxed text-white/70">{subtitle}</p>
+            <p className="text-[11.5px] font-[600] uppercase tracking-[0.14em] text-[#7FE0B0]">Mission Control</p>
+            <h1 className="mt-1 text-[24px] font-[650] leading-tight tracking-[-0.025em] sm:text-[27px]">{title}</h1>
+            <p className="mt-1 max-w-[620px] text-[13.5px] leading-relaxed text-white/70">{subtitle}</p>
           </div>
 
-          <div className="max-w-[440px] rounded-[var(--r-lg)] border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur-[2px]" aria-live="polite">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[17px] font-[620] tracking-[-0.015em]">{hub.city}</span>
-              <span className="text-[12.5px] text-white/60">{hub.exchange}</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px]" aria-live="polite">
+            <span className="font-[600]">{hub.city}</span>
             {st ? (
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+              <>
                 <span className="inline-flex items-center gap-1.5 font-medium" style={{ color: STATE_COLOR[st.state] }}>
                   <span className="h-2 w-2 rounded-full" style={{ background: STATE_COLOR[st.state] }} />{STATE_LABEL[st.state]}
                 </span>
                 <span className="num text-white/80">{st.localTime} local</span>
                 <span className="text-white/60">{st.next}</span>
-              </div>
-            ) : <div className="mt-1 h-5" />}
+              </>
+            ) : <span className="h-4" />}
           </div>
 
-          <nav className="flex flex-wrap gap-1.5" aria-label="Market hubs">
+          <nav className="flex flex-wrap gap-1.5" aria-label="World market sessions">
             {HUBS.map((h: Hub) => {
               const s = statuses?.[h.id];
               const on = h.id === focus;
               return (
                 <button
                   key={h.id} onClick={(e) => pick(h.id, e.timeStamp)} aria-pressed={on}
-                  className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12.5px] transition-colors ${on ? "border-[#F4D38A]/70 bg-white/10 text-white" : "border-white/15 text-white/70 hover:border-white/30 hover:text-white"}`}
+                  title={s ? `${h.exchange}: ${STATE_LABEL[s.state]}, ${s.localTime} local. ${s.next}. Regular hours; non-U.S. holidays aren't shown.` : h.exchange}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12px] transition-colors ${on ? "border-[#F4D38A]/70 bg-white/10 text-white" : "border-white/15 text-white/70 hover:border-white/30 hover:text-white"}`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: s ? STATE_COLOR[s.state] : "#7C8F88" }} />
                   {h.city}
@@ -235,20 +232,15 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
             })}
           </nav>
 
-          <p className="-mt-2 text-[11px] text-white/40">Regular session hours; exchange holidays outside the U.S. aren&apos;t shown.</p>
-
-          <div className="mt-auto flex flex-wrap gap-2">
-            <Link href="/portfolio" className="btn sm border-white/20 bg-white/10 text-white hover:bg-white/15">Portfolio X-Ray</Link>
-            <Link href="/setups" className="btn sm border-white/20 bg-white/10 text-white hover:bg-white/15">Setups</Link>
-          </div>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </div>
 
-        <div className="pointer-events-none absolute right-[-90px] top-[-10px] w-[320px] opacity-35 sm:opacity-60 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[380px] md:opacity-100">
+        <div className="pointer-events-none absolute right-[-70px] top-[-20px] w-[240px] opacity-30 sm:opacity-50 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[220px] md:opacity-100">
           <canvas ref={canvasRef} className="aspect-square w-full" aria-hidden />
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[150px]" aria-hidden>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[84px]" aria-hidden>
         {prev && prev !== focus && <Skyline key={`p-${prev}`} id={prev} className="skyline-out absolute inset-0 h-full w-full" />}
         <Skyline key={`f-${focus}`} id={focus} className="skyline-in absolute inset-0 h-full w-full" />
       </div>

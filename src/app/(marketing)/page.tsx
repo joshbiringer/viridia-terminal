@@ -62,7 +62,7 @@ export default async function Landing() {
       <section className="border-t border-line">
         <div className="mx-auto grid max-w-[1200px] gap-px bg-line px-0 md:grid-cols-4">
           {([
-            ["See what matters", "The Brief opens with what changed since the last session: wave structure flips, new and expired setups, the biggest moves, and your watchlist.", "/terminal", "Open the Brief"],
+            ["See what matters", "Mission Control opens with what changed since the last session: the market pulse and regime, wave structure flips, new setups, the biggest moves and your watchlist, plus a one-click Prepare My Day.", "/terminal", "Open Mission Control"],
             ["Understand a portfolio", "Portfolio X-Ray measures concentration, beta, volatility, correlated positions, tax lots and each holding's structure. Nothing you paste is stored.", "/portfolio", "Try Portfolio X-Ray"],
             ["Context, not ratings", "Viridia Signals shows structure, trend, momentum and risk side by side, and every setup carries its historical track record.", "/setups/track-record", "See the track record"],
             ["Communicate better", "Every explanation has a client version: plain language, no jargon, the level that would change the view, ready to copy.", "/terminal/SPY", "See an example"],
@@ -82,7 +82,7 @@ export default async function Landing() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {([
             ["Viridia Research", "live", "Every U.S.-listed security: rule-checked Elliott Wave counts, Fibonacci confluence, Signals and setups with a track record."],
-            ["Viridia Markets", "live", "Market overview, breadth, a structure scanner and the daily Brief of what changed."],
+            ["Viridia Markets", "live", "Market overview, breadth, a structure scanner and Mission Control, the daily view of what changed."],
             ["Viridia Portfolio", "partial", "Portfolio X-Ray is live. Saved portfolios, model portfolios, drift monitoring and attribution are in development."],
             ["Viridia AI", "partial", "Ask Viridia explains every analysis, with a client version. Natural-language search across a practice comes later."],
             ["Viridia Advisor", "planned", "Client households, meeting preparation and planning opportunities, connected to your CRM and custodian."],
@@ -209,7 +209,7 @@ export default async function Landing() {
           <div>
             <p className="eyebrow">Access</p>
             <h2 className="h2 mt-3">Free during the beta.</h2>
-            <p className="lede mt-4 max-w-[520px]">Every security, wave count, setup, the Brief and Portfolio X-Ray are open now. A free account adds watchlists and saved preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>
+            <p className="lede mt-4 max-w-[520px]">Every security, wave count, setup, Mission Control and Portfolio X-Ray are open now. A free account adds watchlists and saved preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>
           </div>
           <div className="flex flex-col gap-3 md:items-end">
             <Link href="/signup" className="btn pri lg">Create a free account</Link>
@@ -234,7 +234,7 @@ export default async function Landing() {
             <p className="max-w-[280px] text-[13.5px] text-fg-3">The research and intelligence terminal for advisors, RIAs and portfolio managers.</p>
           </div>
           {[
-            ["Product", [["Brief", "/terminal"], ["Portfolio X-Ray", "/portfolio"], ["Setups", "/setups"], ["Scanner", "/scanner"], ["Markets", "/markets"]]],
+            ["Product", [["Mission Control", "/terminal"], ["Portfolio X-Ray", "/portfolio"], ["Setups", "/setups"], ["Scanner", "/scanner"], ["Markets", "/markets"]]],
             ["Resources", [["Methodology", "#methodology"], ["Data", "/data-sources"], ["Documentation", "/data-sources"]]],
             ["Company", [["About", "#product"], ["Contact", "#disclosures"]]],
             ["Legal", [["Terms", "#disclosures"], ["Privacy", "#disclosures"], ["Disclosures", "#disclosures"]]],
