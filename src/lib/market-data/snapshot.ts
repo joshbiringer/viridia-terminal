@@ -19,6 +19,10 @@ export interface ScanRow {
   symbol: string; name: string; exchange: string | null; asset_subtype: string; close: number | null;
   change_pct: number | null; trend: Trend; vs_sma50: number | null; vs_sma200: number | null;
   from_high: number | null; range_pos: number | null; dollar_volume: number | null; last_ts: string | null; total: number;
+  /** Preferred daily wave count (Phase 7); null until the security's analysis is ranked. */
+  glance_degree?: string | null; glance_pattern?: string | null; glance_complete?: boolean | null; glance_wave?: string | null;
+  glance_wave_dir?: "up" | "down" | null; glance_score?: number | null; glance_alt_score?: number | null;
+  glance_hold?: number | null; hold_dist?: number | null; zone_dist?: number | null;
 }
 
 export interface OverviewRow { symbol: string; name: string; close: number | null; prev_close: number | null; last_ts: string | null; spark: number[] }

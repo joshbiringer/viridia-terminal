@@ -23,7 +23,21 @@ export async function GET(req: Request) {
   if (!cached) return NextResponse.json({ symbol, error: "no cached analysis" }, { status: 404 });
   const bars = (barsRes.data ?? []) as PivotBar[];
   const live = computeAnalysis(bars, "1d");
-  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  // jsonb reorders object keys, so compare structurally and report the first differing path
+  const diff = (a: unknown, b: unknown, path = "$"): string | null => {
+    if (typeof a === "number" && typeof b === "number") return a === b || Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a)) ? null : path;
+    if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return a === b ? null : path;
+    if (Array.isArray(a) !== Array.isArray(b)) return path;
+    const ka = Object.keys(a as object).filter((k) => (a as Record<string, unknown>)[k] !== undefined);
+    const kb = Object.keys(b as object).filter((k) => (b as Record<string, unknown>)[k] !== undefined);
+    if (ka.length !== kb.length) return `${path} (keys ${ka.length} vs ${kb.length})`;
+    for (const k of ka) {
+      const d = diff((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`);
+      if (d) return d;
+    }
+    return null;
+  };
+  const cmp = (a: unknown, b: unknown) => { const d = diff(a, b); return d ? { equal: false, first_difference: d } : { equal: true }; };
   const comparable = cached.algorithm_version === ANALYSIS_VERSION && cached.current;
   return NextResponse.json({
     symbol,
@@ -33,8 +47,8 @@ export async function GET(req: Request) {
     analysis_timestamp: cached.analysis_timestamp,
     // only meaningful when the cache was built by this engine version from the same bars
     match: comparable ? {
-      candidates: same(live.candidate_counts_json, cached.candidates),
-      zones: same(live.confluence_zones_json, cached.zones),
+      candidates: cmp(live.candidate_counts_json, cached.candidates),
+      zones: cmp(live.confluence_zones_json, cached.zones),
     } : null,
   }, { headers: { "Cache-Control": "no-store" } });
 }

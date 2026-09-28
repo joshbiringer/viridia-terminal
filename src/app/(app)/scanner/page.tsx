@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { scan, TREND_METHOD } from "@/lib/market-data/snapshot";
+import { db } from "@/lib/supabase";
+import { ANALYSIS_VERSION, RANK_METHOD } from "@/lib/analysis/candidates";
 import { exchangeLabel, fmtInt } from "@/lib/format";
 import { ScannerTable } from "@/components/ScannerTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -8,18 +10,30 @@ import { PageHeader } from "@/components/ui/PageHeader";
 export const metadata: Metadata = { title: "Scanner" };
 
 const PAGE = 50;
-const STRUCTURE_FILTERS = [
-  "Potential Wave 3", "Potential Wave 5", "ABC completion", "Bullish impulse",
-  "Bearish impulse", "Fib confluence", "Near invalidation", "Trend reversal",
-];
+/** Structure presets: each one filters on the preferred daily wave count (engine Phase 7). */
+const STRUCTURE = [
+  ["wave3", "Wave 3 in progress", "Preferred count is an impulse or diagonal in its third wave"],
+  ["wave5", "Wave 5 in progress", "Preferred count is in its final motive wave"],
+  ["wave_c", "Wave C in progress", "Preferred count is a zigzag or flat in its last leg"],
+  ["abc_done", "Correction complete", "A three-wave zigzag or flat looks complete"],
+  ["five_done", "Five waves complete", "A five-wave impulse or diagonal looks complete"],
+  ["near_zone", "Near a Fib zone", "Within 3% of a Fibonacci confluence zone"],
+  ["near_invalidation", "Near invalidation", "Within 3% of the level that breaks the preferred count"],
+] as const;
+const DIRS = [["", "Any direction"], ["up", "Up"], ["down", "Down"]] as const;
+const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+)"]] as const;
 const TRENDS = [["", "Any trend"], ["uptrend", "Uptrend"], ["mixed", "Mixed"], ["downtrend", "Downtrend"]] as const;
 const EXCHANGES = ["XNAS", "XNYS", "ARCX", "BATS", "XASE"];
 const TYPES = [["", "Stocks and ETFs"], ["common", "Stocks"], ["etf", "ETFs"]] as const;
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
 const NEAR = [["", "Anywhere"], ["high", "Near 52-week high"], ["low", "Near 52-week low"]] as const;
-const SORTS = [["dollar_volume", "Dollar volume"], ["change", "Today's change"], ["vs_sma200", "Strength vs 200-day"], ["from_high", "Closest to 52w high"], ["symbol", "Ticker"]] as const;
+const SORTS = [
+  ["dollar_volume", "Dollar volume"], ["confidence", "Pattern Confidence"], ["invalidation", "Closest to invalidation"],
+  ["zone", "Closest to a Fib zone"], ["change", "Today's change"], ["vs_sma200", "Strength vs 200-day"],
+  ["from_high", "Closest to 52w high"], ["symbol", "Ticker"],
+] as const;
 
-type Params = Partial<Record<"trend" | "exchange" | "type" | "min" | "max" | "dv" | "near" | "sort" | "page", string>>;
+type Params = Partial<Record<"trend" | "exchange" | "type" | "min" | "max" | "dv" | "near" | "sort" | "page" | "s" | "dir" | "score" | "view", string>>;
 
 export default async function ScannerPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
@@ -33,41 +47,66 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
   const min = Number(sp.min) > 0 ? Number(sp.min) : null;
   const max = Number(sp.max) > 0 ? Number(sp.max) : null;
   const page = Math.max(1, Number(sp.page) || 1);
+  const structure = STRUCTURE.some(([k]) => k === sp.s) ? sp.s! : "";
+  const dir = pick(DIRS, sp.dir);
+  const score = pick(SCORES, sp.score);
+  const structural = !!(structure || dir || score);
+  const view = sp.view === "price" ? "price" : sp.view === "structure" || structural || sort === "confidence" || sort === "invalidation" || sort === "zone" ? "structure" : "price";
 
-  const rows = await scan({
-    p_trend: trend || null, p_exchange: exchange || null, p_type: type || null,
-    p_min_price: min, p_max_price: max, p_min_dollar_volume: dv ? Number(dv) : null,
-    p_near: near || null, p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE,
-  });
+  const [rows, cov] = await Promise.all([
+    scan({
+      p_trend: trend || null, p_exchange: exchange || null, p_type: type || null,
+      p_min_price: min, p_max_price: max, p_min_dollar_volume: dv ? Number(dv) : null,
+      p_near: near || null, p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE,
+      p_structure: structure || null, p_direction: dir || null, p_min_score: score ? Number(score) : null,
+    }),
+    db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
+  ]);
+  const coverage = (cov.data ?? null) as { ranked: number; with_count: number; total: number } | null;
   const total = rows[0]?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const href = (patch: Params) => {
-    const merged: Params = { trend, exchange, type, min: min ? String(min) : "", max: max ? String(max) : "", dv, near, sort: sort === "dollar_volume" ? "" : sort, page: "", ...patch };
+    const merged: Params = {
+      trend, exchange, type, min: min ? String(min) : "", max: max ? String(max) : "", dv, near,
+      sort: sort === "dollar_volume" ? "" : sort, s: structure, dir, score, view: sp.view === "price" || sp.view === "structure" ? sp.view : "",
+      page: "", ...patch,
+    };
     const p = new URLSearchParams(Object.entries(merged).filter(([, v]) => v) as [string, string][]);
     return `/scanner${p.size ? "?" + p : ""}`;
   };
-  const filtered = !!(trend || exchange || type || min || max || dv || near);
+  const filtered = !!(trend || exchange || type || min || max || dv || near || structural);
+  const recomputing = coverage && coverage.ranked < coverage.total;
 
   return (
     <>
-      <PageHeader title="Wave Scanner" description="Screen thousands of securities by trend, liquidity, price and 52-week position." />
+      <PageHeader title="Wave Scanner" description="Screen thousands of securities by wave structure, trend, liquidity and price." />
 
       <section className="card">
         <div className="flex flex-col gap-3 border-b border-line px-5 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-[13.5px] font-medium">Structure</span>
-            <span className="text-[12.5px] text-fg-3">Available when the wave engine is live (Phase 10)</span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-[13.5px] font-medium">Wave structure</span>
+            <span className="text-[12.5px] text-fg-3">Filters on each security&apos;s preferred daily count</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {STRUCTURE_FILTERS.map((f) => (
-              <button key={f} disabled className="h-8 rounded-lg border border-dashed border-line-2 px-3 text-[13px] text-fg-3" title="Needs the wave engine">
-                {f}
-              </button>
-            ))}
-          </div>
+          <nav className="flex flex-wrap gap-2" aria-label="Structure filters">
+            {STRUCTURE.map(([k, label, hint]) => {
+              const on = structure === k;
+              return (
+                <Link key={k} href={href({ s: on ? "" : k })} title={hint} aria-current={on ? "true" : undefined}
+                  className={`inline-flex h-8 items-center rounded-[var(--r-md)] border px-3 text-[13px] transition-colors ${on ? "border-brand bg-[var(--accent-bg)] font-medium text-brand" : "border-line text-fg-2 hover:border-line-2 hover:text-fg"}`}>
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          {recomputing && (
+            <p className="text-[12.5px] text-fg-3">
+              Ranking is being computed across the universe: <span className="num">{coverage!.ranked.toLocaleString("en-US")}</span> of{" "}
+              <span className="num">{coverage!.total.toLocaleString("en-US")}</span> securities so far, most-traded first. Structure filters only see ranked securities.
+            </p>
+          )}
         </div>
 
-        <form action="/scanner" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 2xl:grid-cols-[repeat(7,minmax(0,1fr))_auto]">
+        <form action="/scanner" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
           <Select name="trend" label="Trend" value={trend} options={TRENDS} />
           <Select name="type" label="Asset class" value={type} options={TYPES} />
           <Select name="exchange" label="Exchange" value={exchange} options={[["", "Any exchange"], ...EXCHANGES.map((x) => [x, exchangeLabel(x)] as const)]} />
@@ -80,20 +119,29 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
               <input className="field w-full min-w-0" name="max" inputMode="decimal" placeholder="Max" defaultValue={max ?? ""} aria-label="Maximum price" />
             </span>
           </label>
+          <Select name="dir" label="Wave in progress" value={dir} options={DIRS} />
+          <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
+          {structure && <input type="hidden" name="s" value={structure} />}
           <div className="col-span-2 flex items-end gap-2 md:col-span-1 2xl:col-span-1">
             <button type="submit" className="btn pri w-full md:w-auto">Scan</button>
             {filtered && <Link href="/scanner" className="btn">Reset</Link>}
           </div>
         </form>
 
-        <div className="flex items-center gap-3 px-5 py-3 text-[13px]">
+        <div className="flex flex-wrap items-center gap-3 px-5 py-3 text-[13px]">
           <span className="num font-medium">{fmtInt(total)} securities</span>
-          <span className="text-fg-3">from the automatic-coverage universe and names opened on demand</span>
+          <span className="hidden text-fg-3 sm:inline">from the automatic-coverage universe and names opened on demand</span>
+          <div className="seg ml-auto" role="tablist" aria-label="Columns">
+            <Link role="tab" aria-selected={view === "structure"} href={href({ view: "structure" })}>Wave structure</Link>
+            <Link role="tab" aria-selected={view === "price"} href={href({ view: "price" })}>Price and trend</Link>
+          </div>
         </div>
-        {rows.length ? <ScannerTable rows={rows} /> : (
+        {rows.length ? <ScannerTable rows={rows} structure={view === "structure"} /> : (
           <div className="px-6 py-14 text-center text-fg-2">
-            No securities match. Trend filters need 200 sessions of history, which the backfill is still loading; try removing the trend filter.
+            {structural
+              ? "No ranked security matches this structure right now. Structures change as new bars arrive; try another filter or a lower confidence."
+              : "No securities match. Trend filters need 200 sessions of history, which the backfill is still loading; try removing the trend filter."}
           </div>
         )}
         {pages > 1 && (
@@ -105,7 +153,10 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
             </span>
           </div>
         )}
-        <div className="src"><span><b>Method</b>{TREND_METHOD} 52-week measures need a full year of bars.</span></div>
+        <div className="src">
+          <span><b>Structure</b>The preferred count is the highest-ranked rule-valid count at intermediate degree (primary, then minor, when intermediate has none). {RANK_METHOD}</span>
+          <span><b>Trend</b>{TREND_METHOD} 52-week measures need a full year of bars.</span>
+        </div>
       </section>
     </>
   );
