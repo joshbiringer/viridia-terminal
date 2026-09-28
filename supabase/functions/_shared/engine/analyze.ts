@@ -7,6 +7,7 @@ import { DEGREES, analyzePivots, compact, swingStructure, type Degree, type Pivo
 import { compactSet, generateCandidates, type CandidateSet, type CompactCandidateSet } from "./candidates.ts";
 import { analyzeFib, type FibLevel } from "./fib.ts";
 import { ANALYSIS_VERSION } from "./version.ts";
+import { glanceOf } from "./glance.ts";
 
 export { ANALYSIS_VERSION };
 
@@ -37,6 +38,7 @@ export function computeAnalysis(bars: PivotBar[], timeframe: Timeframe) {
     candidates: sets,
   });
   const round = (x: number) => Math.round(x * 1e4) / 1e4;
+  const candidate_counts_json = Object.fromEntries(DEGREES.map((d) => [d, withTargets(compactSet(sets[d]), fib.targets)])) as Record<Degree, CompactCandidateSet>;
   return {
     pivots: a,
     pivots_json: Object.fromEntries(DEGREES.map((d) => {
@@ -44,7 +46,9 @@ export function computeAnalysis(bars: PivotBar[], timeframe: Timeframe) {
       return [d, { params: s.params, pivots: s.pivots.map(compact), pending: s.pending }];
     })),
     swing_structure: Object.fromEntries(DEGREES.map((d) => [d, swingStructure(a.degrees[d].pivots).structure])),
-    candidate_counts_json: Object.fromEntries(DEGREES.map((d) => [d, withTargets(compactSet(sets[d]), fib.targets)])) as Record<Degree, CompactCandidateSet>,
+    candidate_counts_json,
+    /** Preferred/alternate summary (Phase 7); the worker stores it as scanner columns. */
+    glance: glanceOf(candidate_counts_json),
     candidate_count: DEGREES.reduce((n, d) => n + sets[d].candidates.length, 0),
     /** Level counts only; the full list is recomputable and would triple the row size. */
     fib_level_counts: Object.fromEntries(DEGREES.map((d) => [d, fib.levels[d].filter((l) => !l.reached).length])),

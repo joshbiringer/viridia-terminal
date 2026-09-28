@@ -89,11 +89,15 @@ describe("candidate generation", () => {
     expect(c).toBeUndefined();
   });
 
-  it("is deterministic and sorted by coverage", () => {
+  it("is deterministic and ranked by Pattern Confidence, ties in coverage order", () => {
     const a = run(bars), b = run(bars);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-    const sorted = [...a.candidates].sort(byCoverage);
-    expect(sorted.map((c) => c.id)).toEqual(a.candidates.map((c) => c.id));
+    const c = a.candidates;
+    for (let i = 1; i < c.length; i++) {
+      const x = c[i - 1].rank!, y = c[i].rank!;
+      expect(x.score).toBeGreaterThanOrEqual(y.score);
+      if (x.score === y.score && x.evaluated === y.evaluated) expect(byCoverage(c[i - 1], c[i])).toBeLessThan(0);
+    }
   });
 
   it("has no look-ahead: a prefix of the bars only sees counts built from its own pivots", () => {

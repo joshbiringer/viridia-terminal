@@ -16,6 +16,8 @@ import { ConfluenceZones } from "@/components/ConfluenceZones";
 import { WatchButton } from "@/components/WatchButton";
 import { TrackEvent } from "@/components/TrackEvent";
 import { WelcomeGuide } from "@/components/WelcomeGuide";
+import { DegreeProvider } from "@/components/analysis/DegreeContext";
+import { StructureGlance } from "@/components/analysis/StructureGlance";
 
 type Props = { params: Promise<{ symbol: string }>; searchParams: Promise<{ welcome?: string }> };
 
@@ -135,8 +137,14 @@ export default async function StockTerminal({ params, searchParams }: Props) {
 
       {welcome && <WelcomeGuide symbol={sec.symbol} />}
 
+      <DegreeProvider auto={swings?.glances.auto?.degree ?? null}>
+      <StructureGlance
+        symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
+        zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf}
+      />
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} />
+        <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
         <StructureSummary snap={snap} swings={swings} />
       </div>
 
@@ -159,6 +167,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
         </div>
         </div>
       </section>
+      </DegreeProvider>
     </>
   );
 }

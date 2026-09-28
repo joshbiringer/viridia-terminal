@@ -2,9 +2,9 @@
  * Viridia engine, Phase 5: candidate wave counts.
  *
  * Turns a pivot series (pivots.ts) into every Elliott Wave labeling of the recent swings that passes
- * the hard rules (rules.ts). Nothing here ranks, scores or prefers one count over another: that is
- * Phase 7. The output is the set of counts the rules still allow, each with its evidence and the
- * price that would invalidate it.
+ * the hard rules (rules.ts). The output is the set of counts the rules still allow, each with its
+ * evidence and the price that would invalidate it. Ranking (Pattern Confidence) is rank.ts, Phase 7:
+ * candidates are generated in a neutral order, then ranked, then truncated.
  *
  * Method
  *   1. Take the last `lookback` confirmed pivots of one degree. The latest pivot is the anchor: every
@@ -15,8 +15,9 @@
  *   3. For each chain of 3 to 6 points, and each pattern the length allows, run the Phase 4
  *      validator with the bars and the most extreme price since the anchor. A chain survives only
  *      with zero rule failures. Chains that break a rule are counted by rule id, for transparency.
- *   4. Counts are de-duplicated and sorted by a neutral, documented order (see `byCoverage`): more
- *      waves explained first, then longer spans. This is ordering for display, not a confidence.
+ *   4. Counts are de-duplicated and put in a neutral, documented order (see `byCoverage`): more
+ *      waves explained first, then longer spans. rank.ts then orders them by guideline evidence
+ *      (stable, so ties keep the neutral order) and the list is truncated after ranking.
  *
  * Deterministic: the same pivots, bars and options always give the same candidates in the same order.
  * No look-ahead: the input is whatever bars the caller passes; the engine never reads beyond them.
@@ -25,6 +26,7 @@ import type { Degree, Pivot, PivotBar, PendingSwing, Timeframe } from "./pivots.
 import {
   RULES_VERSION, validate, type Direction, type Invalidation, type Pattern, type Validation, type WavePoint,
 } from "./rules.ts";
+import { rankCandidates, encodeFactors, type Rank } from "./rank.ts";
 
 export const CANDIDATES_VERSION = "candidates-1.0.0";
 
@@ -88,6 +90,8 @@ export interface Candidate {
   spanBars: number;
   /** Full Phase 4 validation, for the evidence panel. */
   validation: Validation;
+  /** Pattern Confidence (Phase 7). Set by generateCandidates. */
+  rank?: Rank;
 }
 
 export interface CandidateSet {
@@ -214,7 +218,7 @@ export function generateCandidates(input: GenerateInput, options: CandidateOptio
   };
   extend([A]);
 
-  const all = [...found.values()].sort(byCoverage);
+  const all = rankCandidates([...found.values()].sort(byCoverage), bars);
   return {
     version: CANDIDATES_VERSION, timeframe, degree, anchor: anchorOf(piv[A]),
     examined, eliminated,
@@ -244,10 +248,16 @@ export interface CompactCandidate {
   inv: number | null; ev: [number, number, number, number];
   /** Fibonacci targets for the wave in progress (Phase 6): [price, label, primary]. */
   tg?: [number, string, boolean][];
+  /** Pattern Confidence (Phase 7): score, [passed, evaluated]. */
+  sc?: number; rk?: [number, number];
+  /** Evidence factors (rank.ts encodeFactors); stored for the preferred and alternate counts only. */
+  fx?: number[];
 }
 
-export function compactCandidate(c: Candidate): CompactCandidate {
+export function compactCandidate(c: Candidate, withFactors = false): CompactCandidate {
   return {
+    ...(c.rank ? { sc: c.rank.score, rk: [c.rank.passed, c.rank.evaluated] as [number, number] } : {}),
+    ...(c.rank && withFactors ? { fx: encodeFactors(c.rank.factors) } : {}),
     id: c.id, pt: c.pattern, st: c.subtype, d: c.direction === "up" ? "u" : "d", c: c.complete,
     p: c.points.map((x) => [x.ts, x.price]),
     nx: {
@@ -267,7 +277,7 @@ export interface CompactCandidateSet {
 export function compactSet(s: CandidateSet, keep = 12): CompactCandidateSet {
   return {
     v: s.version, a: s.anchor, x: s.examined, e: s.eliminated, eb: s.eliminatedBy.slice(0, 6),
-    t: s.truncated || s.candidates.length > keep, c: s.candidates.slice(0, keep).map(compactCandidate),
+    t: s.truncated || s.candidates.length > keep, c: s.candidates.slice(0, keep).map((c, i) => compactCandidate(c, i < 2)),
   };
 }
 

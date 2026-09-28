@@ -63,9 +63,9 @@ export function StructureSummary({ snap, swings }: { snap: Snapshot | null; swin
             <span className="h-2.5 w-2.5 rounded-[3px] bg-brand" aria-hidden /> Elliott Wave
           </div>
           <p className="mt-1.5 text-[13px] leading-relaxed text-fg-2">
-            Candidate counts below are built on these swings and each one passes every rule in the{" "}
-            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. Fibonacci targets and confluence zones
-            are live; ranking arrives in Phase 7, so no count is presented as the preferred one yet.
+            Wave counts are built on these swings and each one passes every rule in the{" "}
+            <Link href="/analysis/rulebook" className="text-brand hover:underline">rulebook</Link>. They are ranked by how many
+            guidelines they satisfy; the preferred and alternate counts are summarized above the chart.
           </p>
         </div>
       </div>

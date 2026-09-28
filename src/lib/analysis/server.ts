@@ -1,7 +1,7 @@
 import { db } from "@/lib/supabase";
 import type { BarRow } from "@/lib/market-data/bars";
 import { DEGREES, fromCompact, pivotsForClient, type ClientPivots, type Degree } from "./pivots";
-import { ANALYSIS_VERSION, candidatesForClient, fromCompactSet, type ClientCandidates, type ClientFib } from "./candidates";
+import { ANALYSIS_VERSION, candidatesForClient, fromCompactSet, glancesOf, type ClientCandidates, type ClientFib, type Glances } from "./candidates";
 import type { CompactCandidateSet } from "@engine/candidates";
 import type { ConfluenceZone } from "@engine/fib";
 
@@ -12,6 +12,8 @@ export interface SwingSummary {
   pivots: ClientPivots;
   candidates: ClientCandidates;
   fib: ClientFib | null;
+  /** Preferred and alternate counts per degree (Phase 7). */
+  glances: Glances;
   version: string;
 }
 
@@ -35,7 +37,7 @@ export async function getDailyAnalysis(symbol: string): Promise<SwingSummary | n
     const candidates = Object.fromEntries(DEGREES.map((d) => [d, fromCompactSet(c.candidates![d])])) as ClientCandidates;
     return {
       source: "cache", asOf: c.analysis_timestamp, bars: c.input_bars, version: ANALYSIS_VERSION,
-      pivots: { version: ANALYSIS_VERSION.split("+")[0], degrees }, candidates, fib: c.zones,
+      pivots: { version: ANALYSIS_VERSION.split("+")[0], degrees }, candidates, fib: c.zones, glances: glancesOf(c.candidates),
     };
   }
   const { data } = await db().rpc("get_bars", { p_symbol: symbol, p_timeframe: "1d", p_limit: 600 });
@@ -44,6 +46,6 @@ export async function getDailyAnalysis(symbol: string): Promise<SwingSummary | n
   const live = candidatesForClient(bars, "1d");
   return {
     source: "live", asOf: bars.at(-1)!.ts, bars: bars.length, version: ANALYSIS_VERSION,
-    pivots: pivotsForClient(bars, "1d"), candidates: live.candidates, fib: live.fib,
+    pivots: pivotsForClient(bars, "1d"), candidates: live.candidates, fib: live.fib, glances: live.glances,
   };
 }

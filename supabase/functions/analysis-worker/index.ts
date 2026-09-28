@@ -5,7 +5,8 @@
  *   1. takes a lease so runs never overlap
  *   2. asks Postgres for securities whose cached analysis is missing or stale (analysis_batch)
  *   3. runs the engine on their bars (engine/analyze.ts): pivots (Phase 3), candidate wave counts
- *      validated against the hard rules (Phases 4–5), Fibonacci levels and confluence zones (Phase 6).
+ *      validated against the hard rules (Phases 4–5), Fibonacci levels and confluence zones (Phase 6),
+ *      and Pattern Confidence ranking with the preferred/alternate summary (Phase 7).
  *      These are the same engine files the app and tests use.
  *   4. stores results (store_analysis_results), until the time budget is spent
  *
@@ -15,6 +16,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import type { PivotBar, Timeframe } from "../_shared/engine/pivots.ts";
 import { ANALYSIS_VERSION, computeAnalysis } from "../_shared/engine/analyze.ts";
+import type { Glance } from "../_shared/engine/glance.ts";
 
 const TIME_BUDGET_MS = 100_000;
 // Small batches: after a version change every row is stale and cold bar reads approach the 8 s statement limit.
@@ -26,8 +28,19 @@ type BatchRow = {
   symbol: string;
   source_first_ts: string | null;
   source_last_ts: string | null;
-  bars: [string, number, number, number, number][];
+  bars: [string, number, number, number, number, number | null][];
 };
+
+/** Preferred/alternate summary as scanner columns (Phase 7). */
+function glanceColumns(g: Glance | null) {
+  const p = g?.preferred;
+  return {
+    glance_degree: g?.degree ?? null, glance_pattern: p?.pattern ?? null, glance_complete: p?.complete ?? null,
+    glance_wave: p?.wave ?? null, glance_wave_dir: p?.waveDirection ?? null, glance_score: p?.score ?? null,
+    glance_alt_score: g?.alternate?.score ?? null, glance_hold: p?.hold ?? null, glance_hold_side: p?.holdSide ?? null,
+    glance_target: p?.target?.price ?? null,
+  };
+}
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -63,7 +76,7 @@ Deno.serve(async (req) => {
         if (!rows.length) continue;
 
         const out = rows.map((r) => {
-          const bars: PivotBar[] = r.bars.map(([ts, open, high, low, close]) => ({ ts, open, high, low, close }));
+          const bars: PivotBar[] = r.bars.map(([ts, open, high, low, close, volume]) => ({ ts, open, high, low, close, volume }));
           const a = computeAnalysis(bars, tf);
           counts += a.candidate_count;
           zones += a.confluence_zones_json.zones.length;
@@ -76,6 +89,7 @@ Deno.serve(async (req) => {
             swing_structure: a.swing_structure, pivots_json: a.pivots_json,
             candidate_counts_json: a.candidate_counts_json, candidate_count: a.candidate_count,
             fib_levels_json: a.fib_level_counts, confluence_zones_json: a.confluence_zones_json,
+            ...glanceColumns(a.glance),
           };
         });
         const { error: storeErr } = await db.rpc("store_analysis_results", { p_rows: out });

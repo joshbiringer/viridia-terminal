@@ -12,8 +12,9 @@ import {
 } from "@/lib/market-data/bars";
 import { DEGREES, DEGREE_LABEL, PIVOT_ALGORITHM_VERSION, SWING_LABEL, type ClientPivots, type Degree } from "@/lib/analysis/pivots";
 import { SourceFooter } from "./SourceFooter";
-import type { ConfluenceZone } from "@/lib/analysis/candidates";
+import type { ClientCandidates, ConfluenceZone } from "@/lib/analysis/candidates";
 import { useViewer } from "./ViewerProvider";
+import { useDegree } from "./analysis/DegreeContext";
 
 type Legend = { o: number; h: number; l: number; c: number; v: number; label: string } | null;
 
@@ -24,7 +25,7 @@ function alpha(hex: string, a: number) {
   return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})`;
 }
 function palette() {
-  return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2") };
+  return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2"), wave: css("--brand") || "#176B4D" };
 }
 
 
@@ -36,7 +37,10 @@ const METHOD: Record<ChartTimeframe, string> = {
   "1mo": "Resampled from daily bars",
 };
 
-export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: ConfluenceZone[] }) {
+/** Whether wave point i of a count is a swing high (odd legs move with the pattern). */
+const isHigh = (i: number, dir: "up" | "down") => (i % 2 === 1) === (dir === "up");
+
+export function PriceChart({ symbol, zones = [], counts = null }: { symbol: string; zones?: ConfluenceZone[]; counts?: ClientCandidates | null }) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -46,6 +50,8 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
   const tfRef = useRef<ChartTimeframe>("1d");
   const zigRef = useRef<ISeriesApi<"Line"> | null>(null);
   const pendRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const countRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const holdLine = useRef<IPriceLine | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
   const { prefs } = useViewer();
@@ -66,7 +72,11 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
   const [showPivots, setShowPivots] = useState(true);
   const [showFib, setShowFib] = useState(true);
   const zoneLines = useRef<IPriceLine[]>([]);
-  const [degree, setDegree] = useState<Degree>((prefs?.default_degree && prefs.default_degree !== "auto" ? prefs.default_degree : "intermediate") as Degree);
+  const { degree, setDegree } = useDegree((prefs?.default_degree && prefs.default_degree !== "auto" ? prefs.default_degree : "intermediate") as Degree);
+  const [showCount, setShowCount] = useState(true);
+  // the preferred count at this degree (ranked first); drawn on the daily chart its points come from
+  const preferred = counts?.[degree]?.candidates[0]?.score != null ? counts[degree].candidates[0] : null;
+  const countOn = showCount && !!preferred && tf === "1d";
   const [themeTick, setThemeTick] = useState(0);
 
   // Create the chart once; re-theme it when the app theme changes.
@@ -92,7 +102,8 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
     const lineOpts = { lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false, lineWidth: 2 as const, color: p.pivot };
     const zig = chart.addSeries(LineSeries, lineOpts);
     const pend = chart.addSeries(LineSeries, { ...lineOpts, lineStyle: LineStyle.Dashed, lineWidth: 1 as const });
-    zigRef.current = zig; pendRef.current = pend;
+    const count = chart.addSeries(LineSeries, { ...lineOpts, color: p.wave, lineWidth: 2 as const });
+    zigRef.current = zig; pendRef.current = pend; countRef.current = count;
     markersRef.current = createSeriesMarkers(candles, []);
     chart.subscribeCrosshairMove((param) => {
       // The logical index is the bar's position in the data array.
@@ -113,7 +124,7 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
       setThemeTick((n) => n + 1);
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => { mo.disconnect(); chart.remove(); chartRef.current = null; zigRef.current = null; pendRef.current = null; markersRef.current = null; };
+    return () => { mo.disconnect(); chart.remove(); chartRef.current = null; zigRef.current = null; pendRef.current = null; countRef.current = null; markersRef.current = null; };
   }, []);
 
   // Load bars for the selected timeframe; poll while a history fetch is queued.
@@ -159,23 +170,49 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
 
   // Pivot overlay: a zigzag through confirmed pivots, a dashed leg to the swing still in progress,
   // and HH/HL/LH/LL labels. Pivots come from the engine, computed on exactly these bars.
+  // Preferred wave count (Phase 7): a line through its labeled points with the wave numbers, and its
+  // invalidation level. Pivots draw underneath; where both mark the same bar, the wave label wins.
   useEffect(() => {
-    const zig = zigRef.current, pend = pendRef.current, markers = markersRef.current;
-    if (!zig || !pend || !markers) return;
-    const series = showPivots && bars.length ? pivots?.degrees[degree] : null;
-    if (!series) { zig.setData([]); pend.setData([]); markers.setMarkers([]); return; }
-    const color = palette().pivot, ink = palette().ink;
-    zig.applyOptions({ color }); pend.applyOptions({ color });
+    const zig = zigRef.current, pend = pendRef.current, markers = markersRef.current, count = countRef.current, candles = candleRef.current;
+    if (!zig || !pend || !markers || !count || !candles) return;
+    const pal = palette();
     const t = (ts: string) => chartTime(ts, tf) as Time;
-    zig.setData(series.pivots.map((p) => ({ time: t(p.ts), value: p.price })));
-    const last = series.pivots.at(-1);
-    pend.setData(last && series.pending ? [{ time: t(last.ts), value: last.price }, { time: t(series.pending.ts), value: series.pending.price }] : []);
-    const labelled = series.pivots.length <= 60; // HH/HL/LH/LL text only where it stays legible
-    markers.setMarkers(series.pivots.map((p): SeriesMarker<Time> => ({
-      time: t(p.ts), position: p.type === "high" ? "aboveBar" : "belowBar", shape: "circle", size: 0.6,
-      color: ink, text: labelled ? p.label : "",
-    })));
-  }, [pivots, showPivots, degree, bars, tf, themeTick]);
+    const out: SeriesMarker<Time>[] = [];
+    const taken = new Set<string>();
+
+    if (holdLine.current) { candles.removePriceLine(holdLine.current); holdLine.current = null; }
+    if (countOn && bars.length && preferred) {
+      count.applyOptions({ color: pal.wave });
+      count.setData(preferred.points.map((p) => ({ time: t(p.ts), value: p.price })));
+      preferred.points.forEach((p, i) => {
+        taken.add(p.ts);
+        const high = isHigh(i, preferred.direction);
+        out.push({ time: t(p.ts), position: high ? "aboveBar" : "belowBar", shape: high ? "arrowDown" : "arrowUp", size: 0.8,
+          color: pal.wave, text: i === 0 ? "" : p.label });
+      });
+      if (preferred.next.hold != null || preferred.invalidation != null) {
+        holdLine.current = candles.createPriceLine({
+          price: (preferred.next.hold ?? preferred.invalidation)!, color: pal.neg, lineWidth: 1, lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true, title: "Invalidation",
+        });
+      }
+    } else count.setData([]);
+
+    const series = showPivots && bars.length ? pivots?.degrees[degree] : null;
+    if (series) {
+      zig.applyOptions({ color: pal.pivot }); pend.applyOptions({ color: pal.pivot });
+      zig.setData(series.pivots.map((p) => ({ time: t(p.ts), value: p.price })));
+      const last = series.pivots.at(-1);
+      pend.setData(last && series.pending ? [{ time: t(last.ts), value: last.price }, { time: t(series.pending.ts), value: series.pending.price }] : []);
+      const labelled = series.pivots.length <= 60 && !countOn; // HH/HL/LH/LL text only where it stays legible
+      for (const p of series.pivots) {
+        if (taken.has(p.ts)) continue;
+        out.push({ time: t(p.ts), position: p.type === "high" ? "aboveBar" : "belowBar", shape: "circle", size: 0.6, color: pal.ink, text: labelled ? p.label : "" });
+      }
+    } else { zig.setData([]); pend.setData([]); }
+    // markers must be in time order
+    markers.setMarkers(out.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0)));
+  }, [pivots, showPivots, degree, bars, tf, themeTick, countOn, preferred]);
 
   // Fibonacci confluence zones (engine Phase 6): a solid line at each zone's midpoint and dashed lines
   // at its edges, labeled with the number of relationships that meet there.
@@ -217,6 +254,10 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
           <div className="seg" role="group" aria-label="Overlays">
             <button aria-pressed={showFib} disabled={!zones.length} onClick={() => setShowFib((v) => !v)} title={zones.length ? "Fibonacci confluence zones (daily analysis)" : "No confluence zones for this security yet"}>
               <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--fib)" }} aria-hidden />Fib
+            </button>
+            <button aria-pressed={countOn} disabled={!preferred || tf !== "1d"} onClick={() => setShowCount((v) => !v)}
+              title={!preferred ? "No ranked wave count at this degree" : tf !== "1d" ? "The wave count is drawn on the daily chart" : "Preferred wave count and its invalidation level"}>
+              <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--wave)" }} aria-hidden />Count
             </button>
             <button aria-pressed={showPivots} onClick={() => setShowPivots((v) => !v)} title="Adaptive swing pivots">
               <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--neutral)" }} aria-hidden />Pivots

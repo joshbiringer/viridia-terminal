@@ -28,6 +28,8 @@ export interface PivotBar {
   high: number;
   low: number;
   close: number;
+  /** Shares traded. Optional: used only by the ranking engine's volume evidence (rank.ts). */
+  volume?: number | null;
 }
 
 export interface Pivot {

@@ -2,33 +2,31 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useViewer } from "./ViewerProvider";
+import { useDegree } from "./analysis/DegreeContext";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { fmtDate } from "@/lib/format";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
-import { CANDIDATE_METHOD, PATTERN_LABEL, type ClientCandidate, type ClientCandidates } from "@/lib/analysis/candidates";
+import { BAND_LABEL, CANDIDATE_METHOD, PATTERN_LABEL, band, type ClientCandidate, type ClientCandidates } from "@/lib/analysis/candidates";
 
 type Degree = keyof ClientCandidates;
 const ORDER: Degree[] = ["primary", "intermediate", "minor"];
 const PREFERRED_TAB: Degree[] = ["intermediate", "minor", "primary"];
 
 /**
- * Candidate wave counts (engine Phase 5). Every count shown passes every hard rule. They are listed by
- * how much of the recent structure they explain; which is preferred is decided by ranking in Phase 7.
+ * Candidate wave counts (engine Phase 5), ranked by Pattern Confidence (Phase 7). Every count shown
+ * passes every hard rule; the first is the preferred count and the second the alternate.
  */
 export function WaveCounts({ data, asOf, version, source }: { data: ClientCandidates | null; asOf?: string; version?: string; source?: string }) {
-  const { prefs } = useViewer();
-  const chosen = prefs?.default_degree && prefs.default_degree !== "auto" ? (prefs.default_degree as Degree) : null;
-  const first = chosen ?? (data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate");
-  const [deg, setDeg] = useState<Degree>(first);
+  const first = data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
+  const { degree: deg, setDegree: setDeg } = useDegree(first);
   const [open, setOpen] = useState<string | null>(null);
   const set = data?.[deg];
 
   return (
     <div className="card">
       <div className="card-h">
-        <h2 className="card-t">Candidate wave counts</h2>
-        <span className="chip">Unranked</span>
+        <h2 className="card-t" id="counts">Candidate wave counts</h2>
+        {set?.candidates.some((c) => c.score != null) ? <span className="chip">Ranked</span> : <span className="chip">Unranked</span>}
         <div className="seg ml-auto" role="tablist" aria-label="Wave degree">
           {ORDER.map((d) => (
             <button key={d} role="tab" aria-selected={deg === d} onClick={() => { setDeg(d); setOpen(null); }}>
@@ -61,8 +59,8 @@ export function WaveCounts({ data, asOf, version, source }: { data: ClientCandid
           )}
 
           <ul className="divide-y divide-line">
-            {set.candidates.map((c) => (
-              <CountRow key={c.id} c={c} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} />
+            {set.candidates.map((c, i) => (
+              <CountRow key={c.id} c={c} rank={c.score != null ? i : null} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} />
             ))}
           </ul>
 
@@ -86,15 +84,19 @@ export function WaveCounts({ data, asOf, version, source }: { data: ClientCandid
   );
 }
 
-function CountRow({ c, open, onToggle }: { c: ClientCandidate; open: boolean; onToggle: () => void }) {
+function CountRow({ c, rank, open, onToggle }: { c: ClientCandidate; rank: number | null; open: boolean; onToggle: () => void }) {
   const done = c.points.slice(1).map((p) => p.label);
   const arrow = c.next.direction === "up" ? "↑" : "↓";
   const nextText = c.complete ? `Pattern complete; next move ${c.next.direction}` : `Wave ${c.next.label} in progress ${arrow}`;
   return (
     <li>
       <button onClick={onToggle} aria-expanded={open} className="flex w-full flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3.5 text-left hover:bg-hover">
-        <span className={`dot ${c.direction === "up" ? "bg-pos" : "bg-neg"}`} aria-hidden />
+        {c.score != null ? (
+          <span className="num w-8 shrink-0 text-[14px] font-[650]" title={`Pattern Confidence ${c.score}: ${BAND_LABEL[band(c.score)]}`}>{c.score}</span>
+        ) : <span className={`dot ${c.direction === "up" ? "bg-pos" : "bg-neg"}`} aria-hidden />}
         <span className="min-w-[150px] text-[14px] font-medium">
+          {rank === 0 && <span className="chip acc mr-2 align-[1px]">Preferred</span>}
+          {rank === 1 && <span className="chip warn mr-2 align-[1px]">Alternate</span>}
           {PATTERN_LABEL[c.pattern]}{c.subtype ? <span className="text-fg-3"> · {c.subtype.replace("_", " ")}</span> : null}
           <span className="text-fg-3"> {c.direction === "up" ? "up" : "down"}</span>
         </span>
@@ -118,11 +120,22 @@ function CountRow({ c, open, onToggle }: { c: ClientCandidate; open: boolean; on
           </div>
           <div className="flex flex-col gap-3">
             <div>
-              <div className="label">Evidence (not a score)</div>
+              <div className="label">Evidence</div>
               <p className="mt-1 text-fg-2">
-                {c.evidence.evaluated ? `${c.evidence.passed} of ${c.evidence.evaluated} guidelines met` : "No guidelines measurable yet"}
+                {c.confidence
+                  ? `Pattern Confidence ${c.score} (${BAND_LABEL[band(c.score!)].toLowerCase()}): ${c.confidence.passed} of ${c.confidence.evaluated} checks met`
+                  : c.evidence.evaluated ? `${c.evidence.passed} of ${c.evidence.evaluated} guidelines met` : "No guidelines measurable yet"}
                 {c.evidence.fibTotal ? `; ${c.evidence.fibMatches} of ${c.evidence.fibTotal} ratios near a Fibonacci value` : ""}.
               </p>
+              {c.confidence?.factors && (
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {c.confidence.factors.map((f) => (
+                    <li key={f.id} className="flex gap-2 leading-snug text-fg-2">
+                      <span className={f.pass ? "text-pos" : "text-neg"} aria-hidden>{f.pass ? "✓" : "✗"}</span><span>{f.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             {c.targets.length > 0 && (
               <div>
