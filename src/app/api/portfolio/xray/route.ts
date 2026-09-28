@@ -19,7 +19,10 @@ export async function POST(req: Request) {
     db().rpc("portfolio_context", { p_symbols: symbols }),
     db().rpc("closes_for", { p_symbols: symbols, p_limit: 253 }),
   ]);
-  if (ctxRes.error || closesRes.error) return NextResponse.json({ errors: ["Market data couldn't be loaded. Try again in a moment."] }, { status: 502 });
+  if (ctxRes.error || closesRes.error) {
+    console.error("xray", ctxRes.error?.message, closesRes.error?.message);
+    return NextResponse.json({ errors: ["Market data couldn't be loaded. Try again in a moment."], detail: (ctxRes.error ?? closesRes.error)?.message }, { status: 502 });
+  }
   const closes = new Map<string, Close[]>();
   for (const r of (closesRes.data ?? []) as { symbol: string; ts: string; close: number }[]) {
     if (!closes.has(r.symbol)) closes.set(r.symbol, []);
