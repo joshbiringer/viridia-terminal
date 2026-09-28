@@ -3,7 +3,7 @@
 import { fmtPrice } from "@/lib/market-data/bars";
 import { pct } from "@/lib/market-data/snapshot";
 import { DEGREES, DEGREE_LABEL, type Degree } from "@/lib/analysis/pivots";
-import { BAND_LABEL, SETUP_LABEL, SETUP_METHOD, type Setups } from "@/lib/analysis/candidates";
+import { BAND_LABEL, SETUP_LABEL, SETUP_METHOD, type SetupReasons, type Setups } from "@/lib/analysis/candidates";
 import { SETUP_STORY, entryText } from "@/lib/analysis/setups";
 import { useDegree } from "./DegreeContext";
 import { SideChip } from "./SideChip";
@@ -14,7 +14,7 @@ const dist = (price: number, close: number | null) => (close ? price / close - 1
  * The buy or sell setup the preferred count implies at the page's degree: entry, stop, target and
  * reward:risk, all taken from the count. Shows nothing invented when the count defines no setup.
  */
-export function SetupCard({ setups, close }: { setups: Setups | null; close: number | null }) {
+export function SetupCard({ setups, reasons, close }: { setups: Setups | null; reasons?: SetupReasons | null; close: number | null }) {
   const { degree, setDegree } = useDegree("intermediate");
   const s = setups?.[degree] ?? null;
   const others = DEGREES.filter((d) => d !== degree && setups?.[d]);
@@ -33,8 +33,8 @@ export function SetupCard({ setups, close }: { setups: Setups | null; close: num
         <div className="px-5 py-5">
           <p className="text-[14px] font-medium">No setup at {DEGREE_LABEL[degree].toLowerCase()} degree right now</p>
           <p className="mt-1 max-w-[680px] text-[13px] leading-relaxed text-fg-2">
-            A setup needs the preferred count to define a stop and a target on the right sides of the entry, and price must not have
-            reached either yet. When it doesn&apos;t, Viridia shows nothing rather than a guess.
+            {reasons?.[degree] ?? "A setup needs the preferred count to define a stop and a target on the right sides of the entry."}{" "}
+            Viridia shows nothing rather than a guess.
           </p>
           {others.length > 0 && (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-fg-2">

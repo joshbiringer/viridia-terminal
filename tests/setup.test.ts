@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CompactCandidate, CompactCandidateSet } from "../supabase/functions/_shared/engine/candidates";
 import type { ConfluenceZone } from "../supabase/functions/_shared/engine/fib";
-import { setupOf } from "../supabase/functions/_shared/engine/setup";
+import { setupOf, setupVerdict } from "../supabase/functions/_shared/engine/setup";
 
 const cand = (o: Partial<CompactCandidate> & Pick<CompactCandidate, "pt" | "d" | "c" | "p" | "nx">): CompactCandidate => ({
   id: "x", st: null, inv: null, ev: [0, 0, 0, 0], sc: 72, rk: [5, 6], ...o,
@@ -67,10 +67,24 @@ describe("Wave setups", () => {
     expect(s.target.price).toBe(140);
   });
 
+  it("rejects a setup whose target is closer than its stop, and says why", () => {
+    const c = cand({ pt: "impulse", d: "u", c: false, p: P(100, 120, 108), nx: { l: "3", d: "u", h: 100, hs: "below", hr: null }, tg: [[140, "t", true]] });
+    const v = setupVerdict(set(c), "minor", 125, []); // risk 25, reward 15
+    expect(v.setup).toBeNull();
+    expect(v.reason).toMatch(/closer than the stop/);
+  });
+
+  it("offers no pullback entry for a diagonal's wave 4", () => {
+    const c = cand({ pt: "ending_diagonal", d: "u", c: false, p: P(100, 130, 110, 135), nx: { l: "4", d: "d", h: 110, hs: "below", hr: null } });
+    const v = setupVerdict(set(c), "minor", 134, []);
+    expect(v.setup).toBeNull();
+    expect(v.reason).toMatch(/diagonal/);
+  });
+
   it("flags wave 5 as late in the trend and marks close calls", () => {
     const pref = cand({ id: "a", pt: "impulse", d: "u", c: false, p: P(100, 120, 110, 150, 140), nx: { l: "5", d: "u", h: 120, hs: "below", hr: null }, tg: [[160, "Wave 5 = wave 1", true]], sc: 70 });
     const alt = cand({ id: "b", pt: "zigzag", d: "u", c: false, p: P(110, 150, 140), nx: { l: "C", d: "u", h: 110, hs: "below", hr: null }, sc: 68 });
-    const s = setupOf(set(pref, alt), "intermediate", 145, [])!;
+    const s = setupOf(set(pref, alt), "intermediate", 135, [])!;
     expect(s.kind).toBe("wave5");
     expect(s.closeCall).toBe(true);
     expect(s.cautions.some((x) => x.startsWith("Late in the trend"))).toBe(true);

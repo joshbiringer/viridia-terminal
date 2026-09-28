@@ -85,7 +85,9 @@ export default async function StockTerminal({ params, searchParams }: Props) {
   const edgar = sec.cik ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${sec.cik}&type=&dateb=&owner=include&count=40` : null;
   const stored = (mappings.data ?? []) as { provider: string; provider_symbol: string; valid_from: string }[];
   const providerRows = [
-    ...stored.map((m) => ({ provider: m.provider, symbol: m.provider_symbol })),
+    // one row per provider and symbol (stored mappings repeat when a listing changes and changes back)
+    ...stored.filter((m, i) => stored.findIndex((x) => x.provider === m.provider && x.provider_symbol === m.provider_symbol) === i)
+      .map((m) => ({ provider: m.provider, symbol: m.provider_symbol })),
     ...(["massive"] as const).filter((p) => !stored.some((m) => m.provider === p)).map((p) => ({ provider: p, symbol: toProviderSymbol(sec.symbol, p) })),
   ];
   const coverage = sum?.coverage === "full" ? "Automatic, updated nightly" : sum?.coverage === "on_demand" ? "On demand, then updated nightly" : "Fetched when first opened";
@@ -93,6 +95,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
   return (
     <>
       <TrackEvent event="analysis_viewed" props={{ symbol: sec.symbol }} />
+      <DegreeProvider auto={swings?.glances.auto?.degree ?? null}>
       <header className="flex flex-col gap-5">
         <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
           <div className="min-w-0">
@@ -116,7 +119,11 @@ export default async function StockTerminal({ params, searchParams }: Props) {
           )}
           <div className="ml-auto flex flex-wrap gap-2">
             <WatchButton securityId={sec.id} symbol={sec.symbol} />
-            <AskViridiaButton symbol={sec.symbol} />
+            <AskViridiaButton
+              symbol={sec.symbol} close={sum?.last_close ?? null} glances={swings?.glances ?? null}
+              candidates={swings?.candidates ?? null} zones={swings?.fib?.zones ?? []} setups={swings?.setups ?? null}
+              setupReasons={swings?.setupReasons ?? null}
+            />
           </div>
         </div>
         <nav className="-mb-2 flex gap-6 overflow-x-auto border-b border-line" aria-label="Security sections">
@@ -138,12 +145,11 @@ export default async function StockTerminal({ params, searchParams }: Props) {
 
       {welcome && <WelcomeGuide symbol={sec.symbol} />}
 
-      <DegreeProvider auto={swings?.glances.auto?.degree ?? null}>
       <StructureGlance
         symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
         zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf}
       />
-      <SetupCard setups={swings?.setups ?? null} close={sum?.last_close ?? null} />
+      <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
