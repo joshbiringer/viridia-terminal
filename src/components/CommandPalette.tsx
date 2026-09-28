@@ -51,7 +51,8 @@ export function CommandPalette() {
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("viridia:open-palette", show); };
   }, [open, show, hide]);
 
-  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 10); }, [open]);
+  // focus synchronously on open so keystrokes typed right after ⌘K are not lost
+  useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
   // Debounced, cancellable search against the security master
   useEffect(() => {
@@ -135,7 +136,7 @@ export function CommandPalette() {
         <div className="flex items-center gap-3 border-b border-line px-4 text-fg-3">
           <Icon name="search" />
           <input
-            ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }}
+            ref={inputRef} autoFocus value={q} onChange={(e) => { setQ(e.target.value); setSel(0); }}
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, rows.length - 1)); }
               else if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }

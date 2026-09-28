@@ -7,7 +7,6 @@ import { fmtDate, fmtInt } from "@/lib/format";
 import { MarketStrip } from "@/components/MarketStrip";
 import { BreadthSummary } from "@/components/BreadthSummary";
 import { ScannerTable } from "@/components/ScannerTable";
-import { OpenPaletteButton } from "@/components/OpenPaletteButton";
 import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FirstRun } from "@/components/FirstRun";
@@ -61,7 +60,6 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
             {m.label} Prices are end of day, as of {fmtDate(overview[0]?.last_ts)}.
           </span>
         }
-        actions={<OpenPaletteButton label="Search markets" className="btn w-full justify-start text-fg-3 sm:w-[300px]" />}
       />
 
       {showFirstRun && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}

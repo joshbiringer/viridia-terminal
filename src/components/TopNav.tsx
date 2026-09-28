@@ -27,13 +27,18 @@ export function TopNav() {
       </button>
       <Link href="/terminal" className="flex-none lg:w-[200px] lg:pl-1.5" aria-label="Viridia home"><ViridiaLockup /></Link>
       <button
-        className="mx-auto flex h-9 w-full max-w-[560px] min-w-0 items-center gap-2.5 rounded-[var(--r-md)] border border-line bg-bg px-3 text-left text-[13.5px] text-fg-3 transition-colors duration-[var(--t-fast)] hover:border-line-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mx-auto hidden h-9 w-full max-w-[560px] min-w-0 items-center sm:flex gap-2.5 rounded-[var(--r-md)] border border-line bg-bg px-3 text-left text-[13.5px] text-fg-3 transition-colors duration-[var(--t-fast)] hover:border-line-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
         aria-label="Search stocks, ETFs and commands" aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
       >
         <Icon name="search" />
         <span className="min-w-0 flex-1 truncate">Search stocks, ETFs and commands…</span>
         <kbd className="hidden sm:inline">{mac ? "⌘ K" : "Ctrl K"}</kbd>
+      </button>
+      <button
+        className="btn ghost sm ml-auto px-2 text-fg-2 sm:hidden" aria-label="Search" onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
+      >
+        <Icon name="search" className="h-[18px] w-[18px]" />
       </button>
       <button
         className="btn ghost sm hidden px-2 text-fg-2 sm:inline-flex" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}

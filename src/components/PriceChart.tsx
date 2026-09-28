@@ -27,10 +27,6 @@ function palette() {
   return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2") };
 }
 
-const PLANNED_OVERLAYS = [
-  { id: "waves", label: "Waves", color: "var(--wave)", phase: "Wave labels arrive with candidate counts (Phases 4–8)" },
-  { id: "channels", label: "Channels", color: "var(--alt)", phase: "Channels arrive with the chart overlays (Phase 8)" },
-];
 
 const METHOD: Record<ChartTimeframe, string> = {
   "1h": "Regular-session hours (09:30–16:00 ET) built from 30-minute bars",
@@ -219,11 +215,6 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="seg" role="group" aria-label="Overlays">
-            {PLANNED_OVERLAYS.map((o) => (
-              <button key={o.id} disabled aria-pressed="false" title={o.phase}>
-                <span className="h-2 w-2 rounded-[2px]" style={{ background: o.color }} aria-hidden />{o.label}
-              </button>
-            ))}
             <button aria-pressed={showFib} disabled={!zones.length} onClick={() => setShowFib((v) => !v)} title={zones.length ? "Fibonacci confluence zones (daily analysis)" : "No confluence zones for this security yet"}>
               <span className="h-2 w-2 rounded-[2px]" style={{ background: "var(--fib)" }} aria-hidden />Fib
             </button>

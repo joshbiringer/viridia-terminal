@@ -97,7 +97,7 @@ export default async function FibonacciPage({ searchParams }: { searchParams: Pr
                       </Link>
                     </td>
                     <td className="num px-3 py-2.5 text-right">{fmtPrice(r.close)}</td>
-                    <td className="num px-3 py-2.5 text-right">{fmtPrice(r.low)}{r.high - r.low > 1e-9 ? `–${fmtPrice(r.high)}` : ""}</td>
+                    <td className="num whitespace-nowrap px-3 py-2.5 text-right">{fmtPrice(r.low)}{r.high - r.low > 1e-9 ? `–${fmtPrice(r.high)}` : ""}</td>
                     <td className={`num px-3 py-2.5 text-right ${r.side === "above" ? "text-pos" : "text-neg"}`}>
                       {r.distance_pct >= 0 ? "+" : "−"}{Math.abs(r.distance_pct * 100).toFixed(1)}%
                     </td>
