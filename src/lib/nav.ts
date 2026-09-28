@@ -16,9 +16,12 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
   { group: "Structure", items: [
     { label: "Wave Scanner", href: "/scanner", icon: "scanner", live: true, keywords: "screen screener filter" },
     { label: "Setups", href: "/setups", icon: "target", live: true, keywords: "signals buy sell trade entry stop target" },
-    { label: "Track Record", href: "/setups/track-record", icon: "gauge", live: true, keywords: "backtest history performance hit rate" },
+    { label: "Track Record", href: "/setups/track-record", icon: "check", live: true, keywords: "backtest history performance hit rate" },
     { label: "Fibonacci", href: "/analysis/fibonacci", icon: "fib", live: true, keywords: "confluence zones retracement" },
     { label: "Rulebook", href: "/analysis/rulebook", icon: "rulebook", live: true, keywords: "elliott wave rules guidelines" },
+  ]},
+  { group: "Portfolio", items: [
+    { label: "Portfolio X-Ray", href: "/portfolio", icon: "gauge", live: true, keywords: "holdings concentration risk beta correlation tax upload csv" },
   ]},
   { group: "Research", items: [
     { label: "Company Research", href: "/research", icon: "research", live: true, keywords: "company search" },
