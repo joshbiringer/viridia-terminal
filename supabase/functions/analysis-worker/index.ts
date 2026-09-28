@@ -6,7 +6,8 @@
  *   2. asks Postgres for securities whose cached analysis is missing or stale (analysis_batch)
  *   3. runs the engine on their bars (engine/analyze.ts): pivots (Phase 3), candidate wave counts
  *      validated against the hard rules (Phases 4–5), Fibonacci levels and confluence zones (Phase 6),
- *      and Pattern Confidence ranking with the preferred/alternate summary (Phase 7).
+ *      Pattern Confidence ranking with the preferred/alternate summary (Phase 7), and the buy/sell
+ *      setup each preferred count implies (setup.ts).
  *      These are the same engine files the app and tests use.
  *   4. stores results (store_analysis_results), until the time budget is spent
  *
@@ -17,6 +18,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import type { PivotBar, Timeframe } from "../_shared/engine/pivots.ts";
 import { ANALYSIS_VERSION, computeAnalysis } from "../_shared/engine/analyze.ts";
 import type { Glance } from "../_shared/engine/glance.ts";
+import type { Setup } from "../_shared/engine/setup.ts";
 
 const TIME_BUDGET_MS = 100_000;
 // Small batches: after a version change every row is stale and cold bar reads approach the 8 s statement limit.
@@ -39,6 +41,16 @@ function glanceColumns(g: Glance | null) {
     glance_wave: p?.wave ?? null, glance_wave_dir: p?.waveDirection ?? null, glance_score: p?.score ?? null,
     glance_alt_score: g?.alternate?.score ?? null, glance_hold: p?.hold ?? null, glance_hold_side: p?.holdSide ?? null,
     glance_target: p?.target?.price ?? null,
+  };
+}
+
+/** The setup at the glance degree as scanner columns; all setups (one per degree at most) as JSON. */
+function setupColumns(all: Record<string, Setup | null>, s: Setup | null) {
+  const kept = Object.fromEntries(Object.entries(all).filter(([, v]) => v));
+  return {
+    setups_json: Object.keys(kept).length ? kept : null,
+    setup_degree: s?.degree ?? null, setup_kind: s?.kind ?? null, setup_side: s?.side ?? null,
+    setup_status: s?.status ?? null, setup_rr: s?.rr ?? null, setup_risk_pct: s?.riskPct ?? null,
   };
 }
 
@@ -90,6 +102,7 @@ Deno.serve(async (req) => {
             candidate_counts_json: a.candidate_counts_json, candidate_count: a.candidate_count,
             fib_levels_json: a.fib_level_counts, confluence_zones_json: a.confluence_zones_json,
             ...glanceColumns(a.glance),
+            ...setupColumns(a.setups, a.setup),
           };
         });
         const { error: storeErr } = await db.rpc("store_analysis_results", { p_rows: out });

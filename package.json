@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint .",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "bundle:worker": "npx --yes esbuild@0.25 supabase/functions/analysis-worker/index.ts --bundle --format=esm --platform=neutral --target=es2022 --external:npm:* --outfile=supabase/functions/analysis-worker/dist/index.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

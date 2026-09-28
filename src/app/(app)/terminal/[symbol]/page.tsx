@@ -18,6 +18,7 @@ import { TrackEvent } from "@/components/TrackEvent";
 import { WelcomeGuide } from "@/components/WelcomeGuide";
 import { DegreeProvider } from "@/components/analysis/DegreeContext";
 import { StructureGlance } from "@/components/analysis/StructureGlance";
+import { SetupCard } from "@/components/analysis/SetupCard";
 
 type Props = { params: Promise<{ symbol: string }>; searchParams: Promise<{ welcome?: string }> };
 
@@ -142,6 +143,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
         symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
         zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf}
       />
+      <SetupCard setups={swings?.setups ?? null} close={sum?.last_close ?? null} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />

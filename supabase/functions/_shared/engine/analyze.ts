@@ -8,6 +8,7 @@ import { compactSet, generateCandidates, type CandidateSet, type CompactCandidat
 import { analyzeFib, type FibLevel } from "./fib.ts";
 import { ANALYSIS_VERSION } from "./version.ts";
 import { glanceOf } from "./glance.ts";
+import { setupOf, type Setup } from "./setup.ts";
 
 export { ANALYSIS_VERSION };
 
@@ -39,6 +40,8 @@ export function computeAnalysis(bars: PivotBar[], timeframe: Timeframe) {
   });
   const round = (x: number) => Math.round(x * 1e4) / 1e4;
   const candidate_counts_json = Object.fromEntries(DEGREES.map((d) => [d, withTargets(compactSet(sets[d]), fib.targets)])) as Record<Degree, CompactCandidateSet>;
+  const glance = glanceOf(candidate_counts_json);
+  const setups = Object.fromEntries(DEGREES.map((d) => [d, setupOf(candidate_counts_json[d], d, fib.close, fib.zones)])) as Record<Degree, Setup | null>;
   return {
     pivots: a,
     pivots_json: Object.fromEntries(DEGREES.map((d) => {
@@ -48,7 +51,11 @@ export function computeAnalysis(bars: PivotBar[], timeframe: Timeframe) {
     swing_structure: Object.fromEntries(DEGREES.map((d) => [d, swingStructure(a.degrees[d].pivots).structure])),
     candidate_counts_json,
     /** Preferred/alternate summary (Phase 7); the worker stores it as scanner columns. */
-    glance: glanceOf(candidate_counts_json),
+    glance,
+    /** The preferred count's setup per degree (buy/sell signal with entry, stop and target), or null. */
+    setups,
+    /** The setup at the glance degree; the worker stores it as scanner columns. */
+    setup: glance ? setups[glance.degree] : null,
     candidate_count: DEGREES.reduce((n, d) => n + sets[d].candidates.length, 0),
     /** Level counts only; the full list is recomputable and would triple the row size. */
     fib_level_counts: Object.fromEntries(DEGREES.map((d) => [d, fib.levels[d].filter((l) => !l.reached).length])),

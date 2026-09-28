@@ -15,6 +15,7 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
   ]},
   { group: "Structure", items: [
     { label: "Wave Scanner", href: "/scanner", icon: "scanner", live: true, keywords: "screen screener filter" },
+    { label: "Setups", href: "/setups", icon: "target", live: true, keywords: "signals buy sell trade entry stop target" },
     { label: "Fibonacci", href: "/analysis/fibonacci", icon: "fib", live: true, keywords: "confluence zones retracement" },
     { label: "Rulebook", href: "/analysis/rulebook", icon: "rulebook", live: true, keywords: "elliott wave rules guidelines" },
   ]},

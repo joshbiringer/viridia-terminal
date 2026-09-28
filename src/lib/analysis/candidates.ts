@@ -9,9 +9,19 @@ import { DEGREES, type Degree, type PivotBar, type Timeframe } from "@engine/piv
 import { RULEBOOK } from "@engine/rules";
 import { PERSONALITY, band, decodeFactors, type ConfidenceBand } from "@engine/rank";
 import { GLANCE_DEGREES, glanceOf, type Glance } from "@engine/glance";
+import { SETUP_LABEL, setupOf, type Setup, type SetupKind } from "@engine/setup";
 
-export { ANALYSIS_VERSION, CANDIDATES_VERSION, PATTERN_LABEL, GLANCE_DEGREES };
-export type { CandidatePattern, ConfluenceZone, Glance, ConfidenceBand };
+export { ANALYSIS_VERSION, CANDIDATES_VERSION, PATTERN_LABEL, GLANCE_DEGREES, SETUP_LABEL };
+export type { CandidatePattern, ConfluenceZone, Glance, ConfidenceBand, Setup, SetupKind };
+
+export type Setups = Record<Degree, Setup | null>;
+/** The preferred count's setup at every degree (engine setup.ts), from the stored compact counts. */
+export function setupsOf(sets: Partial<Record<Degree, CompactCandidateSet | null>>, fib: { close: number; zones: ConfluenceZone[] } | null): Setups {
+  return Object.fromEntries(DEGREES.map((d) => [d, setupOf(sets[d], d, fib?.close ?? null, fib?.zones ?? [])])) as Setups;
+}
+
+export const SETUP_METHOD =
+  "A setup restates the preferred count as a trade: the entry (the close, or the level where the correction in progress most often ends), the stop where the count is wrong (a rule level, or the end of a finished pattern), and the count's own Fibonacci target. Reward:risk is measured from the middle of the entry range. It is research output from the wave count, not a recommendation or a forecast.";
 
 export const CANDIDATE_METHOD =
   "Every chain of 3–6 alternating pivots ending at the latest confirmed pivot is tested as each pattern; only counts with zero hard-rule failures are kept, then ranked by Pattern Confidence.";
@@ -98,9 +108,10 @@ export function glancesOf(sets: Partial<Record<Degree, CompactCandidateSet | nul
   } as Glances;
 }
 
-export function candidatesForClient(bars: PivotBar[], timeframe: Timeframe): { candidates: ClientCandidates; fib: ClientFib; glances: Glances } {
+export function candidatesForClient(bars: PivotBar[], timeframe: Timeframe): { candidates: ClientCandidates; fib: ClientFib; glances: Glances; setups: Setups } {
   const r = computeAnalysis(bars, timeframe);
   return {
+    setups: r.setups,
     candidates: Object.fromEntries(DEGREES.map((d) => [d, fromCompactSet(r.candidate_counts_json[d])])) as ClientCandidates,
     fib: r.confluence_zones_json,
     glances: glancesOf(r.candidate_counts_json),
