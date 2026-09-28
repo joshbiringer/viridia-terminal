@@ -11,10 +11,13 @@ import { scan, type ScanRow } from "@/lib/market-data/snapshot";
 import { fmtDate } from "@/lib/format";
 import { TrackEvent } from "@/components/TrackEvent";
 
-export const metadata: Metadata = { title: { absolute: "Viridia Terminal: See the structure behind the market" } };
+export const metadata: Metadata = {
+  title: { absolute: "Viridia: From market signal to client conversation" },
+  description: "The research and intelligence terminal for advisors, RIAs and portfolio managers: market structure, portfolio X-ray and client-ready explanations in one place.",
+};
 export const revalidate = 900;
 
-const NAV = [["Product", "#product"], ["Markets", "/markets"], ["Research", "/research"], ["Methodology", "#methodology"], ["Pricing", "#pricing"]];
+const NAV = [["Product", "#product"], ["Portfolio X-Ray", "/portfolio"], ["Markets", "/markets"], ["Methodology", "#methodology"], ["Pricing", "#pricing"]];
 
 export default async function Landing() {
   let live: ScanRow[] = [];
@@ -41,10 +44,10 @@ export default async function Landing() {
       <section className="relative overflow-hidden" id="product">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[560px]" style={{ background: "radial-gradient(60% 55% at 70% 0%, var(--panel-2) 0%, transparent 70%)" }} />
         <div className="relative mx-auto max-w-[1200px] px-6 pb-20 pt-20 md:pt-28">
-          <p className="eyebrow">Market Structure Intelligence</p>
-          <h1 className="display mt-5 max-w-[900px]">See the structure<br />behind the market.</h1>
-          <p className="lede mt-6 max-w-[640px]">
-            Viridia Terminal combines Elliott Wave analysis, Fibonacci relationships and quantitative market structure to help investors understand how markets are developing.
+          <p className="eyebrow">For advisors, RIAs and portfolio managers</p>
+          <h1 className="display mt-5 max-w-[900px]">From market signal<br />to client conversation.</h1>
+          <p className="lede mt-6 max-w-[660px]">
+            Viridia brings market structure, portfolio intelligence and client-ready explanations into one research terminal, so you can see what changed, understand why it matters and explain it clearly.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/signup" className="btn pri lg">Start free</Link>
@@ -54,6 +57,47 @@ export default async function Landing() {
           <div className="mt-16 md:mt-20"><HeroTerminalMock /></div>
         </div>
       </section>
+
+      {/* ------------------------------------------------ outcomes (live features only) */}
+      <section className="border-t border-line">
+        <div className="mx-auto grid max-w-[1200px] gap-px bg-line px-0 md:grid-cols-4">
+          {([
+            ["See what matters", "The Brief opens with what changed since the last session: wave structure flips, new and expired setups, the biggest moves, and your watchlist.", "/terminal", "Open the Brief"],
+            ["Understand a portfolio", "Portfolio X-Ray measures concentration, beta, volatility, correlated positions, tax lots and each holding's structure. Nothing you paste is stored.", "/portfolio", "Try Portfolio X-Ray"],
+            ["Context, not ratings", "Viridia Signals shows structure, trend, momentum and risk side by side, and every setup carries its historical track record.", "/setups/track-record", "See the track record"],
+            ["Communicate better", "Every explanation has a client version: plain language, no jargon, the level that would change the view, ready to copy.", "/terminal/SPY", "See an example"],
+          ] as const).map(([t, d, href, cta]) => (
+            <div key={t} className="flex flex-col gap-2 bg-panel px-6 py-10">
+              <h3 className="h3">{t}</h3>
+              <p className="text-[14.5px] leading-relaxed text-fg-2">{d}</p>
+              <Link href={href} className="mt-auto pt-2 text-[14px] font-medium text-brand hover:underline">{cta} →</Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ------------------------------------------------ modules, with honest status */}
+      <Section eyebrow="One platform" title={<>Research. Portfolios. Markets.<br />Clients. One terminal.</>}
+        lede="Viridia is built in modules that share one intelligence layer. Here is exactly what is live today and what is being built.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {([
+            ["Viridia Research", "live", "Every U.S.-listed security: rule-checked Elliott Wave counts, Fibonacci confluence, Signals and setups with a track record."],
+            ["Viridia Markets", "live", "Market overview, breadth, a structure scanner and the daily Brief of what changed."],
+            ["Viridia Portfolio", "partial", "Portfolio X-Ray is live. Saved portfolios, model portfolios, drift monitoring and attribution are in development."],
+            ["Viridia AI", "partial", "Ask Viridia explains every analysis, with a client version. Natural-language search across a practice comes later."],
+            ["Viridia Advisor", "planned", "Client households, meeting preparation and planning opportunities, connected to your CRM and custodian."],
+            ["Viridia Enterprise", "planned", "Investment committee workspace, firm-wide monitoring, governance and integrations."],
+          ] as const).map(([name, st, d]) => (
+            <div key={name} className="rounded-[var(--r-lg)] border border-line px-5 py-5">
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-semibold">{name}</span>
+                <span className={`chip ml-auto ${st === "live" ? "pos" : st === "partial" ? "acc" : ""}`}>{st === "live" ? "Live" : st === "partial" ? "Partly live" : "Planned"}</span>
+              </div>
+              <p className="mt-2 text-[14px] leading-relaxed text-fg-2">{d}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
 
       {/* ------------------------------------------------ 2. structure */}
       <Section id="methodology" eyebrow="Methodology" title={<>Markets move in structure.</>}
@@ -125,9 +169,9 @@ export default async function Landing() {
             <span className="text-fg-3">{live[0] ? `Close ${fmtDate(live[0].last_ts)}` : "Loading"}</span>
             <Link href="/scanner" className="ml-auto font-medium text-brand hover:underline">Open the scanner</Link>
           </div>
-          {live.length ? <ScannerTable rows={live} compact /> : <div className="px-6 py-10 text-center text-fg-2">Live data is temporarily unavailable.</div>}
+          {live.length ? <ScannerTable rows={live} compact structure /> : <div className="px-6 py-10 text-center text-fg-2">Live data is temporarily unavailable.</div>}
         </div>
-        <p className="mt-4 text-[13px] text-fg-3">Wave, pattern, confidence and Fibonacci columns join this table when the wave engine is live.</p>
+        <p className="mt-4 text-[13px] text-fg-3">Each row shows the preferred daily wave count and its Pattern Confidence, computed by the engine for every covered security.</p>
       </Section>
 
       {/* ------------------------------------------------ 6. ask viridia */}
@@ -165,7 +209,7 @@ export default async function Landing() {
           <div>
             <p className="eyebrow">Access</p>
             <h2 className="h2 mt-3">Free during the beta.</h2>
-            <p className="lede mt-4 max-w-[520px]">Every security, wave count, Fibonacci zone and the scanner are open now. A free account adds watchlists and saved preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>
+            <p className="lede mt-4 max-w-[520px]">Every security, wave count, setup, the Brief and Portfolio X-Ray are open now. A free account adds watchlists and saved preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>
           </div>
           <div className="flex flex-col gap-3 md:items-end">
             <Link href="/signup" className="btn pri lg">Create a free account</Link>
@@ -177,7 +221,7 @@ export default async function Landing() {
       {/* ------------------------------------------------ closing */}
       <section className="brand-surface">
         <div className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-6 py-24 text-white md:flex-row md:items-end md:justify-between">
-          <h2 className="h2 max-w-[640px] text-white">See the structure behind the market.</h2>
+          <h2 className="h2 max-w-[640px] text-white">Research markets. Understand portfolios. Prepare clients.</h2>
           <Link href="/signup" className="btn lg border-white bg-white text-brand-dark hover:bg-white/90">Start free</Link>
         </div>
       </section>
@@ -187,10 +231,10 @@ export default async function Landing() {
         <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-16 md:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div className="flex flex-col gap-4">
             <ViridiaLockup />
-            <p className="max-w-[280px] text-[13.5px] text-fg-3">Quantitative market intelligence powered by Elliott Wave, Fibonacci analysis and multi-timeframe market structure.</p>
+            <p className="max-w-[280px] text-[13.5px] text-fg-3">The research and intelligence terminal for advisors, RIAs and portfolio managers.</p>
           </div>
           {[
-            ["Product", [["Terminal", "/terminal"], ["Scanner", "/scanner"], ["Markets", "/markets"], ["Research", "/research"]]],
+            ["Product", [["Brief", "/terminal"], ["Portfolio X-Ray", "/portfolio"], ["Setups", "/setups"], ["Scanner", "/scanner"], ["Markets", "/markets"]]],
             ["Resources", [["Methodology", "#methodology"], ["Data", "/data-sources"], ["Documentation", "/data-sources"]]],
             ["Company", [["About", "#product"], ["Contact", "#disclosures"]]],
             ["Legal", [["Terms", "#disclosures"], ["Privacy", "#disclosures"], ["Disclosures", "#disclosures"]]],
@@ -207,8 +251,9 @@ export default async function Landing() {
           <p>
             Viridia Terminal provides research tools and educational market analysis. It is not investment advice, and nothing here is a
             recommendation to buy, sell or hold any security. Elliott Wave and Fibonacci analysis describe possible market structures; they do not
-            predict prices, and every interpretation can be invalidated. Pattern confidence scores are heuristic measures of fit, not probabilities,
-            until validated by out-of-sample backtesting. Market data is end of day, sourced from Massive and U.S. exchange symbol directories, and may
+            predict prices, and every interpretation can be invalidated. Pattern confidence scores are heuristic measures of fit, not probabilities.
+            Setup track records are historical replays of the engine with no look-ahead; they exclude costs and delisted securities, and past
+            results do not predict future ones. Market data is end of day, sourced from Massive and U.S. exchange symbol directories, and may
             be delayed or contain errors. Illustrations on this page use a synthetic price series. Past performance does not guarantee future results.
           </p>
           <p className="mt-4">© {new Date().getFullYear()} Viridia</p>

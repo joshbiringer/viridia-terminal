@@ -32,7 +32,8 @@ const PHASES: [string, string, "live" | "next" | "planned"][] = [
   ["8", "Chart overlays: wave count, invalidation, confluence zones", "live"],
   ["9", "Multi-timeframe analysis (weekly alignment live; multi-degree reconciliation next)", "next"],
   ["10", "Market-wide wave scanner and buy/sell setups", "live"],
-  ["11", "Historical backtesting framework", "next"],
+  ["11", "Setup backtesting (track record)", "live"],
+  ["12", "Portfolio X-Ray", "live"],
 ];
 
 function nextScheduledSync(now = new Date()): Date {
