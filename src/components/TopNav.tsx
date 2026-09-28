@@ -33,7 +33,7 @@ export function TopNav() {
         ))}
       </nav>
       <button
-        className="ml-auto flex h-9 w-full max-w-[380px] min-w-0 items-center gap-2.5 rounded-[9px] border border-line bg-bg px-3 text-left text-[13.5px] text-fg-3 transition-colors hover:border-line-2"
+        className="ml-auto flex h-9 w-full max-w-[380px] min-w-0 items-center gap-2.5 rounded-[var(--r-md)] border border-line bg-bg px-3 text-left text-[13.5px] text-fg-3 transition-colors hover:border-line-2"
         onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
         aria-label="Search markets"
       >

@@ -7,6 +7,7 @@ import { fmtDollars } from "@/lib/market-data/snapshot";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
 import { FIB_METHOD } from "@/lib/analysis/candidates";
 import { SourceFooter } from "@/components/SourceFooter";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Fibonacci" };
 export const dynamic = "force-dynamic";
@@ -50,13 +51,10 @@ export default async function FibonacciPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <section className="max-w-[760px] pt-2">
-        <h1 className="h2">Fibonacci confluence.</h1>
-        <p className="lede mt-3">
-          Price bands where independent Fibonacci relationships from rule-valid wave counts, Elliott channels and recent swings
-          coincide. Every level is anchored to confirmed pivots, never to hand-picked highs and lows.
-        </p>
-      </section>
+      <PageHeader
+        title="Fibonacci confluence"
+        description="Price bands where independent Fibonacci relationships from rule-valid wave counts, Elliott channels and recent swings coincide. Every level is anchored to confirmed pivots."
+      />
 
       <section className="card">
         <form action="/analysis/fibonacci" className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-4">

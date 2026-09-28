@@ -45,7 +45,7 @@ export function AskViridiaButton({ symbol }: { symbol: string }) {
             <div className="text-[12.5px] text-fg-3">About {symbol}</div>
           </div>
           <button className="btn ghost sm px-2" onClick={() => setOpen(false)} aria-label="Close">
-            <Icon d="M6 6l12 12M18 6L6 18" />
+            <Icon name="x" />
           </button>
         </div>
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
@@ -58,14 +58,14 @@ export function AskViridiaButton({ symbol }: { symbol: string }) {
             {SUGGESTED.map((q) => (
               <button
                 key={q} onClick={() => setAsked(q)}
-                className={`rounded-[10px] border px-4 py-2.5 text-left text-[13.5px] transition-colors ${asked === q ? "border-brand bg-panel-2" : "border-line hover:border-line-2 hover:bg-hover"}`}
+                className={`rounded-[var(--r-lg)] border px-4 py-2.5 text-left text-[13.5px] transition-colors ${asked === q ? "border-brand bg-panel-2" : "border-line hover:border-line-2 hover:bg-hover"}`}
               >
                 {q}
               </button>
             ))}
           </div>
           {asked && (
-            <div className="rounded-[12px] bg-panel-2 px-4 py-4 text-[13.5px] leading-relaxed">
+            <div className="rounded-[var(--r-lg)] bg-panel-2 px-4 py-4 text-[13.5px] leading-relaxed">
               <div className="mb-1.5 font-medium">{asked}</div>
               <p className="text-fg-2">
                 There&apos;s no preferred wave count for {symbol} yet, so there&apos;s nothing to explain. The engine already lists every

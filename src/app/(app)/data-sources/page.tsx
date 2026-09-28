@@ -6,6 +6,7 @@ import { exchangeLabel, fmtDateTime, fmtInt, stockHref, timeAgo } from "@/lib/fo
 import { SourceFooter } from "@/components/SourceFooter";
 import { PIVOT_METHOD } from "@/lib/analysis/pivots";
 import { ANALYSIS_VERSION, CANDIDATE_METHOD, FIB_METHOD } from "@/lib/analysis/candidates";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Data Sources" };
 export const dynamic = "force-dynamic"; // always show the latest sync state
@@ -82,12 +83,9 @@ export default async function DataSourcesPage() {
 
   return (
     <>
-      <section className="pt-2">
-        <h1 className="h2">Data sources</h1>
-        <p className="lede mt-2 max-w-[720px]">Where every number in Viridia comes from, when it last updated, and what is still loading.</p>
-      </section>
+      <PageHeader title="Data sources" description="Where every number in Viridia comes from, when it last updated, and what is still loading." />
 
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] border border-line bg-line lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-lg)] border border-line bg-line lg:grid-cols-4">
         {cards.map(([k, v, s]) => (
           <div key={k} className="bg-panel px-5 py-4">
             <div className="text-[13px] text-fg-2">{k}</div>

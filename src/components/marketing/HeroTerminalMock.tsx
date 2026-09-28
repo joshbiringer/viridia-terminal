@@ -14,7 +14,7 @@ export function HeroTerminalMock() {
     ["Higher timeframe", <span key="h" className="text-pos">Bullish</span>],
   ];
   return (
-    <div className="overflow-hidden rounded-[18px] border border-line bg-panel" style={{ boxShadow: "var(--shadow-lg)" }}>
+    <div className="overflow-hidden rounded-[var(--r-lg)] border border-line bg-panel" style={{ boxShadow: "var(--shadow-lg)" }}>
       <div className="flex items-center gap-3 border-b border-line px-5 py-3">
         <ViridiaMark size={16} className="text-brand" />
         <span className="text-[13px] font-semibold tracking-[-0.01em]">EXAMPLE</span>

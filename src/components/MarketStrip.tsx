@@ -7,7 +7,7 @@ import { Sparkline } from "./Sparkline";
 export function MarketStrip({ rows }: { rows: OverviewRow[] }) {
   const by = new Map(rows.map((r) => [r.symbol, r]));
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] border border-line bg-line shadow-[var(--shadow-sm)] md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-lg)] border border-line bg-line shadow-[var(--shadow-sm)] md:grid-cols-3 xl:grid-cols-6">
       {MARKET_PROXIES.map((m) => {
         const r = by.get(m.symbol);
         const chg = r?.close != null && r.prev_close ? r.close / r.prev_close - 1 : null;

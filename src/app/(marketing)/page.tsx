@@ -56,7 +56,7 @@ export default async function Landing() {
       <Section id="methodology" eyebrow="Methodology" title={<>Markets move in structure.</>}
         lede="Viridia analyzes price structure across multiple timeframes to identify motive waves, corrective structures, Fibonacci relationships and objective invalidation levels.">
         <div className="grid items-center gap-12 lg:grid-cols-[1.25fr_1fr]">
-          <div className="rounded-[16px] border border-line bg-bg px-4 py-6"><WaveSchematic className="h-auto w-full" /></div>
+          <div className="rounded-[var(--r-lg)] border border-line bg-bg px-4 py-6"><WaveSchematic className="h-auto w-full" /></div>
           <div className="flex flex-col gap-7">
             {[
               ["Rules are never bent", "Wave 2 never retraces more than all of wave 1. Wave 3 is never the shortest motive wave. In an impulse, wave 4 never enters wave 1's price territory. A count that breaks one is discarded, whatever else it has going for it."],
@@ -76,7 +76,7 @@ export default async function Landing() {
       <Section eyebrow="Preferred and alternate counts" title={<>One chart.<br />Multiple interpretations.</>}
         lede="Elliott Wave analysis can produce more than one structurally valid reading of the same chart. Viridia ranks them rather than pretending the uncertainty isn't there.">
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-[16px] border border-line px-3 py-4"><IllustrativeChart layers={["waves", "alternate"]} className="h-auto w-full" /></div>
+          <div className="rounded-[var(--r-lg)] border border-line px-3 py-4"><IllustrativeChart layers={["waves", "alternate"]} className="h-auto w-full" /></div>
           <div className="flex flex-col gap-4">
             <CountCard color="var(--wave)" name="Preferred count" score={EXAMPLE.confidence}
               text="Wave 3 of an impulse is underway from the wave 2 low." />
@@ -94,8 +94,8 @@ export default async function Landing() {
       <Section eyebrow="Fibonacci confluence" title={<>Where structure<br />meets mathematics.</>}
         lede="Fibonacci levels are anchored to the active wave count, never drawn across arbitrary highs and lows. Where independent measurements overlap, Viridia marks a zone instead of pretending one exact price is certain.">
         <div className="grid items-center gap-12 lg:grid-cols-[1.25fr_1fr]">
-          <div className="rounded-[16px] border border-line bg-bg px-4 py-6"><FibSchematic className="h-auto w-full" /></div>
-          <div className="rounded-[16px] border border-line px-7 py-7">
+          <div className="rounded-[var(--r-lg)] border border-line bg-bg px-4 py-6"><FibSchematic className="h-auto w-full" /></div>
+          <div className="rounded-[var(--r-lg)] border border-line px-7 py-7">
             <div className="label">Fibonacci confluence</div>
             <div className="num mt-2 text-[34px] font-[640] tracking-[-0.03em] text-fib">{EXAMPLE.zone.lo.toFixed(2)} – {EXAMPLE.zone.hi.toFixed(2)}</div>
             <p className="mt-1 text-[14px] text-fg-2">3 overlapping relationships</p>
@@ -116,7 +116,7 @@ export default async function Landing() {
       {/* ------------------------------------------------ 5. scanner (live data) */}
       <Section eyebrow="Scanner" title={<>Scan the market.<br />Not just a watchlist.</>}
         lede="Viridia covers every security listed on U.S. exchanges. The scanner below is live: the most actively traded names at the last close.">
-        <div className="overflow-hidden rounded-[16px] border border-line" style={{ boxShadow: "var(--shadow-md)" }}>
+        <div className="overflow-hidden rounded-[var(--r-lg)] border border-line" style={{ boxShadow: "var(--shadow-md)" }}>
           <div className="flex items-center gap-3 border-b border-line bg-bg px-5 py-3 text-[13px]">
             <span className="font-semibold">Most active</span>
             <span className="text-fg-3">{live[0] ? `Close ${fmtDate(live[0].last_ts)}` : "Loading"}</span>
@@ -130,14 +130,14 @@ export default async function Landing() {
       {/* ------------------------------------------------ 6. ask viridia */}
       <Section eyebrow="Ask Viridia" title={<>Understand the analysis.</>}
         lede="Ask Viridia explains what the engine calculated, with the evidence behind it. It never invents a wave count of its own.">
-        <div className="mx-auto max-w-[760px] rounded-[16px] border border-line" style={{ boxShadow: "var(--shadow-md)" }}>
+        <div className="mx-auto max-w-[760px] rounded-[var(--r-lg)] border border-line" style={{ boxShadow: "var(--shadow-md)" }}>
           <div className="flex items-center gap-2.5 border-b border-line px-6 py-4">
             <ViridiaMark size={18} className="text-brand" />
             <span className="text-[14px] font-semibold">Ask Viridia</span>
             <span className="ml-auto text-[12.5px] text-fg-3">Illustrative example</span>
           </div>
           <div className="flex flex-col gap-5 px-6 py-6">
-            <div className="self-end rounded-[12px] bg-hover px-4 py-2.5 text-[14.5px]">Why is EXAMPLE labeled Wave 3?</div>
+            <div className="self-end rounded-[var(--r-lg)] bg-hover px-4 py-2.5 text-[14.5px]">Why is EXAMPLE labeled Wave 3?</div>
             <div className="flex flex-col gap-4 text-[14.5px] leading-relaxed">
               <p>The preferred count reads the advance from {EXAMPLE.w2.p.toFixed(2)} as wave 3 of an impulse. It passes every rule checked so far:</p>
               <ul className="flex flex-col gap-2">
@@ -172,7 +172,7 @@ export default async function Landing() {
       </section>
 
       {/* ------------------------------------------------ closing */}
-      <section className="brand-grad">
+      <section className="brand-surface">
         <div className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-6 py-24 text-white md:flex-row md:items-end md:justify-between">
           <h2 className="h2 max-w-[640px] text-white">See the structure behind the market.</h2>
           <Link href="/terminal" className="btn lg border-white bg-white text-brand-dark hover:bg-white/90">Open Terminal</Link>
@@ -230,7 +230,7 @@ function Section({ id, eyebrow, title, lede, children }: { id?: string; eyebrow:
 
 function CountCard({ color, name, score, text }: { color: string; name: string; score: number; text: string }) {
   return (
-    <div className="rounded-[14px] border border-line px-5 py-4">
+    <div className="rounded-[var(--r-lg)] border border-line px-5 py-4">
       <div className="flex items-center gap-2.5">
         <span className="h-[3px] w-5 rounded-full" style={{ background: color }} aria-hidden />
         <span className="text-[14px] font-semibold">{name}</span>

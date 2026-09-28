@@ -5,6 +5,7 @@ import { db } from "@/lib/supabase";
 import type { SearchHit, Security } from "@/lib/types";
 import { exchangeLabel, fmtInt, stockHref, subtypeLabel } from "@/lib/format";
 import { SourceFooter } from "@/components/SourceFooter";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const KINDS = {
   stocks: { title: "Stocks", blurb: "Every listed stock, ADR, preferred, unit, warrant and right.", types: ["common", "preferred", "warrant", "unit", "right", "note"], defaultType: "common" },
@@ -64,10 +65,7 @@ export default async function UniversePage({ params, searchParams }: { params: P
 
   return (
     <>
-      <section className="pt-2">
-        <h1 className="h2">{cfg.title}</h1>
-        <p className="lede mt-2">{cfg.blurb} Drawn from the daily exchange symbol directories; nothing is hand-picked.</p>
-      </section>
+      <PageHeader title={cfg.title} description={<>{cfg.blurb} Drawn from the daily exchange symbol directories; nothing is hand-picked.</>} />
       <section className="card">
         <form className="flex flex-wrap items-end gap-3 border-b border-line px-5 py-4" action={base}>
           <label className="flex min-w-[220px] flex-1 flex-col gap-1.5 sm:max-w-[320px]">

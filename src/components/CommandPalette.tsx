@@ -76,7 +76,7 @@ export function CommandPalette() {
       role="dialog" aria-modal="true" aria-label="Search securities"
       onMouseDown={(e) => { if (e.target === e.currentTarget) hide(); }}
     >
-      <div className="w-full max-w-[640px] overflow-hidden rounded-[14px] border border-line bg-panel" style={{ boxShadow: "var(--shadow-lg)" }}>
+      <div className="w-full max-w-[640px] overflow-hidden rounded-[var(--r-lg)] border border-line bg-panel" style={{ boxShadow: "var(--shadow-lg)" }}>
         <div className="flex items-center gap-3 border-b border-line px-4 text-fg-3">
           <Icon d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3" />
           <input

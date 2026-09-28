@@ -4,6 +4,7 @@ import { scan } from "@/lib/market-data/snapshot";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { stockHref } from "@/lib/format";
 import { OpenPaletteButton } from "@/components/OpenPaletteButton";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Research" };
 export const dynamic = "force-dynamic";
@@ -15,11 +16,11 @@ export default async function ResearchPage() {
   ]);
   return (
     <>
-      <section className="flex max-w-[760px] flex-col gap-5 pt-2">
-        <h1 className="h2">Research any company.</h1>
-        <p className="lede">Open any of the 13,000+ securities listed on U.S. exchanges. Price history for names outside the automatic universe is fetched the first time you open them.</p>
-        <OpenPaletteButton label="Search ticker or company" className="btn lg w-full max-w-[440px] justify-start text-fg-3" />
-      </section>
+      <PageHeader
+        title="Company research"
+        description="Open any of the 13,000+ securities listed on U.S. exchanges. History for names outside the automatic universe is fetched the first time you open them."
+        actions={<OpenPaletteButton label="Search ticker or company" className="btn w-full justify-start text-fg-3 sm:w-[300px]" />}
+      />
       {[["Most active stocks", stocks], ["Most active ETFs", etfs]].map(([title, rows]) => (
         <section key={title as string} className="flex flex-col gap-3">
           <h2 className="h3">{title as string}</h2>

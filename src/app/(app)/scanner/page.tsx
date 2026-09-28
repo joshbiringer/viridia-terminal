@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { scan, TREND_METHOD } from "@/lib/market-data/snapshot";
 import { exchangeLabel, fmtInt } from "@/lib/format";
 import { ScannerTable } from "@/components/ScannerTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Scanner" };
 
@@ -49,10 +50,7 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <section className="max-w-[760px] pt-2">
-        <h1 className="h2">Find market structure.</h1>
-        <p className="lede mt-3">Scan thousands of securities for Elliott Wave structures, Fibonacci confluence and emerging trends.</p>
-      </section>
+      <PageHeader title="Wave Scanner" description="Screen thousands of securities by trend, liquidity, price and 52-week position." />
 
       <section className="card">
         <div className="flex flex-col gap-3 border-b border-line px-5 py-4">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { RULEBOOK, RULES_VERSION, type Category, type Pattern } from "@engine/rules";
 import { EXAMPLE, EXAMPLE_VALIDATION } from "@/lib/illustration";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Rulebook" };
 
@@ -37,16 +38,13 @@ export default function RulebookPage() {
   const ex = EXAMPLE_VALIDATION;
   return (
     <>
-      <section className="max-w-[820px] pt-2">
-        <p className="eyebrow">Phase 4 · {RULES_VERSION}</p>
-        <h1 className="h2 mt-2">The rulebook.</h1>
-        <p className="lede mt-3">
-          Any wave count Viridia shows is checked against these rules by deterministic code first. Rules eliminate counts; guidelines
-          and Fibonacci tendencies only add or subtract evidence. No language model can relabel a wave or excuse a broken rule.
-        </p>
-      </section>
+      <PageHeader
+        title="Rulebook"
+        meta={<span className="num">{RULES_VERSION}</span>}
+        description="Every wave count Viridia shows is checked against these rules by deterministic code. Rules eliminate counts; guidelines and Fibonacci tendencies only add or subtract evidence. No language model can relabel a wave or excuse a broken rule."
+      />
 
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] border border-line bg-line lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--r-lg)] border border-line bg-line lg:grid-cols-4">
         {(Object.keys(CATEGORY) as Category[]).map((c) => (
           <div key={c} className="bg-panel px-5 py-4">
             <div className="flex items-center gap-2"><span className={`chip ${CATEGORY[c].chip}`}>{CATEGORY[c].label}</span><span className="num text-[13px] text-fg-3">{counts[c] ?? 0}</span></div>
@@ -94,7 +92,7 @@ export default function RulebookPage() {
                   </li>
                 ))}
               </ul>
-              <div className="rounded-[10px] bg-panel-2 px-4 py-3">
+              <div className="rounded-[var(--r-md)] bg-panel-2 px-4 py-3">
                 <div className="font-medium">Invalidation</div>
                 {ex.invalidations.map((v) => (
                   <p key={v.price + v.kind} className="mt-1 text-fg-2">

@@ -9,6 +9,7 @@ import { BreadthSummary } from "@/components/BreadthSummary";
 import { ScannerTable } from "@/components/ScannerTable";
 import { OpenPaletteButton } from "@/components/OpenPaletteButton";
 import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const SWING_ORDER: [SwingStructure, string][] = [
   ["higher_highs_lows", "var(--pos-chart)"], ["expanding", "var(--alt)"], ["contracting", "var(--fib)"],
@@ -44,16 +45,16 @@ export default async function TerminalHome() {
 
   return (
     <>
-      <section className="flex flex-col gap-5 pt-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-[34px] font-[640] leading-tight tracking-[-0.035em]">{greeting()}</h1>
-          <p className="mt-1 flex items-center gap-2 text-[15px] text-fg-2">
+      <PageHeader
+        title={greeting()}
+        description={
+          <span className="inline-flex items-center gap-2">
             <span className="dot" style={{ background: m.state === "open" ? "var(--pos-chart)" : "var(--border-2)" }} />
-            {m.label} Prices shown are end of day, as of {fmtDate(overview[0]?.last_ts)}.
-          </p>
-        </div>
-        <OpenPaletteButton label="Search markets" className="btn lg w-full justify-start text-fg-3 md:w-[320px]" />
-      </section>
+            {m.label} Prices are end of day, as of {fmtDate(overview[0]?.last_ts)}.
+          </span>
+        }
+        actions={<OpenPaletteButton label="Search markets" className="btn w-full justify-start text-fg-3 sm:w-[300px]" />}
+      />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
@@ -119,7 +120,7 @@ export default async function TerminalHome() {
               ))}
             </ol>
             {st && (
-              <div className="mt-auto rounded-[10px] bg-panel-2 px-4 py-3">
+              <div className="mt-auto rounded-[var(--r-md)] bg-panel-2 px-4 py-3">
                 <div className="flex items-baseline justify-between text-[13px]">
                   <span className="font-medium">Price history backfill</span>
                   <span className="num text-fg-2">{Math.round(backfill * 100)}%</span>

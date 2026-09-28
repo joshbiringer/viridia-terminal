@@ -5,6 +5,7 @@ import { fmtDate } from "@/lib/format";
 import { MarketStrip } from "@/components/MarketStrip";
 import { BreadthSummary } from "@/components/BreadthSummary";
 import { ScannerTable } from "@/components/ScannerTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export const metadata: Metadata = { title: "Markets" };
 export const dynamic = "force-dynamic";
@@ -16,13 +17,11 @@ export default async function MarketsPage() {
   ]);
   return (
     <>
-      <section className="flex flex-wrap items-end justify-between gap-3 pt-2">
-        <div>
-          <h1 className="h2">Markets</h1>
-          <p className="lede mt-2">U.S. equities at the last close, {fmtDate(overview[0]?.last_ts)}.</p>
-        </div>
-        <div className="flex gap-2"><Link href="/markets/stocks" className="btn">All stocks</Link><Link href="/markets/etfs" className="btn">All ETFs</Link></div>
-      </section>
+      <PageHeader
+        title="Markets"
+        description={<>U.S. equities at the last close, {fmtDate(overview[0]?.last_ts)}.</>}
+        actions={<><Link href="/markets/stocks" className="btn">All stocks</Link><Link href="/markets/etfs" className="btn">All ETFs</Link></>}
+      />
       <MarketStrip rows={overview} />
       {breadth && <BreadthSummary b={breadth} />}
       <div className="grid gap-6 xl:grid-cols-2">
