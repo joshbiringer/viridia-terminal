@@ -243,7 +243,7 @@ export function GlobeHero({ title, subtitle }: { title: string; subtitle: string
           </div>
         </div>
 
-        <div className="pointer-events-none absolute right-[-90px] top-[-10px] w-[320px] opacity-60 sm:opacity-80 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[380px] md:opacity-100">
+        <div className="pointer-events-none absolute right-[-90px] top-[-10px] w-[320px] opacity-35 sm:opacity-60 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[380px] md:opacity-100">
           <canvas ref={canvasRef} className="aspect-square w-full" aria-hidden />
         </div>
       </div>
