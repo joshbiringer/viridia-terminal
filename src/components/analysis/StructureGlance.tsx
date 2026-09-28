@@ -86,6 +86,7 @@ export function StructureGlance({
         </div>
       ) : (
         <>
+          <Context g={g} close={close} />
           {g.closeCall && (
             <p className="flex items-start gap-2 border-b border-line px-5 py-2.5 text-[12.5px]" style={{ background: "var(--alt-soft)", color: "var(--alt)" }}>
               <b className="font-semibold">Close call.</b>
@@ -98,7 +99,11 @@ export function StructureGlance({
             {g.alternate ? <CountPanel kind="alternate" c={g.alternate} full={alternate} /> : (
               <div className="bg-panel px-5 py-5">
                 <div className="label">Alternate count</div>
-                <p className="mt-2 text-[13px] text-fg-2">Only one labeling passes the rules at this degree.</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-fg-2">
+                  {g.valid > 1
+                    ? `All ${g.valid} rule-valid counts at this degree tell the same story, starting from different points. There is no competing reading yet.`
+                    : "Only one labeling passes the rules at this degree."}
+                </p>
               </div>
             )}
           </div>
@@ -159,12 +164,21 @@ function Levels({ g, close, zone }: { g: GlanceCount; close: number | null; zone
   return (
     <div className="flex flex-col gap-4 bg-panel px-5 py-5">
       <div className="label">Key levels, preferred count</div>
-      <Level
-        name="Invalidation"
-        value={g.hold != null ? fmtPrice(g.hold) : "None yet"}
-        delta={holdD} tone="neg"
-        note={g.hold != null ? `Price ${g.holdSide} this level breaks the count.` : "The rules set no level for this state."}
-      />
+      {g.hold == null && g.reassess != null ? (
+        <Level
+          name="Reassess"
+          value={fmtPrice(g.reassess)}
+          delta={dist(g.reassess, close)} tone="neg"
+          note={`The pattern ended here. A move ${g.reassessSide} it means its last wave is still going, so the pattern isn't complete.`}
+        />
+      ) : (
+        <Level
+          name="Invalidation"
+          value={g.hold != null ? fmtPrice(g.hold) : "None yet"}
+          delta={holdD} tone="neg"
+          note={g.hold != null ? `Price ${g.holdSide} this level breaks the count.` : "The rules set no level for this state."}
+        />
+      )}
       <Level
         name={g.complete ? "Target, next move" : `Target, wave ${g.wave}`}
         value={g.target ? fmtPrice(g.target.price) : "None"}
@@ -178,6 +192,27 @@ function Levels({ g, close, zone }: { g: GlanceCount; close: number | null; zone
         note={zone ? `${zone.count} Fibonacci relationships meet here.` : "No zone within 35% of price."}
       />
     </div>
+  );
+}
+
+/** Where price is relative to the count, and how much of the rest of the list agrees on direction. */
+function Context({ g, close }: { g: Glance; close: number | null }) {
+  const move = close != null ? close / g.preferred.last.price - 1 : null;
+  const dir = g.preferred.waveDirection;
+  const withCount = move != null && (dir === "up" ? move > 0 : move < 0);
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-b border-line px-5 py-2.5 text-[12.5px] text-fg-2">
+      {move != null && (
+        <span>
+          Since the count&apos;s last pivot ({fmtPrice(g.preferred.last.price)}, {fmtDate(g.preferred.last.ts)}) price has moved{" "}
+          <b className="num font-semibold" style={{ color: withCount ? "var(--pos)" : "var(--neg)" }}>{pct(move, 1)}</b>
+          {withCount ? ", the way the count expects." : ", against the way the count expects."}
+        </span>
+      )}
+      <span>
+        <b className="num font-semibold text-fg">{g.agree} of {g.valid}</b> rule-valid counts expect the current move to be {dir}.
+      </span>
+    </p>
   );
 }
 

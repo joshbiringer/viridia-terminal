@@ -17,7 +17,7 @@ export const CANDIDATE_METHOD =
   "Every chain of 3–6 alternating pivots ending at the latest confirmed pivot is tested as each pattern; only counts with zero hard-rule failures are kept, then ranked by Pattern Confidence.";
 
 export const RANK_METHOD =
-  "Pattern Confidence = (guidelines met + 2) ÷ (guidelines measured + 4), from the rulebook's guidelines, Fibonacci tendencies and wave-personality checks (wave 3 speed and volume, wave 5 volume, alternation in time, a start at the prior extreme). It ranks the rule-valid counts against each other; it is not a probability of any outcome.";
+  "Pattern Confidence = (guidelines met + 2) ÷ (guidelines measured + 4), from the rulebook's guidelines, Fibonacci tendencies and wave-personality checks (wave 3 speed and volume, wave 5 volume, alternation in time, a start at the prior extreme), alternate waves in Fibonacci ratio, and the rarity of running flats. The alternate is the best-ranked count that tells a different story. It ranks the rule-valid counts against each other; it is not a probability of any outcome.";
 
 export const BAND_LABEL: Record<ConfidenceBand, string> = { high: "High", medium: "Medium", low: "Low" };
 export { band };

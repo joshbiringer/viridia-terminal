@@ -26,7 +26,7 @@ import type { Degree, Pivot, PivotBar, PendingSwing, Timeframe } from "./pivots.
 import {
   RULES_VERSION, validate, type Direction, type Invalidation, type Pattern, type Validation, type WavePoint,
 } from "./rules.ts";
-import { rankCandidates, encodeFactors, type Rank } from "./rank.ts";
+import { rankCandidates, encodeFactors, alternateIndex, scenarioKey, type Rank } from "./rank.ts";
 
 export const CANDIDATES_VERSION = "candidates-1.0.0";
 
@@ -274,10 +274,14 @@ export interface CompactCandidateSet {
   eb: CandidateSet["eliminatedBy"]; t: boolean; c: CompactCandidate[];
 }
 
+export const candidateScenario = (c: Candidate) => scenarioKey(c.pattern, c.complete, c.next.label, c.next.direction);
+
 export function compactSet(s: CandidateSet, keep = 12): CompactCandidateSet {
+  const kept = s.candidates.slice(0, keep);
+  const alt = alternateIndex(kept, candidateScenario);
   return {
     v: s.version, a: s.anchor, x: s.examined, e: s.eliminated, eb: s.eliminatedBy.slice(0, 6),
-    t: s.truncated || s.candidates.length > keep, c: s.candidates.slice(0, keep).map((c, i) => compactCandidate(c, i < 2)),
+    t: s.truncated || s.candidates.length > keep, c: kept.map((c, i) => compactCandidate(c, i === 0 || i === alt)),
   };
 }
 

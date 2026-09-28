@@ -4,7 +4,7 @@ import { generateCandidates, compactSet } from "../supabase/functions/_shared/en
 import {
   FACTOR_IDS, band, decodeFactors, encodeFactors, rankCandidate, scoreOf,
 } from "../supabase/functions/_shared/engine/rank";
-import { glanceOf } from "../supabase/functions/_shared/engine/glance";
+import { compactScenario, glanceOf } from "../supabase/functions/_shared/engine/glance";
 
 /** Straight-line legs between waypoints; per-leg volume so wave personality can be tested. */
 function path(waypoints: number[], vols?: number[], barsPerLeg = 10): PivotBar[] {
@@ -67,6 +67,21 @@ describe("Pattern Confidence", () => {
     expect(rankCandidate(c, bars)).toEqual(c.rank);
   });
 
+  it("credits alternate waves in Fibonacci ratio (wave 5 = wave 1)", () => {
+    const equal = impulseId(path([140, 100, 130, 112, 175, 158, 188, 170]));  // w1 = 30, w5 = 30
+    const off = impulseId(path(WAY));                                          // w5 = 32 (6.7% off)
+    const f = (c: typeof equal) => c.rank!.factors.find((x) => x.id === "fib.alternate_ratio")?.pass;
+    expect(f(equal)).toBe(true);
+    expect(f(off)).toBe(false);
+  });
+
+  it("marks running flats as the rare variation", () => {
+    const set = run(path([90, 120, 100, 125, 105, 118]));
+    const running = set.candidates.find((c) => c.pattern === "flat" && c.subtype === "running");
+    expect(running).toBeDefined();
+    expect(running!.rank!.factors.find((x) => x.id === "flat.not_running")?.pass).toBe(false);
+  });
+
   it("round-trips factors through compact storage", () => {
     const c = impulseId(path(WAY));
     expect(decodeFactors(encodeFactors(c.rank!.factors))).toEqual(c.rank!.factors);
@@ -76,7 +91,9 @@ describe("Pattern Confidence", () => {
   it("stores factors only for the preferred and alternate counts", () => {
     const s = compactSet(run(path(WAY)));
     expect(s.c[0].fx).toBeDefined();
-    expect(s.c.slice(2).every((c) => c.fx === undefined)).toBe(true);
+    const withFx = s.c.map((c, i) => (c.fx ? i : -1)).filter((i) => i >= 0);
+    expect(withFx.length).toBeLessThanOrEqual(2);
+    expect(withFx[0]).toBe(0);
     expect(s.c.every((c) => typeof c.sc === "number")).toBe(true);
   });
 });
@@ -87,8 +104,30 @@ describe("Structure at a glance", () => {
     const g = glanceOf({ minor: s })!;
     expect(g.degree).toBe("minor");
     expect(g.preferred.id).toBe(s.c[0].id);
-    expect(g.alternate?.id).toBe(s.c[1]?.id);
     expect(g.closeCall).toBe(!!g.alternate && g.preferred.score - g.alternate.score < 5);
+  });
+  it("picks an alternate that tells a different story, the best-ranked one", () => {
+    const g = glanceOf({ minor: s })!;
+    const key = (c: (typeof s.c)[number]) => compactScenario(c);
+    if (g.alternate) {
+      const ai = s.c.findIndex((c) => c.id === g.alternate!.id);
+      expect(key(s.c[ai])).not.toBe(key(s.c[0]));
+      expect(s.c.slice(1, ai).every((c) => key(c) === key(s.c[0]))).toBe(true);
+      expect(s.c[ai].fx).toBeDefined();
+    } else {
+      expect(s.c.every((c) => key(c) === key(s.c[0]))).toBe(true);
+    }
+    expect(g.agree).toBeGreaterThanOrEqual(1);
+  });
+  it("gives a finished pattern a reassess level at its last point", () => {
+    const g = glanceOf({ minor: s })!;
+    const c = s.c.find((x) => x.c);
+    if (c) {
+      const one = glanceOf({ minor: { ...s, c: [c] } })!;
+      expect(one.preferred.reassess).toBe(c.p[c.p.length - 1][1]);
+      expect(one.preferred.reassessSide).toBe(c.d === "u" ? "above" : "below");
+    }
+    expect(g.preferred.last.price).toBe(s.c[0].p[s.c[0].p.length - 1][1]);
   });
   it("falls back through degrees and returns null with no counts", () => {
     expect(glanceOf({ intermediate: { ...s, c: [] }, minor: s })!.degree).toBe("minor");

@@ -5,7 +5,7 @@
  */
 import type { CompactCandidate, CompactCandidateSet } from "./candidates.ts";
 import type { Degree } from "./pivots.ts";
-import { band, CLOSE_CALL, type ConfidenceBand } from "./rank.ts";
+import { alternateIndex, band, CLOSE_CALL, scenarioKey, type ConfidenceBand } from "./rank.ts";
 
 /** Degree shown first when the reader has not chosen one: intermediate is the swing-trading degree. */
 export const GLANCE_DEGREES: Degree[] = ["intermediate", "primary", "minor"];
@@ -26,6 +26,14 @@ export interface GlanceCount {
   holdSide: "above" | "below" | null;
   /** Nearest unreached Fibonacci target for the wave in progress. */
   target: { price: number; label: string } | null;
+  /**
+   * For a finished pattern, the price at its last point: beyond it the final wave is still extending,
+   * so the pattern is not finished after all. Not a rule level (the rules define none in this state).
+   */
+  reassess: number | null;
+  reassessSide: "above" | "below" | null;
+  /** The count's last labeled point (where the current, unconfirmed move began). */
+  last: { ts: string; price: number };
 }
 
 export interface Glance {
@@ -36,6 +44,8 @@ export interface Glance {
   closeCall: boolean;
   /** Rule-valid counts at this degree (up to the stored limit). */
   valid: number;
+  /** Of those, how many expect the same direction for the move in progress as the preferred count. */
+  agree: number;
 }
 
 function toGlance(c: CompactCandidate): GlanceCount {
@@ -51,8 +61,14 @@ function toGlance(c: CompactCandidate): GlanceCount {
     wave: c.nx.l, waveDirection: c.nx.d === "u" ? "up" : "down",
     score, band: band(score), hold, holdSide,
     target: primary ? { price: primary[0], label: primary[1] } : null,
+    reassess: c.c ? c.p[c.p.length - 1][1] : null,
+    // a finished up-pattern ends at a high: a higher high means its last wave is still going
+    reassessSide: c.c ? (c.d === "u" ? "above" : "below") : null,
+    last: { ts: c.p[c.p.length - 1][0], price: c.p[c.p.length - 1][1] },
   };
 }
+
+export const compactScenario = (c: CompactCandidate) => scenarioKey(c.pt, c.c, c.nx.l, c.nx.d === "u" ? "up" : "down");
 
 export function glanceOf(sets: Partial<Record<Degree, CompactCandidateSet | null>>, prefer?: Degree | "auto" | null): Glance | null {
   const order = prefer && prefer !== "auto" ? [prefer, ...GLANCE_DEGREES.filter((d) => d !== prefer)] : GLANCE_DEGREES;
@@ -60,9 +76,11 @@ export function glanceOf(sets: Partial<Record<Degree, CompactCandidateSet | null
     const c = sets[degree]?.c ?? [];
     if (!c.length) continue;
     const preferred = toGlance(c[0]);
-    const alternate = c[1] ? toGlance(c[1]) : null;
+    // the alternate tells a different story (see rank.ts scenarioKey), not the same one from another start
+    const ai = alternateIndex(c, compactScenario);
+    const alternate = ai > 0 ? toGlance(c[ai]) : null;
     return {
-      degree, preferred, alternate, valid: c.length,
+      degree, preferred, alternate, valid: c.length, agree: c.filter((x) => x.nx.d === c[0].nx.d).length,
       closeCall: !!alternate && preferred.score - alternate.score < CLOSE_CALL,
     };
   }

@@ -22,7 +22,7 @@ import type { Candidate } from "./candidates.ts";
 import type { PivotBar } from "./pivots.ts";
 import { RULEBOOK } from "./rules.ts";
 
-export const RANK_VERSION = "rank-1.0.0";
+export const RANK_VERSION = "rank-1.1.0";
 
 /** Wave-personality checks measured by this module. */
 export const PERSONALITY = {
@@ -44,6 +44,15 @@ export const PERSONALITY = {
   },
   "personality.w4_time": {
     text: "Waves 2 and 4 alternate in time too: the shallower correction takes at least as long",
+    source: "Essentials",
+  },
+  // rank-1.1.0 (appended: FACTOR_IDS positions are part of the stored encoding)
+  "fib.alternate_ratio": {
+    text: "Alternate waves are related by a Fibonacci ratio within 5% (wave 5 to wave 1, C to A, or triangle legs at 61.8%), the more reliable kind of relationship",
+    source: "Essentials",
+  },
+  "flat.not_running": {
+    text: "The flat is a regular or expanded flat; running flats are a rare variation",
     source: "Essentials",
   },
 } as const;
@@ -87,10 +96,47 @@ function avgVolume(bars: PivotBar[], from: number, to: number): number | null {
   return n ? sum / n : null;
 }
 
+/** Within `tol` (relative) of any of the ratios. */
+const nearRatio = (r: number, ratios: number[], tol = 0.05) => Number.isFinite(r) && ratios.some((x) => Math.abs(r / x - 1) <= tol);
+
+/**
+ * Essentials: relationships between alternate waves are "far more reliable" than those between
+ * adjacent waves. Measured once the later wave of the pair has finished; null when not measurable.
+ */
+function alternateRatio(c: Candidate): boolean | null {
+  const p = c.points;
+  const len = (a: number, b: number) => Math.abs(p[b].price - p[a].price);
+  switch (c.pattern) {
+    case "impulse":
+      if (p.length < 6) return null;
+      // wave 5 = wave 1 (or 61.8% / 161.8% of it), or wave 5 = 61.8% / 161.8% of waves 1 through 3
+      return nearRatio(len(4, 5) / len(0, 1), [0.618, 1, 1.618]) || nearRatio(len(4, 5) / len(0, 3), [0.618, 1.618]);
+    case "zigzag":
+      if (p.length < 4) return null;
+      return nearRatio(len(2, 3) / len(0, 1), [0.618, 1, 1.618]);
+    case "flat":
+      if (p.length < 4) return null;
+      // regular: C about equal to A; expanded: C tends to be 1.618 × A
+      return nearRatio(len(2, 3) / len(0, 1), [1, 1.618]);
+    case "triangle": {
+      if (p.length < 4) return null;
+      const ca = nearRatio(len(2, 3) / len(0, 1), [0.618]);
+      const db = p.length >= 5 ? nearRatio(len(3, 4) / len(1, 2), [0.618]) : false;
+      return ca || db;
+    }
+    default:
+      return null;
+  }
+}
+
 function personality(c: Candidate, bars: PivotBar[] | undefined): Factor[] {
   const out: Factor[] = [];
   const p = c.points;
   const up = c.direction === "up";
+
+  const alt = alternateRatio(c);
+  if (alt != null) out.push({ id: "fib.alternate_ratio", pass: alt });
+  if (c.pattern === "flat" && c.subtype) out.push({ id: "flat.not_running", pass: c.subtype !== "running" });
 
   // Start at an extreme: nothing in the look-back window (the count's own span, at least 10 bars)
   // went beyond the starting point.
@@ -129,6 +175,25 @@ function personality(c: Candidate, bars: PivotBar[] | undefined): Factor[] {
     out.push({ id: "personality.w4_time", pass: r2 >= r4 ? w4.bars >= w2.bars : w2.bars >= w4.bars });
   }
   return out;
+}
+
+// ------------------------------------------------------------------------------------------ alternate
+
+/**
+ * What a count says happens next, reduced to what a reader acts on: motive or corrective, the wave in
+ * progress (or "next" after a finished pattern) and its direction. Two counts with the same scenario
+ * are the same story from different starting points, so the alternate must tell a different one.
+ */
+const MOTIVE = new Set(["impulse", "leading_diagonal", "ending_diagonal"]);
+export const scenarioKey = (pattern: string, complete: boolean, wave: string, waveDir: string) =>
+  `${MOTIVE.has(pattern) ? "motive" : "corrective"}|${complete ? "next" : wave}|${waveDir}`;
+
+/** Index of the top-ranked count whose scenario differs from the preferred (index 0); -1 if none. */
+export function alternateIndex<T>(ranked: T[], key: (t: T) => string): number {
+  if (ranked.length < 2) return -1;
+  const k0 = key(ranked[0]);
+  for (let i = 1; i < ranked.length; i++) if (key(ranked[i]) !== k0) return i;
+  return -1;
 }
 
 // ------------------------------------------------------------------------------------------ ranking

@@ -149,7 +149,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <WaveCounts data={swings?.candidates ?? null} asOf={swings?.asOf} version={swings?.version} source={swings?.source} />
+        <WaveCounts data={swings?.candidates ?? null} glances={swings?.glances ?? null} asOf={swings?.asOf} version={swings?.version} source={swings?.source} />
         <div className="flex min-w-0 flex-col gap-6">
         <ConfluenceZones fib={swings?.fib ?? null} />
         <div className="card">

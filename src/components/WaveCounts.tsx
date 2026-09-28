@@ -6,7 +6,7 @@ import { useDegree } from "./analysis/DegreeContext";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { fmtDate } from "@/lib/format";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
-import { BAND_LABEL, CANDIDATE_METHOD, PATTERN_LABEL, band, type ClientCandidate, type ClientCandidates } from "@/lib/analysis/candidates";
+import { BAND_LABEL, CANDIDATE_METHOD, PATTERN_LABEL, band, type ClientCandidate, type ClientCandidates, type Glances } from "@/lib/analysis/candidates";
 
 type Degree = keyof ClientCandidates;
 const ORDER: Degree[] = ["primary", "intermediate", "minor"];
@@ -14,9 +14,12 @@ const PREFERRED_TAB: Degree[] = ["intermediate", "minor", "primary"];
 
 /**
  * Candidate wave counts (engine Phase 5), ranked by Pattern Confidence (Phase 7). Every count shown
- * passes every hard rule; the first is the preferred count and the second the alternate.
+ * passes every hard rule; the first is the preferred count, and the alternate is the best-ranked count
+ * that tells a different story (see engine rank.ts scenarioKey).
  */
-export function WaveCounts({ data, asOf, version, source }: { data: ClientCandidates | null; asOf?: string; version?: string; source?: string }) {
+export function WaveCounts({ data, glances, asOf, version, source }: {
+  data: ClientCandidates | null; glances?: Glances | null; asOf?: string; version?: string; source?: string;
+}) {
   const first = data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
   const { degree: deg, setDegree: setDeg } = useDegree(first);
   const [open, setOpen] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function WaveCounts({ data, asOf, version, source }: { data: ClientCandid
 
           <ul className="divide-y divide-line">
             {set.candidates.map((c, i) => (
-              <CountRow key={c.id} c={c} rank={c.score != null ? i : null} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} />
+              <CountRow key={c.id} c={c} rank={c.score == null ? null : i === 0 ? 0 : c.id === glances?.[deg]?.alternate?.id ? 1 : i} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} />
             ))}
           </ul>
 
