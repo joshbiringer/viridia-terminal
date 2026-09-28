@@ -21,22 +21,24 @@ const KINDS = [["", "Any setup"], ...(Object.entries(SETUP_LABEL) as [SetupKind,
 const RRS = [["", "Any"], ["1.5", "1.5 : 1 or better"], ["2", "2 : 1 or better"], ["3", "3 : 1 or better"]] as const;
 const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+)"]] as const;
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
+const ALIGN = [["", "Any"], ["with", "With the weekly count"], ["against", "Against the weekly count"]] as const;
 const SORTS = [["confidence", "Pattern Confidence"], ["rr", "Reward : risk"], ["risk", "Smallest risk"], ["dollar_volume", "Dollar volume"], ["symbol", "Ticker"]] as const;
 
-type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page", string>>;
+type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk", string>>;
 
 export default async function SetupsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const pick = <T extends readonly (readonly [string, string])[]>(opts: T, v?: string) => (opts.some(([k]) => k === v) ? v! : opts[0][0]);
   const side = pick(SIDES, sp.side), status = pick(STATUSES, sp.status), kind = pick(KINDS, sp.kind);
   const rr = pick(RRS, sp.rr), score = pick(SCORES, sp.score), dv = pick(DV, sp.dv), sort = pick(SORTS, sp.sort);
+  const wk = pick(ALIGN, sp.wk);
   const page = Math.max(1, Number(sp.page) || 1);
 
   const [rows, cov] = await Promise.all([
     setupScan({
       p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
       p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null,
-      p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE,
+      p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE, p_aligned: wk ? wk === "with" : null,
     }).catch(() => null),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
   ]);
@@ -44,11 +46,11 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const total = rows?.[0]?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const href = (patch: Params) => {
-    const merged: Params = { side, status, kind, rr, score, dv, sort: sort === "confidence" ? "" : sort, page: "", ...patch };
+    const merged: Params = { side, status, kind, rr, score, dv, wk, sort: sort === "confidence" ? "" : sort, page: "", ...patch };
     const p = new URLSearchParams(Object.entries(merged).filter(([, v]) => v) as [string, string][]);
     return `/setups${p.size ? "?" + p : ""}`;
   };
-  const filtered = !!(side || status || kind || rr || score || dv);
+  const filtered = !!(side || status || kind || rr || score || dv || wk);
   const recomputing = coverage && coverage.ranked < coverage.total;
 
   return (
@@ -61,9 +63,9 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
       <section className="card">
         <nav className="flex flex-wrap gap-2 border-b border-line px-5 py-4" aria-label="Quick filters">
           {([["Buy setups", { side: "buy" }], ["Sell setups", { side: "sell" }], ["Active now", { status: "active" }],
-             ["Waiting for a pullback", { status: "waiting" }], ["Wave 3 under way", { kind: "wave3" }], ["2 : 1 or better", { rr: "2" }]] as [string, Params][])
+             ["Waiting for a pullback", { status: "waiting" }], ["With the weekly count", { wk: "with" }], ["Wave 3 under way", { kind: "wave3" }], ["2 : 1 or better", { rr: "2" }]] as [string, Params][])
             .map(([label, patch]) => {
-              const on = Object.entries(patch).every(([k, v]) => ({ side, status, kind, rr } as Record<string, string>)[k] === v);
+              const on = Object.entries(patch).every(([k, v]) => ({ side, status, kind, rr, wk } as Record<string, string>)[k] === v);
               const next = on ? Object.fromEntries(Object.keys(patch).map((k) => [k, ""])) : patch;
               return (
                 <Link key={label} href={href(next)} aria-current={on ? "true" : undefined}
@@ -74,12 +76,13 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
             })}
         </nav>
 
-        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-[repeat(7,minmax(0,1fr))_auto]">
+        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-[repeat(8,minmax(0,1fr))_auto]">
           <Select name="side" label="Side" value={side} options={SIDES} />
           <Select name="status" label="Status" value={status} options={STATUSES} />
           <Select name="kind" label="Setup" value={kind} options={KINDS} />
           <Select name="rr" label="Reward : risk" value={rr} options={RRS} />
           <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
+          <Select name="wk" label="Weekly count" value={wk} options={ALIGN} />
           <Select name="dv" label="Dollar volume" value={dv} options={DV} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
           <div className="col-span-2 flex items-end gap-2 md:col-span-1">
@@ -114,6 +117,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                   <th className="r" title="Reward ÷ risk from the middle of the entry range">R : R</th>
                   <th className="r hidden sm:table-cell" title="Distance from entry to stop">Risk</th>
                   <th className="r hidden sm:table-cell" title="Pattern Confidence of the preferred count">Conf.</th>
+                  <th className="hidden md:table-cell" title="Does the weekly preferred count's move in progress point the same way?">Weekly</th>
                   <th className="r hidden xl:table-cell">$ volume (20d)</th>
                 </tr>
               </thead>
@@ -137,6 +141,11 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                     <td className="r num font-medium">{r.rr.toFixed(1)}</td>
                     <td className="r num hidden text-fg-2 sm:table-cell">{pct(r.risk_pct, 1).replace("+", "")}</td>
                     <td className="r num hidden sm:table-cell">{r.score ?? "—"}</td>
+                    <td className="hidden whitespace-nowrap text-[12.5px] md:table-cell">
+                      {r.weekly_dir == null ? <span className="text-fg-3">—</span>
+                        : (r.weekly_dir === "up") === (r.side === "buy") ? <span className="text-pos">With</span>
+                        : <span style={{ color: "var(--warn)" }}>Against</span>}
+                    </td>
                     <td className="r num hidden text-fg-2 xl:table-cell">{fmtDollars(r.dollar_volume)}</td>
                   </tr>
                 ))}

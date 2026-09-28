@@ -4,6 +4,8 @@ import { DEGREES, fromCompact, pivotsForClient, type ClientPivots, type Degree }
 import { ANALYSIS_VERSION, candidatesForClient, fromCompactSet, glancesOf, setupReasonsOf, setupsOf, type ClientCandidates, type ClientFib, type Glances, type SetupReasons, type Setups } from "./candidates";
 import type { CompactCandidateSet } from "@engine/candidates";
 import type { ConfluenceZone } from "@engine/fib";
+import { glanceOf, type Glance } from "@engine/glance";
+import type { HistoryPoint } from "./explain";
 
 export interface SwingSummary {
   source: "cache" | "live";
@@ -53,4 +55,17 @@ export async function getDailyAnalysis(symbol: string): Promise<SwingSummary | n
     source: "live", asOf: bars.at(-1)!.ts, bars: bars.length, version: ANALYSIS_VERSION,
     pivots: pivotsForClient(bars, "1d"), candidates: live.candidates, fib: live.fib, glances: live.glances, setups: live.setups, setupReasons: live.setupReasons,
   };
+}
+
+/** The weekly analysis's preferred-count summary, from the latest stored weekly result (any engine version). */
+export async function getWeeklyGlance(symbol: string): Promise<Glance | null> {
+  const { data } = await db().rpc("get_analysis", { p_symbol: symbol, p_timeframe: "1w" });
+  const c = data as Cached | null;
+  return c?.candidates ? glanceOf(c.candidates) : null;
+}
+
+/** The last few stored days of the preferred daily count, newest first. */
+export async function getAnalysisHistory(symbol: string, limit = 10): Promise<HistoryPoint[]> {
+  const { data } = await db().rpc("get_analysis_history", { p_symbol: symbol, p_limit: limit });
+  return (data ?? []) as HistoryPoint[];
 }

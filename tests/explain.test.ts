@@ -21,4 +21,16 @@ describe("Ask Viridia", () => {
     expect(JSON.stringify(answer("why", empty))).toContain("no rule-valid wave count");
     expect(JSON.stringify(answer("setup", empty))).toContain("doesn't define a setup");
   });
+
+  it("compares two stored days and reports only what changed", () => {
+    const day = (d: string, o: object) => ({ day: d, degree: "intermediate", pattern: "impulse", complete: false, wave: "3", wave_dir: "up", score: 70, hold: 100, setup_side: "buy", setup_kind: "wave3", ...o });
+    const same = answer("changed", { ...empty, history: [day("2026-09-29", {}), day("2026-09-28", {})] });
+    expect(JSON.stringify(same)).toContain("Nothing material changed");
+    const moved = answer("changed", { ...empty, history: [day("2026-09-29", { wave: "4", wave_dir: "down", score: 64, setup_side: null, setup_kind: null }), day("2026-09-28", {})] });
+    const text = JSON.stringify(moved);
+    expect(text).toContain("Pattern Confidence: 70 → 64");
+    expect(text).toContain("Setup: buy");
+    const none = answer("changed", { ...empty, history: [day("2026-09-28", {})] });
+    expect(JSON.stringify(none)).toContain("previous day");
+  });
 });

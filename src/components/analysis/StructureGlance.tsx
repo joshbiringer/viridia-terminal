@@ -46,10 +46,10 @@ const dist = (price: number | null, close: number | null) => (price != null && c
  * rule-valid, ranked counts; nothing is filled in when the engine has no count.
  */
 export function StructureGlance({
-  symbol, glances, candidates, zones, close, asOf,
+  symbol, glances, candidates, zones, close, asOf, weekly = null,
 }: {
   symbol: string; glances: Glances | null; candidates: ClientCandidates | null; zones: ConfluenceZone[];
-  close: number | null; asOf?: string;
+  close: number | null; asOf?: string; weekly?: Glance | null;
 }) {
   const { degree, setDegree } = useDegree((glances?.auto?.degree ?? "intermediate") as Degree);
   const g = glances?.[degree] ?? null;
@@ -86,7 +86,7 @@ export function StructureGlance({
         </div>
       ) : (
         <>
-          <Context g={g} close={close} />
+          <Context g={g} close={close} weekly={weekly} />
           {g.closeCall && (
             <p className="flex items-start gap-2 border-b border-line px-5 py-2.5 text-[12.5px]" style={{ background: "var(--alt-soft)", color: "var(--alt)" }}>
               <b className="font-semibold">Close call.</b>
@@ -196,7 +196,7 @@ function Levels({ g, close, zone }: { g: GlanceCount; close: number | null; zone
 }
 
 /** Where price is relative to the count, and how much of the rest of the list agrees on direction. */
-function Context({ g, close }: { g: Glance; close: number | null }) {
+function Context({ g, close, weekly }: { g: Glance; close: number | null; weekly: Glance | null }) {
   const move = close != null ? close / g.preferred.last.price - 1 : null;
   const dir = g.preferred.waveDirection;
   const withCount = move != null && (dir === "up" ? move > 0 : move < 0);
@@ -212,6 +212,17 @@ function Context({ g, close }: { g: Glance; close: number | null }) {
       <span>
         <b className="num font-semibold text-fg">{g.agree} of {g.valid}</b> rule-valid counts expect the current move to be {dir}.
       </span>
+      {weekly && (
+        <span title={`Weekly preferred count: ${PATTERN_LABEL[weekly.preferred.pattern]} ${weekly.preferred.direction}, ${weekly.preferred.complete ? "complete" : `wave ${weekly.preferred.wave}`} (Pattern Confidence ${weekly.preferred.score})`}>
+          Weekly count:{" "}
+          <b className="font-semibold text-fg">
+            {PATTERN_LABEL[weekly.preferred.pattern].toLowerCase()} {weekly.preferred.complete ? "complete" : `wave ${weekly.preferred.wave}`} {weekly.preferred.waveDirection === "up" ? "↑" : "↓"}
+          </b>
+          {weekly.preferred.waveDirection === dir
+            ? <span className="text-pos">, same direction</span>
+            : <span style={{ color: "var(--warn)" }}>, opposite direction</span>}
+        </span>
+      )}
     </p>
   );
 }

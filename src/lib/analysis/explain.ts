@@ -274,7 +274,7 @@ function wave(ctx: ExplainContext): Answer {
 
 function weekly(ctx: ExplainContext): Answer {
   const title = "Weekly versus daily";
-  const d = ctx.glances?.auto ?? null;
+  const d = ctx.glances?.[ctx.degree] ?? ctx.glances?.auto ?? null;
   const w = ctx.weekly ?? null;
   if (!d || !w) {
     return { title, blocks: [p(!w

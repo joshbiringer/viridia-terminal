@@ -10,7 +10,7 @@ import { SourceFooter } from "@/components/SourceFooter";
 import { PriceChart } from "@/components/PriceChart";
 import { StructureSummary } from "@/components/StructureSummary";
 import { AskViridiaButton } from "@/components/AskViridiaPanel";
-import { getDailyAnalysis } from "@/lib/analysis/server";
+import { getAnalysisHistory, getDailyAnalysis, getWeeklyGlance } from "@/lib/analysis/server";
 import { WaveCounts } from "@/components/WaveCounts";
 import { ConfluenceZones } from "@/components/ConfluenceZones";
 import { WatchButton } from "@/components/WatchButton";
@@ -69,12 +69,14 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     );
   }
 
-  const [events, mappings, summaryRes, snapRes, swings] = await Promise.all([
+  const [events, mappings, summaryRes, snapRes, swings, weekly, history] = await Promise.all([
     db().from("security_events").select("*").eq("security_id", sec.id).order("id", { ascending: false }).limit(20),
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
     db().rpc("get_snapshot", { p_symbol: sec.symbol }),
     getDailyAnalysis(sec.symbol).catch(() => null),
+    getWeeklyGlance(sec.symbol).catch(() => null),
+    getAnalysisHistory(sec.symbol, 10).catch(() => []),
   ]);
   const sum = (summaryRes.data ?? null) as BarSummary | null;
   const snap = (snapRes.data ?? null) as Snapshot | null;
@@ -122,7 +124,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
             <AskViridiaButton
               symbol={sec.symbol} close={sum?.last_close ?? null} glances={swings?.glances ?? null}
               candidates={swings?.candidates ?? null} zones={swings?.fib?.zones ?? []} setups={swings?.setups ?? null}
-              setupReasons={swings?.setupReasons ?? null}
+              setupReasons={swings?.setupReasons ?? null} weekly={weekly} history={history}
             />
           </div>
         </div>
@@ -147,7 +149,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
 
       <StructureGlance
         symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
-        zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf}
+        zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf} weekly={weekly}
       />
       <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} />
 
