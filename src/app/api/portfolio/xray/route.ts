@@ -15,20 +15,24 @@ export async function POST(req: Request) {
   const { holdings, errors } = parseHoldings(text);
   if (!holdings.length) return NextResponse.json({ errors: errors.length ? errors : ["No holdings found."] }, { status: 400 });
   const symbols = [...holdings.map((h) => h.symbol), "SPY"];
-  const [ctxRes, closesRes] = await Promise.all([
+  // closes in chunks of 8 symbols, in parallel, to stay inside the database's per-call time limit
+  const chunks: string[][] = [];
+  for (let i = 0; i < symbols.length; i += 8) chunks.push(symbols.slice(i, i + 8));
+  const [ctxRes, ...closeRes] = await Promise.all([
     db().rpc("portfolio_context", { p_symbols: symbols }),
-    db().rpc("closes_for", { p_symbols: symbols, p_limit: 253 }),
+    ...chunks.map((c) => db().rpc("closes_for", { p_symbols: c, p_limit: 253 })),
   ]);
-  if (ctxRes.error || closesRes.error) {
-    console.error("xray", ctxRes.error?.message, closesRes.error?.message);
-    return NextResponse.json({ errors: ["Market data couldn't be loaded. Try again in a moment."], detail: (ctxRes.error ?? closesRes.error)?.message }, { status: 502 });
+  const failed = ctxRes.error ?? closeRes.find((r) => r.error)?.error;
+  if (failed) {
+    console.error("xray", failed.message);
+    return NextResponse.json({ errors: ["Market data couldn't be loaded. Try again in a moment."] }, { status: 502 });
   }
   const closes = new Map<string, Close[]>();
-  for (const r of (closesRes.data ?? []) as { symbol: string; ts: string; close: number }[]) {
-    if (!closes.has(r.symbol)) closes.set(r.symbol, []);
-    closes.get(r.symbol)!.push({ ts: r.ts, close: r.close });
+  for (const res of closeRes) {
+    for (const r of (res.data ?? []) as { symbol: string; closes: [string, number][] }[]) {
+      closes.set(r.symbol, r.closes.map(([ts, close]) => ({ ts, close })));
+    }
   }
-  for (const v of closes.values()) v.sort((a, b) => (a.ts < b.ts ? -1 : 1));
   const ctx = ((ctxRes.data ?? []) as Context[]).filter((c) => holdings.some((h) => h.symbol === c.symbol));
   return NextResponse.json({ errors, result: xray(holdings, ctx, closes) }, { headers: { "Cache-Control": "no-store" } });
 }

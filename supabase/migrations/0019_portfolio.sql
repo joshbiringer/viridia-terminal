@@ -19,12 +19,15 @@ language sql stable security definer set search_path to 'public' as $$
 $$;
 grant execute on function public.portfolio_context(text[]) to anon, authenticated;
 
--- Daily closes for up to 100 symbols (last p_limit sessions each), for returns, beta and correlation.
+-- Daily closes for up to 25 symbols per call (last p_limit sessions each), one row per symbol so the
+-- API's row cap never truncates a series; the app calls it in chunks, in parallel.
+drop function if exists public.closes_for(text[], integer);
 create or replace function public.closes_for(p_symbols text[], p_limit integer default 253)
-returns table(symbol text, ts timestamptz, close double precision)
+returns table(symbol text, closes jsonb)
 language sql stable security definer set search_path to 'public' as $$
-  select u.sym, b.ts, b.close
-  from (select distinct upper(trim(x)) as sym from unnest(p_symbols[1:100]) x) u
-  cross join lateral get_bars(u.sym, '1d', least(greatest(p_limit, 20), 300)) b
+  select u.sym,
+         (select coalesce(jsonb_agg(jsonb_build_array(b.ts, b.close) order by b.ts), '[]'::jsonb)
+          from get_bars(u.sym, '1d', least(greatest(p_limit, 20), 300)) b)
+  from (select distinct upper(trim(x)) as sym from unnest(p_symbols[1:25]) x) u
 $$;
 grant execute on function public.closes_for(text[], integer) to anon, authenticated;
