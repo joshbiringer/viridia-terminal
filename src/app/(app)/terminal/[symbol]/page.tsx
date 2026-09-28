@@ -13,8 +13,11 @@ import { AskViridiaButton } from "@/components/AskViridiaPanel";
 import { getDailyAnalysis } from "@/lib/analysis/server";
 import { WaveCounts } from "@/components/WaveCounts";
 import { ConfluenceZones } from "@/components/ConfluenceZones";
+import { WatchButton } from "@/components/WatchButton";
+import { TrackEvent } from "@/components/TrackEvent";
+import { WelcomeGuide } from "@/components/WelcomeGuide";
 
-type Props = { params: Promise<{ symbol: string }> };
+type Props = { params: Promise<{ symbol: string }>; searchParams: Promise<{ welcome?: string }> };
 
 async function load(symbol: string) {
   const { data, error } = await db().from("securities").select("*")
@@ -33,12 +36,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-const TABS: { label: string; live: boolean }[] = [
-  { label: "Overview", live: true }, { label: "Structure", live: false }, { label: "Financials", live: false },
-  { label: "Earnings", live: false }, { label: "Filings", live: true }, { label: "Ownership", live: false }, { label: "AI Research", live: false },
-];
+// Only sections that exist are shown; financials, earnings and ownership arrive with research data.
+const TABS: { label: string; live: boolean }[] = [{ label: "Overview", live: true }, { label: "Filings", live: true }];
 
-export default async function StockTerminal({ params }: Props) {
+export default async function StockTerminal({ params, searchParams }: Props) {
+  const welcome = (await searchParams).welcome === "1";
   const symbol = decodeURIComponent((await params).symbol).toUpperCase();
   const sec = await load(symbol);
 
@@ -87,6 +89,7 @@ export default async function StockTerminal({ params }: Props) {
 
   return (
     <>
+      <TrackEvent event="analysis_viewed" props={{ symbol: sec.symbol }} />
       <header className="flex flex-col gap-5">
         <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
           <div className="min-w-0">
@@ -109,9 +112,7 @@ export default async function StockTerminal({ params }: Props) {
             </div>
           )}
           <div className="ml-auto flex flex-wrap gap-2">
-            <button className="btn" disabled title="Watchlists arrive with accounts">Watch</button>
-            <button className="btn" disabled title="Alerts arrive with accounts">Alert</button>
-            <button className="btn" disabled title="Comparison is planned">Compare</button>
+            <WatchButton securityId={sec.id} symbol={sec.symbol} />
             <AskViridiaButton symbol={sec.symbol} />
           </div>
         </div>
@@ -131,6 +132,8 @@ export default async function StockTerminal({ params }: Props) {
           })}
         </nav>
       </header>
+
+      {welcome && <WelcomeGuide symbol={sec.symbol} />}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} />

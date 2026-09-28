@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useViewer } from "./ViewerProvider";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { fmtDate } from "@/lib/format";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
@@ -16,7 +17,9 @@ const PREFERRED_TAB: Degree[] = ["intermediate", "minor", "primary"];
  * how much of the recent structure they explain; which is preferred is decided by ranking in Phase 7.
  */
 export function WaveCounts({ data, asOf, version, source }: { data: ClientCandidates | null; asOf?: string; version?: string; source?: string }) {
-  const first = data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
+  const { prefs } = useViewer();
+  const chosen = prefs?.default_degree && prefs.default_degree !== "auto" ? (prefs.default_degree as Degree) : null;
+  const first = chosen ?? (data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate");
   const [deg, setDeg] = useState<Degree>(first);
   const [open, setOpen] = useState<string | null>(null);
   const set = data?.[deg];

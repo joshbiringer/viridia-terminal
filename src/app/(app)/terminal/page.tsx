@@ -10,6 +10,9 @@ import { ScannerTable } from "@/components/ScannerTable";
 import { OpenPaletteButton } from "@/components/OpenPaletteButton";
 import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { FirstRun } from "@/components/FirstRun";
+import { getViewer } from "@/lib/auth";
+import { authClient } from "@/lib/supabase/server";
 
 const SWING_ORDER: [SwingStructure, string][] = [
   ["higher_highs_lows", "var(--pos-chart)"], ["expanding", "var(--alt)"], ["contracting", "var(--fib)"],
@@ -29,7 +32,12 @@ const ENGINE: [string, string][] = [
   ["Preferred and alternate ranking", "Phase 7"],
 ];
 
-export default async function TerminalHome() {
+export default async function TerminalHome({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const viewer = await getViewer().catch(() => null);
+  const watchedCount = viewer
+    ? ((await (await authClient()).from("watchlist_items").select("security_id", { count: "exact", head: true })).count ?? 0)
+    : 0;
+  const showFirstRun = !viewer || watchedCount === 0 || (await searchParams).welcome === "1";
   const [overview, breadth, active, statusRes, swingRes] = await Promise.all([
     getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }), db().rpc("market_data_status"),
     db().rpc("swing_breadth", { p_timeframe: "1d", p_degree: "intermediate" }),
@@ -55,6 +63,8 @@ export default async function TerminalHome() {
         }
         actions={<OpenPaletteButton label="Search markets" className="btn w-full justify-start text-fg-3 sm:w-[300px]" />}
       />
+
+      {showFirstRun && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between">

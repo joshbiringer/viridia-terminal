@@ -13,6 +13,7 @@ import {
 import { DEGREES, DEGREE_LABEL, PIVOT_ALGORITHM_VERSION, SWING_LABEL, type ClientPivots, type Degree } from "@/lib/analysis/pivots";
 import { SourceFooter } from "./SourceFooter";
 import type { ConfluenceZone } from "@/lib/analysis/candidates";
+import { useViewer } from "./ViewerProvider";
 
 type Legend = { o: number; h: number; l: number; c: number; v: number; label: string } | null;
 
@@ -51,7 +52,15 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
   const pendRef = useRef<ISeriesApi<"Line"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
-  const [tf, setTf] = useState<ChartTimeframe>("1d");
+  const { prefs } = useViewer();
+  const [tf, setTf] = useState<ChartTimeframe>((prefs?.default_timeframe as ChartTimeframe) ?? "1d");
+  const compact = prefs?.chart_density === "compact";
+  // the command palette can change the timeframe (⌘K → "Chart timeframe: 1W")
+  useEffect(() => {
+    const on = (e: Event) => { const v = (e as CustomEvent<string>).detail; if (TIMEFRAMES.some((t) => t.id === v)) setTf(v as ChartTimeframe); };
+    window.addEventListener("viridia:set-timeframe", on);
+    return () => window.removeEventListener("viridia:set-timeframe", on);
+  }, []);
   const [bars, setBars] = useState<BarRow[]>([]);
   const [history, setHistory] = useState<HistoryStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +70,7 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
   const [showPivots, setShowPivots] = useState(true);
   const [showFib, setShowFib] = useState(true);
   const zoneLines = useRef<IPriceLine[]>([]);
-  const [degree, setDegree] = useState<Degree>("intermediate");
+  const [degree, setDegree] = useState<Degree>((prefs?.default_degree && prefs.default_degree !== "auto" ? prefs.default_degree : "intermediate") as Degree);
   const [themeTick, setThemeTick] = useState(0);
 
   // Create the chart once; re-theme it when the app theme changes.
@@ -247,7 +256,7 @@ export function PriceChart({ symbol, zones = [] }: { symbol: string; zones?: Con
         </div>
       )}
 
-      <div className="relative min-h-[380px] flex-1 sm:min-h-[480px]">
+      <div className={`relative flex-1 ${compact ? "min-h-[300px] sm:min-h-[360px]" : "min-h-[380px] sm:min-h-[480px]"}`}>
         <div ref={box} className="absolute inset-0" />
         {(loading && !bars.length) && <div className="skel absolute inset-3 z-10" aria-label="Loading chart" />}
         {!loading && !bars.length && (

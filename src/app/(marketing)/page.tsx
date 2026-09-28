@@ -9,6 +9,7 @@ import { ScannerTable } from "@/components/ScannerTable";
 import { EXAMPLE } from "@/lib/illustration";
 import { scan, type ScanRow } from "@/lib/market-data/snapshot";
 import { fmtDate } from "@/lib/format";
+import { TrackEvent } from "@/components/TrackEvent";
 
 export const metadata: Metadata = { title: { absolute: "Viridia Terminal: See the structure behind the market" } };
 export const revalidate = 900;
@@ -21,6 +22,7 @@ export default async function Landing() {
 
   return (
     <div className="bg-panel">
+      <TrackEvent event="landing_view" />
       {/* ------------------------------------------------ nav */}
       <header className="sticky top-0 z-30 border-b border-line/70 bg-panel/90 backdrop-blur-[3px]">
         <div className="mx-auto flex h-[64px] max-w-[1200px] items-center gap-8 px-6">
@@ -29,8 +31,8 @@ export default async function Landing() {
             {NAV.map(([l, h]) => <Link key={l} href={h} className="text-[14px] font-[550] text-fg-2 transition-colors hover:text-fg">{l}</Link>)}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            <span className="hidden cursor-default px-3 text-[14px] font-[550] text-fg-3 sm:inline" title="Accounts arrive soon">Sign in</span>
-            <Link href="/terminal" className="btn pri">Open Terminal</Link>
+            <Link href="/signin" className="hidden px-3 text-[14px] font-[550] text-fg-2 transition-colors hover:text-fg sm:inline">Sign in</Link>
+            <Link href="/signup" className="btn pri">Start free</Link>
           </div>
         </div>
       </header>
@@ -45,9 +47,10 @@ export default async function Landing() {
             Viridia Terminal combines Elliott Wave analysis, Fibonacci relationships and quantitative market structure to help investors understand how markets are developing.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/terminal" className="btn pri lg">Open Terminal</Link>
-            <Link href="#methodology" className="btn lg">Explore Methodology</Link>
+            <Link href="/signup" className="btn pri lg">Start free</Link>
+            <Link href="/terminal" className="btn lg">Explore the Terminal</Link>
           </div>
+          <p className="caption mt-4 text-[12.5px]">Free during the beta. No card required. The Terminal is open without an account.</p>
           <div className="mt-16 md:mt-20"><HeroTerminalMock /></div>
         </div>
       </section>
@@ -161,12 +164,12 @@ export default async function Landing() {
         <div className="mx-auto grid max-w-[1200px] gap-10 px-6 py-24 md:grid-cols-[1fr_1fr] md:items-end">
           <div>
             <p className="eyebrow">Access</p>
-            <h2 className="h2 mt-3">Free while it&apos;s being built.</h2>
-            <p className="lede mt-4 max-w-[520px]">The security master, end-of-day price history, charts and scanner are open now. Plans arrive alongside accounts and the wave engine.</p>
+            <h2 className="h2 mt-3">Free during the beta.</h2>
+            <p className="lede mt-4 max-w-[520px]">Every security, wave count, Fibonacci zone and the scanner are open now. A free account adds watchlists and saved preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>
           </div>
           <div className="flex flex-col gap-3 md:items-end">
-            <Link href="/terminal" className="btn pri lg">Open Terminal</Link>
-            <span className="text-[13px] text-fg-3">No sign-up needed.</span>
+            <Link href="/signup" className="btn pri lg">Create a free account</Link>
+            <span className="text-[13px] text-fg-3">No card required.</span>
           </div>
         </div>
       </section>
@@ -175,7 +178,7 @@ export default async function Landing() {
       <section className="brand-surface">
         <div className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-6 py-24 text-white md:flex-row md:items-end md:justify-between">
           <h2 className="h2 max-w-[640px] text-white">See the structure behind the market.</h2>
-          <Link href="/terminal" className="btn lg border-white bg-white text-brand-dark hover:bg-white/90">Open Terminal</Link>
+          <Link href="/signup" className="btn lg border-white bg-white text-brand-dark hover:bg-white/90">Start free</Link>
         </div>
       </section>
 
