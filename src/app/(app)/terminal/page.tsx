@@ -8,8 +8,8 @@ import { MarketStrip } from "@/components/MarketStrip";
 import { BreadthSummary } from "@/components/BreadthSummary";
 import { ScannerTable } from "@/components/ScannerTable";
 import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { FirstRun } from "@/components/FirstRun";
+import { GlobeHero } from "@/components/brief/GlobeHero";
 import { getViewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
 import { countLabel } from "@/components/ScannerTable";
@@ -32,7 +32,6 @@ const SWING_ORDER: [SwingStructure, string][] = [
 export const metadata: Metadata = { title: "Brief" };
 export const dynamic = "force-dynamic";
 
-type Status = { sessions_open: number; first_session: string | null; last_session: string | null; floor: string; coverage_full: number };
 
 /** Structure presets shown on the home page, each linking to the scanner with that filter. */
 const PRESETS: [string, string][] = [
@@ -59,8 +58,8 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
     getTrackRecord().catch(() => []),
   ]);
   const hist = (kind: string, side: string) => record.find((x) => x.kind === kind && x.side === side);
-  const [overview, breadth, active, statusRes, swingRes, setups, ...presetRows] = await Promise.all([
-    getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }), db().rpc("market_data_status"),
+  const [overview, breadth, active, swingRes, setups, ...presetRows] = await Promise.all([
+    getOverview(), getBreadth(), scan({ p_sort: "dollar_volume", p_limit: 10 }),
     db().rpc("swing_breadth", { p_timeframe: "1d", p_degree: "intermediate" }),
     scan({ p_sort: "confidence", p_limit: 8, p_min_score: 70, p_min_dollar_volume: LIQUID }).catch(() => []),
     ...PRESETS.map(([k]) => scan({ p_structure: k, p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => [])),
@@ -68,24 +67,13 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
   const presetCounts = PRESETS.map(([k, label], i) => ({ k, label, n: presetRows[i]?.[0]?.total ?? 0 }));
   const swingCounts = ((swingRes.data as { counts?: Record<string, number> } | null)?.counts ?? {}) as Partial<Record<SwingStructure, number>>;
   const swingTotal = Object.values(swingCounts).reduce((a, b) => a + (b ?? 0), 0);
-  const st = (statusRes.data ?? null) as Status | null;
   const m = marketState();
-  const floor = st ? new Date(st.floor).getTime() : 0;
-  const last = st?.last_session ? new Date(st.last_session).getTime() : 0;
-  const first = st?.first_session ? new Date(st.first_session).getTime() : 0;
-  const backfill = last > floor && first ? Math.min(1, (last - first) / (last - floor)) : 0;
 
   return (
     <>
-      <PageHeader
-        title={`${greeting()}${viewer?.firstName ? `, ${viewer.firstName}` : ""}`}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-2">
-            <span className="dot" style={{ background: m.state === "open" ? "var(--pos-chart)" : "var(--border-2)" }} />
-            Your Viridia Brief. {m.label} Prices are end of day, as of {fmtDate(overview[0]?.last_ts)}.
-          </span>
-        }
-        actions={<Link href="/portfolio" className="btn">Portfolio X-Ray</Link>}
+      <GlobeHero
+        title={`${greeting().replace(/\.$/, "")}${viewer?.firstName ? `, ${viewer.firstName}` : ""}.`}
+        subtitle={`${m.label} Prices are end of day, as of ${fmtDate(overview[0]?.last_ts)}. Below: what changed, the setups worth a look, and where structure stands.`}
       />
 
       {showFirstRun && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
@@ -206,18 +194,9 @@ export default async function TerminalHome({ searchParams }: { searchParams: Pro
                 </ul>
               </div>
             )}
-            {st && (
-              <div className="mt-auto rounded-[var(--r-md)] bg-panel-2 px-4 py-3">
-                <div className="flex items-baseline justify-between text-[13px]">
-                  <span className="font-medium">Price history backfill</span>
-                  <span className="num text-fg-2">{Math.round(backfill * 100)}%</span>
-                </div>
-                <div className="bar mt-2"><i style={{ width: `${backfill * 100}%` }} /></div>
-                <p className="mt-2 text-[12.5px] text-fg-3">
-                  {fmtInt(st.sessions_open)} sessions for {fmtInt(st.coverage_full)} securities. <Link href="/data-sources" className="text-brand hover:underline">Data sources</Link>
-                </p>
-              </div>
-            )}
+            <p className="mt-auto text-[12.5px] text-fg-3">
+              Coverage and data status: <Link href="/data-sources" className="text-brand hover:underline">Data sources</Link>
+            </p>
           </div>
         </section>
       </div>

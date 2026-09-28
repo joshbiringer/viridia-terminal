@@ -252,3 +252,30 @@ kbd { font: 500 11.5px var(--font-sans-stack); padding: 1px 6px; border: 1px sol
 .brand-surface { background: var(--brand-dark); }
 .rule { height: 1px; background: var(--border); }
 }
+
+/* ---------------------------------------------------------------- Brief globe hero (always a night scene) */
+.globe-hero {
+  background:
+    radial-gradient(70% 90% at 78% 30%, rgba(60, 180, 131, 0.16) 0%, transparent 60%),
+    radial-gradient(60% 80% at 10% 0%, rgba(91, 79, 196, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #06130F 0%, #0A2019 62%, #0B271E 100%);
+  border: 1px solid rgba(60, 180, 131, 0.18);
+}
+.globe-stars {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1px 1px at 28% 62%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(1px 1px at 44% 12%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(1px 1px at 58% 44%, rgba(255,255,255,.3), transparent 60%),
+    radial-gradient(1px 1px at 71% 8%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 86% 36%, rgba(255,255,255,.35), transparent 60%),
+    radial-gradient(1px 1px at 93% 14%, rgba(255,255,255,.45), transparent 60%),
+    radial-gradient(1.5px 1.5px at 36% 30%, rgba(244,211,138,.5), transparent 60%),
+    radial-gradient(1px 1px at 5% 48%, rgba(255,255,255,.3), transparent 60%),
+    radial-gradient(1px 1px at 64% 22%, rgba(255,255,255,.3), transparent 60%);
+}
+.skyline-in { animation: skyline-rise 900ms var(--ease) both; }
+.skyline-out { animation: skyline-fade 700ms var(--ease) both; }
+@keyframes skyline-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes skyline-fade { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .skyline-in, .skyline-out { animation: none; } }
