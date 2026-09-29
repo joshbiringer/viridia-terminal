@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Fragment, useState } from "react";
 import { stockHref } from "@/lib/format";
 import {
-  ASSET_LABEL, CLUSTER_CORR, FACTORS, IEF_DURATION, NEAR_INVALIDATION, SECTOR_ETFS, patternName, type Workspace,
+  ASSET_LABEL, CLUSTER_CORR, MIN_FIT, FACTORS, IEF_DURATION, NEAR_INVALIDATION, SECTOR_ETFS, patternName, type Workspace,
 } from "@/lib/portfolio/workspace";
 import type { Change } from "@/lib/portfolio/snapshot";
 import { DRIFT_BAND } from "@/lib/portfolio/xray";
@@ -312,7 +312,7 @@ export function ExposureTab({ ws }: { ws: Workspace }) {
                 <tr key={p.symbol}>
                   <td><TK s={p.symbol} /></td>
                   <td className="r num">{pctU(p.weight)}</td>
-                  <td className="text-fg-2">{p.style ? p.style.slice(0, 3).map((x) => `${x.sector} ${pctU(x.w, 0)}`).join(" · ") : "Not enough history"}{p.styleR2 != null && p.styleR2 < 0.25 ? <span className="text-fg-3"> (weak fit: counted as unclassified)</span> : null}</td>
+                  <td className="text-fg-2">{p.style ? p.style.slice(0, 3).map((x) => `${x.sector} ${pctU(x.w, 0)}`).join(" · ") : "Not enough history"}{p.styleR2 != null && p.styleR2 < MIN_FIT ? <span className="text-fg-3"> (weak fit: counted as unclassified)</span> : null}</td>
                   <td className="r num text-fg-3">{p.styleR2 != null ? pctU(p.styleR2, 0) : "—"}</td>
                 </tr>
               ))}
@@ -320,7 +320,7 @@ export function ExposureTab({ ws }: { ws: Workspace }) {
           </table>
         </div>
         <Method>
-          Sector exposure is a returns-based style analysis (Sharpe, 1992): for each holding, the long-only mix of the eleven Select Sector SPDR ETFs ({SECTOR_ETFS.map((s) => s.symbol).join(", ")}), IEF and BIL whose daily returns best track it over the past year. This estimates what funds hold as well as stocks. Holdings with a fit under 25% are counted as unclassified. SEC industry codes aren&apos;t loaded yet.
+          Sector exposure is a returns-based style analysis (Sharpe, 1992): for each holding, the long-only mix of the eleven Select Sector SPDR ETFs ({SECTOR_ETFS.map((s) => s.symbol).join(", ")}), IEF and BIL whose daily returns best track it over the past year. This estimates what funds hold as well as stocks. A stock counts fully toward its best-fitting sector; a fund is spread across its estimated mix. Holdings with a fit under 15% are counted as unclassified. SEC industry codes aren&apos;t loaded yet.
         </Method>
       </Block>
     </>

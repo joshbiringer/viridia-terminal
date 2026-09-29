@@ -261,7 +261,7 @@ export function buildWorkspace(inp: WorkspaceInput): Workspace {
       dayChange, dayPnl: h.cash ? 0 : c!.prev_close ? h.shares * (close - c!.prev_close) : null,
       cost, gain: h.cash || cost == null ? (h.cash ? 0 : null) : value - cost, gainPct: !h.cash && cost ? value / cost - 1 : null,
       style: st?.mix ?? null, styleR2: st?.r2 ?? null,
-      sector: st?.mix[0] && (st.r2 >= 0.25 || h.cash) ? st.mix[0].sector : "Unclassified",
+      sector: st?.mix[0] && (st.r2 >= MIN_FIT || h.cash) ? st.mix[0].sector : "Unclassified",
       ctx: c, zone: z && z.zone_low != null && z.zone_high != null ? { low: z.zone_low, high: z.zone_high } : null,
     };
   }).sort((a, b) => b.value - a.value);
@@ -406,9 +406,12 @@ export function buildWorkspace(inp: WorkspaceInput): Workspace {
   const replay = (id: string, label: string, anchor: string, what: string): Scenario | null => {
     const bars = inp.closes.get(anchor) ?? [];
     if (bars.length < 60) return null;
-    let peak = 0, best = 0, from = 0, to = 0;
+    // the deepest fall from a high within the preceding six months (126 sessions), so an episode
+    // stays a stress window rather than a multi-year trend
+    let best = 0, from = 0, to = 0;
     for (let i = 1; i < bars.length; i++) {
-      if (bars[i].close > bars[peak].close) peak = i;
+      let peak = Math.max(0, i - EPISODE);
+      for (let k = peak; k < i; k++) if (bars[k].close > bars[peak].close) peak = k;
       const dd = bars[i].close / bars[peak].close - 1;
       if (dd < best) { best = dd; from = peak; to = i; }
     }
@@ -427,7 +430,7 @@ export function buildWorkspace(inp: WorkspaceInput): Workspace {
     const spyR = retOver("SPY");
     return {
       id, label: `${label} (${d0} to ${d1})`, kind: "historical",
-      definition: `Replays each holding's actual return from ${d0} to ${d1}, the ${what} in Viridia's stored history, at today's weights.`,
+      definition: `Replays each holding's actual return from ${d0} to ${d1}, the ${what} within six months in Viridia's stored history, at today's weights.`,
       portfolio: known.length ? known.reduce((a, c) => a + c.contribution!, 0) : null, benchmark: spyR,
       coverage: positions.filter((_, i) => contributions[i].contribution != null).reduce((a, p) => a + p.weight, 0),
       contributions: contributions.sort((x, y) => (x.contribution ?? 0) - (y.contribution ?? 0)),
@@ -493,9 +496,10 @@ export function buildWorkspace(inp: WorkspaceInput): Workspace {
 
   // ---------------------------------------------------------------- sectors & allocation
   const sectorMap = new Map<string, number>();
+  // a stock counts fully toward its best-fitting sector; a fund is spread across its estimated mix
   for (const p of positions) {
-    if (p.style && (p.styleR2 ?? 0) >= 0.25) for (const x of p.style) sectorMap.set(x.sector, (sectorMap.get(x.sector) ?? 0) + p.weight * x.w);
-    else sectorMap.set("Unclassified", (sectorMap.get("Unclassified") ?? 0) + p.weight);
+    if (p.style && (p.styleR2 ?? 0) >= MIN_FIT && p.asset !== "stock") for (const x of p.style) sectorMap.set(x.sector, (sectorMap.get(x.sector) ?? 0) + p.weight * x.w);
+    else sectorMap.set(p.sector, (sectorMap.get(p.sector) ?? 0) + p.weight);
   }
   const sectors = [...sectorMap].map(([sector, weight]) => ({ sector, weight })).filter((s) => s.weight >= 0.001).sort((a, b) => (a.sector === "Unclassified" ? 1 : 0) - (b.sector === "Unclassified" ? 1 : 0) || b.weight - a.weight);
   const allocMap = new Map<AssetClass, number>();
@@ -563,6 +567,9 @@ export function buildWorkspace(inp: WorkspaceInput): Workspace {
 }
 
 export const CLUSTER_CORR = 0.6;
+/** Minimum style-analysis fit (R²) for a sector estimate to count. */
+export const MIN_FIT = 0.15;
+const EPISODE = 126;
 export const NEAR_INVALIDATION = 0.03;
 
 /** Deterministic observations, each built only from figures in the workspace. */
