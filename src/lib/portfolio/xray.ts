@@ -4,7 +4,17 @@
  */
 import { TRADING_DAYS, beta, correlation, dailyReturns, maxDrawdown, periodReturn, volatility, type Close } from "@/lib/analysis/stats";
 
-export interface Holding { symbol: string; shares: number; avgCost: number | null; acquired: string | null }
+/** One purchase: shares, cost per share and date, as entered. Duplicate symbols keep every lot. */
+export interface Lot { shares: number; cost: number | null; acquired: string | null }
+export interface Holding {
+  symbol: string; shares: number; avgCost: number | null; acquired: string | null;
+  lots?: Lot[];
+  /** Cash entered as "USD" or "$CASH" (amount in the shares column). */
+  cash?: boolean;
+}
+/** The symbol cash is carried under. */
+export const CASH_SYMBOL = "USD";
+const isCashCell = (raw: string) => /^(\$cash|usd|cash\s*(&|and)\s.*|cash\s*\(usd\))$/i.test(raw.trim());
 export interface ParseResult { holdings: Holding[]; errors: string[] }
 
 const MAX_HOLDINGS = 100;
@@ -37,10 +47,12 @@ export function parseHoldings(text: string): ParseResult {
     lines.shift();
     if (cols.symbol < 0 || cols.shares < 0) return { holdings: [], errors: ["The header needs a symbol (or ticker) column and a shares (or quantity) column."] };
   }
-  const bySymbol = new Map<string, Holding & { cost: number | null }>();
+  const bySymbol = new Map<string, Holding & { cost: number | null; lots: Lot[] }>();
   lines.forEach((l, i) => {
     const c = split(l);
-    const symbol = (c[cols.symbol] ?? "").toUpperCase().replace(/[^A-Z0-9.\-/]/g, "");
+    const raw = c[cols.symbol] ?? "";
+    const cash = isCashCell(raw);
+    const symbol = cash ? CASH_SYMBOL : raw.toUpperCase().replace(/[^A-Z0-9.\-/]/g, "");
     const shares = num(c[cols.shares]);
     if (!symbol || !Number.isFinite(shares) || shares <= 0) { errors.push(`Line ${i + 1}: needs a symbol and a positive number of shares.`); return; }
     let avg = cols.avg >= 0 ? num(c[cols.avg]) : NaN;
@@ -49,12 +61,14 @@ export function parseHoldings(text: string): ParseResult {
     const d = cols.date >= 0 ? (c[cols.date] ?? "") : "";
     const acquired = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d) ? isoFromUs(d) : null;
     const prev = bySymbol.get(symbol);
-    const cost = Number.isFinite(avg) && avg > 0 ? avg * shares : null;
+    const cost = cash ? shares : Number.isFinite(avg) && avg > 0 ? avg * shares : null;
+    const lot: Lot = { shares, cost: cash ? 1 : Number.isFinite(avg) && avg > 0 ? avg : null, acquired: cash ? null : acquired };
     if (prev) {
       prev.cost = prev.cost != null && cost != null ? prev.cost + cost : null;
       prev.shares += shares;
       prev.acquired = prev.acquired && acquired ? (prev.acquired < acquired ? prev.acquired : acquired) : null;
-    } else bySymbol.set(symbol, { symbol, shares, avgCost: null, acquired, cost });
+      prev.lots.push(lot);
+    } else bySymbol.set(symbol, { symbol, shares, avgCost: null, acquired: cash ? null : acquired, cost, lots: [lot], ...(cash ? { cash: true } : {}) });
   });
   const holdings = [...bySymbol.values()].map(({ cost, ...h }) => ({ ...h, avgCost: cost != null ? cost / h.shares : null }));
   if (holdings.length > MAX_HOLDINGS) { errors.push(`Only the first ${MAX_HOLDINGS} holdings are analyzed.`); holdings.length = MAX_HOLDINGS; }
@@ -83,6 +97,7 @@ export interface Context {
   trend: string | null; glance_pattern: string | null; glance_complete: boolean | null; glance_wave: string | null;
   glance_wave_dir: string | null; glance_score: number | null; glance_hold: number | null;
   setup_side: string | null; setup_kind: string | null; setup_rr: number | null; weekly_dir: string | null;
+  glance_degree?: string | null;
   /** Broad sector from the SEC SIC code (stocks only). */
   sector?: string | null;
 }
@@ -135,7 +150,7 @@ export function driftOf(positions: { symbol: string; weight: number }[], targets
  */
 export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Close[]>, today = new Date(), targets?: Record<string, number> | null): XRay {
   const bySym = new Map(ctx.map((c) => [c.symbol, c]));
-  const unknown = holdings.filter((h) => !bySym.has(h.symbol)).map((h) => h.symbol);
+  const unknown = holdings.filter((h) => !h.cash && !bySym.has(h.symbol)).map((h) => h.symbol);
   const noPrice = holdings.filter((h) => bySym.has(h.symbol) && !(bySym.get(h.symbol)!.close! > 0)).map((h) => h.symbol);
   const spy = closes.get("SPY") ?? [];
   const spyR = dailyReturns(spy);

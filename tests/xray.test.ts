@@ -10,7 +10,11 @@ const closes = (f: (i: number) => number) => Array.from({ length: 253 }, (_, i) 
 describe("Portfolio X-Ray", () => {
   it("parses headers, plain lines, totals and US dates, and combines duplicates", () => {
     const a = parseHoldings("Ticker,Quantity,Cost Basis,Date Acquired\naapl,10,\"$1,500.00\",3/5/2024\nAAPL,10,2500,2025-01-02");
-    expect(a.holdings).toEqual([{ symbol: "AAPL", shares: 20, avgCost: 200, acquired: "2024-03-05" }]);
+    expect(a.holdings).toEqual([{ symbol: "AAPL", shares: 20, avgCost: 200, acquired: "2024-03-05", lots: [
+      { shares: 10, cost: 150, acquired: "2024-03-05" }, { shares: 10, cost: 250, acquired: "2025-01-02" },
+    ] }]);
+    const c = parseHoldings("USD,5000\n$CASH,1000\nCASH,10");
+    expect(c.holdings.map((h) => [h.symbol, h.shares, !!h.cash])).toEqual([["USD", 6000, true], ["CASH", 10, false]]);
     const b = parseHoldings("VTI 250\nnvda,40,120.5\nbad line");
     expect(b.holdings.map((h) => h.symbol)).toEqual(["VTI", "NVDA"]);
     expect(b.holdings[1].avgCost).toBe(120.5);
