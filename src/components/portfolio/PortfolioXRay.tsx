@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { fmtDollars, pct } from "@/lib/market-data/snapshot";
 import { stockHref } from "@/lib/format";
 import { PATTERN_LABEL, SETUP_LABEL, type CandidatePattern, type SetupKind } from "@/lib/analysis/candidates";
-import type { Position, XRay } from "@/lib/portfolio/xray";
+import { FUNDS_BUCKET, UNCLASSIFIED, type Position, type XRay } from "@/lib/portfolio/xray";
 
 const EXAMPLE = `symbol,shares,avg cost,acquired
 QQQ,120,410.00,2024-03-15
@@ -133,6 +133,28 @@ function Results({ r }: { r: XRay }) {
       </div>
 
       <section className="card">
+        <div className="card-h">
+          <h2 className="card-t">Sector exposure</h2>
+          <span className="card-s">Stocks by the sector of their SEC industry code</span>
+        </div>
+        <div className="flex flex-col gap-3 px-5 py-4 text-[13.5px] text-fg-2">
+          {r.sectors.filter((s) => s.sector !== FUNDS_BUCKET && s.sector !== UNCLASSIFIED && s.weight > 0.35).map((s) => (
+            <Flag key={s.sector} tone="warn">{s.sector} is {w(s.weight)} of the portfolio.</Flag>
+          ))}
+          <ul className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
+            {r.sectors.map((s) => (
+              <li key={s.sector} className="flex items-center gap-3">
+                <span className={`min-w-0 flex-1 truncate ${s.sector === FUNDS_BUCKET || s.sector === UNCLASSIFIED ? "text-fg-3" : "text-fg"}`} title={s.symbols.join(", ")}>{s.sector}</span>
+                <span className="h-1.5 w-24 overflow-hidden rounded-full bg-hover" aria-hidden><i className="block h-full bg-brand" style={{ width: `${Math.min(1, s.weight) * 100}%` }} /></span>
+                <span className="num w-12 text-right font-medium">{w(s.weight)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[12px] text-fg-3">Sectors are mapped from each company&apos;s SEC SIC code, an approximation of the usual 11 sectors. Funds are one bucket because their holdings aren&apos;t looked through yet.</p>
+        </div>
+      </section>
+
+      <section className="card">
         <div className="card-h"><h2 className="card-t">Holdings</h2></div>
         <div className="overflow-x-auto">
           <table className="t dense">
@@ -178,7 +200,7 @@ function Results({ r }: { r: XRay }) {
       </div>
 
       <section className="rounded-[var(--r-lg)] border border-dashed border-line px-5 py-4 text-[13px] text-fg-2">
-        <b className="font-medium text-fg">Not in the X-Ray yet.</b> Sector, geographic and factor exposure, fund look-through (the overlap inside QQQ and VGT), and
+        <b className="font-medium text-fg">Not in the X-Ray yet.</b> Geographic and factor exposure, fund look-through (the overlap inside QQQ and VGT), and
         income all need data Viridia doesn&apos;t have yet. They&apos;ll appear here when it does, rather than as estimates. Portfolio history uses today&apos;s
         weights applied to each holding&apos;s past returns; it is not the account&apos;s actual record.
       </section>

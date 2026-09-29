@@ -22,6 +22,8 @@ import { SetupCard } from "@/components/analysis/SetupCard";
 import { getSymbolTrials, getTrackRecord } from "@/lib/analysis/track-record";
 import { computeSignals } from "@/lib/analysis/signals";
 import { SignalsPanel } from "@/components/analysis/SignalsPanel";
+import { getFundamentals, getSectorMedians } from "@/lib/fundamentals/server";
+import type { SectorMedian } from "@/lib/fundamentals/model";
 
 type Props = { params: Promise<{ symbol: string }>; searchParams: Promise<{ welcome?: string }> };
 
@@ -72,7 +74,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     );
   }
 
-  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials] = await Promise.all([
+  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians] = await Promise.all([
     db().from("security_events").select("*").eq("security_id", sec.id).order("id", { ascending: false }).limit(20),
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
@@ -84,7 +86,10 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     db().rpc("get_bars", { p_symbol: sec.symbol, p_timeframe: "1d", p_limit: 300 }),
     db().rpc("get_bars", { p_symbol: "SPY", p_timeframe: "1d", p_limit: 300 }),
     getSymbolTrials(sec.symbol, 40).catch(() => []),
+    getFundamentals([sec.symbol]).then((r) => r[0] ?? null).catch(() => undefined),
+    getSectorMedians().catch(() => [] as SectorMedian[]),
   ]);
+  const sectorMedian = fund?.sector ? medians.find((m) => m.sector === fund.sector) ?? null : null;
   const sum = (summaryRes.data ?? null) as BarSummary | null;
   const snap = (snapRes.data ?? null) as Snapshot | null;
   const evts = (events.data ?? []) as SecurityEvent[];
@@ -160,6 +165,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
           bars: (barsRes.data ?? []) as { ts: string; close: number }[], benchmark: (spyRes.data ?? []) as { ts: string; close: number }[],
           trend: snap?.trend ?? null, sma50: snap?.sma50 ?? null, sma200: snap?.sma200 ?? null,
           glance: swings?.glances.auto ?? null, weekly,
+          fundamentals: fund, sector: sectorMedian,
         })}
       />
 

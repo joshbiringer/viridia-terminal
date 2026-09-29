@@ -41,5 +41,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Skip static assets, images and the public JSON APIs (which never use a session).
-  matcher: ["/((?!_next/static|_next/image|icon.svg|api/bars|api/securities|api/backtest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|icon.svg|api/bars|api/securities|api/backtest|api/sec|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

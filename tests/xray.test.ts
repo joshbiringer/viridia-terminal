@@ -28,5 +28,8 @@ describe("Portfolio X-Ray", () => {
     expect(r.mix).toMatchObject({ stocks: 0.75, etfs: 0.25 });
     expect(r.tax!.gain).toBe(1500);
     expect(r.structure.up).toBe(1);
+    expect(r.sectors).toEqual([{ sector: "Unclassified", weight: 0.75, symbols: ["AAA"] }, { sector: "Funds (not looked through)", weight: 0.25, symbols: ["BBB"] }]);
+    const s = xray(holdings, [{ ...ctx("AAA", 100), sector: "Energy" }, ctx("BBB", 100, "etf")], m);
+    expect(s.sectors[0]).toMatchObject({ sector: "Energy", weight: 0.75 });
   });
 });

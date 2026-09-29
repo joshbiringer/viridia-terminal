@@ -4,6 +4,7 @@
  */
 import type { Glance } from "@engine/glance";
 import { beta, dailyReturns, maxDrawdown, periodReturn, volatility, type Close } from "./stats";
+import { fundamentalDims, type Fundamentals, type SectorMedian } from "@/lib/fundamentals/model";
 
 export type Tone = "pos" | "neg" | "neutral" | "warn" | "na";
 
@@ -24,12 +25,15 @@ export interface SignalsInput {
   sma200: number | null;
   glance: Glance | null;
   weekly: Glance | null;
+  /** SEC fundamentals and the sector's medians; undefined when not loaded. */
+  fundamentals?: Fundamentals | null;
+  sector?: SectorMedian | null;
 }
 
 const pc = (x: number, d = 1) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x * 100).toFixed(d)}%`;
 
 export const SIGNALS_METHOD =
-  "Structure: the preferred daily wave count's expected direction (constructive up, defensive down), unresolved when the alternate is within 5 points. Trend: price against its 50- and 200-day averages. Momentum: 3-month return and its lead over SPY (strong when both are positive and the lead is over 5 points; weak when both are negative). Risk: 20-day volatility against the 1-year level (elevated above 1.25×), and the 1-year drawdown and beta to SPY. Fundamentals and valuation need financial statements, which aren't in the current data plan.";
+  "Structure: the preferred daily wave count's expected direction (constructive up, defensive down), unresolved when the alternate is within 5 points. Trend: price against its 50- and 200-day averages. Momentum: 3-month return and its lead over SPY (strong when both are positive and the lead is over 5 points; weak when both are negative). Risk: 20-day volatility against the 1-year level (elevated above 1.25×), and the 1-year drawdown and beta to SPY. Fundamentals: revenue growth (5% either way) and profitability from SEC filings. Valuation: P/E (or P/S when earnings are negative) against the sector median, 1.5× apart counting as above or below. Fundamentals come from SEC EDGAR XBRL filings.";
 
 export function computeSignals(i: SignalsInput): SignalDim[] {
   const close = i.bars.at(-1)?.close ?? null;
@@ -102,7 +106,11 @@ export function computeSignals(i: SignalsInput): SignalDim[] {
     out.push({ key: "risk", label: "Risk", state: "Not enough history", tone: "na", detail: "Needs a month of sessions.", rule: "Volatility regime, drawdown, beta" });
   }
 
-  out.push({ key: "fundamentals", label: "Fundamentals", state: "Not available yet", tone: "na", detail: "Financial statements aren't in the current data plan.", rule: "Revenue, earnings and margin trends" });
-  out.push({ key: "valuation", label: "Valuation", state: "Not available yet", tone: "na", detail: "Needs financial statements.", rule: "Multiples against history and peers" });
+  if (i.fundamentals === undefined) {
+    out.push({ key: "fundamentals", label: "Fundamentals", state: "Not available", tone: "na", detail: "Fundamentals couldn't be loaded.", rule: "Revenue growth and margins from SEC filings" });
+    out.push({ key: "valuation", label: "Valuation", state: "Not available", tone: "na", detail: "Fundamentals couldn't be loaded.", rule: "P/E or P/S against the sector median" });
+  } else {
+    out.push(...fundamentalDims(i.fundamentals, i.sector));
+  }
   return out;
 }

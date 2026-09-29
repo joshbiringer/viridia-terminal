@@ -83,6 +83,8 @@ export interface Context {
   trend: string | null; glance_pattern: string | null; glance_complete: boolean | null; glance_wave: string | null;
   glance_wave_dir: string | null; glance_score: number | null; glance_hold: number | null;
   setup_side: string | null; setup_kind: string | null; setup_rr: number | null; weekly_dir: string | null;
+  /** Broad sector from the SEC SIC code (stocks only). */
+  sector?: string | null;
 }
 
 export interface Position {
@@ -104,6 +106,8 @@ export interface XRay {
   pairs: { a: string; b: string; corr: number }[];
   tax: { costKnown: number; gain: number; gains: Position[]; losses: Position[]; shortTerm: number; longTerm: number } | null;
   structure: { up: number; down: number; none: number; setups: Position[]; nearLevel: Position[] };
+  /** Weight by sector; funds are one bucket because their holdings aren't looked through. */
+  sectors: { sector: string; weight: number; symbols: string[] }[];
 }
 
 /**
@@ -157,6 +161,15 @@ export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Cl
   const withCost = positions.filter((p) => p.cost != null);
   const hhi = positions.reduce((a, p) => a + p.weight ** 2, 0);
   const mixOf = (t: Position["type"]) => positions.filter((p) => p.type === t).reduce((a, p) => a + p.weight, 0);
+  const bucket = new Map<string, { weight: number; symbols: string[] }>();
+  for (const p of positions) {
+    const k = p.type === "etf" ? FUNDS_BUCKET : p.ctx.sector ?? UNCLASSIFIED;
+    const b = bucket.get(k) ?? { weight: 0, symbols: [] };
+    b.weight += p.weight; b.symbols.push(p.symbol);
+    bucket.set(k, b);
+  }
+  const sectors = [...bucket].map(([sector, b]) => ({ sector, ...b }))
+    .sort((a, b) => (a.sector === FUNDS_BUCKET || a.sector === UNCLASSIFIED ? 1 : 0) - (b.sector === FUNDS_BUCKET || b.sector === UNCLASSIFIED ? 1 : 0) || b.weight - a.weight);
   return {
     asOf: spy.at(-1)?.ts ?? null,
     total, positions, unknown, noPrice,
@@ -185,5 +198,9 @@ export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Cl
       setups: positions.filter((p) => p.ctx.setup_side),
       nearLevel: positions.filter((p) => p.ctx.glance_hold != null && Math.abs(p.ctx.glance_hold / p.close - 1) <= 0.03),
     },
+    sectors,
   };
 }
+
+export const FUNDS_BUCKET = "Funds (not looked through)";
+export const UNCLASSIFIED = "Unclassified";
