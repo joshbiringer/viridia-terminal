@@ -27,13 +27,20 @@ const EXCHANGES = ["XNAS", "XNYS", "ARCX", "BATS", "XASE"];
 const TYPES = [["", "Stocks and ETFs"], ["common", "Stocks"], ["etf", "ETFs"]] as const;
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
 const NEAR = [["", "Anywhere"], ["high", "Near 52-week high"], ["low", "Near 52-week low"]] as const;
+const SWINGS = [["", "Any"], ["higher_highs_lows", "Higher highs and lows"], ["lower_highs_lows", "Lower highs and lows"], ["expanding", "Expanding"], ["contracting", "Contracting"]] as const;
+const PATTERNS = [["", "Any pattern"], ["impulse", "Impulse"], ["leading_diagonal", "Leading diagonal"], ["ending_diagonal", "Ending diagonal"], ["zigzag", "Zigzag"], ["flat", "Flat"], ["triangle", "Triangle"]] as const;
+const WAVES = [["", "Any position"], ["1", "Wave 1"], ["2", "Wave 2"], ["3", "Wave 3"], ["4", "Wave 4"], ["5", "Wave 5"], ["A", "Wave A"], ["B", "Wave B"], ["C", "Wave C"], ["D", "Wave D"], ["E", "Wave E"], ["complete", "Pattern complete"]] as const;
+const ZDIST = [["", "Any"], ["0.01", "Within 1%"], ["0.03", "Within 3%"], ["0.05", "Within 5%"], ["0.1", "Within 10%"]] as const;
+const ZSTR = [["", "Any"], ["2", "2+"], ["4", "4+"], ["6", "6+"]] as const;
+const RANGE = [["", "Anywhere"], ["q1", "Bottom quarter"], ["h1", "Lower half"], ["h2", "Upper half"], ["q4", "Top quarter"]] as const;
+const RANGE_BOUNDS: Record<string, [number | null, number | null]> = { q1: [null, 0.25], h1: [null, 0.5], h2: [0.5, null], q4: [0.75, null] };
 const SORTS = [
   ["dollar_volume", "Dollar volume"], ["confidence", "Pattern Confidence"], ["invalidation", "Closest to invalidation"],
   ["zone", "Closest to a Fib zone"], ["change", "Today's change"], ["vs_sma200", "Strength vs 200-day"],
   ["from_high", "Closest to 52w high"], ["symbol", "Ticker"],
 ] as const;
 
-type Params = Partial<Record<"trend" | "exchange" | "type" | "min" | "max" | "dv" | "near" | "sort" | "page" | "s" | "dir" | "score" | "view", string>>;
+type Params = Partial<Record<"trend" | "exchange" | "type" | "min" | "max" | "dv" | "near" | "sort" | "page" | "s" | "dir" | "score" | "view" | "sp" | "si" | "sm" | "pat" | "wave" | "zd" | "zs" | "rp", string>>;
 
 export default async function ScannerPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
@@ -50,7 +57,10 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
   const structure = STRUCTURE.some(([k]) => k === sp.s) ? sp.s! : "";
   const dir = pick(DIRS, sp.dir);
   const score = pick(SCORES, sp.score);
-  const structural = !!(structure || dir || score);
+  const swP = pick(SWINGS, sp.sp), swI = pick(SWINGS, sp.si), swM = pick(SWINGS, sp.sm);
+  const pat = pick(PATTERNS, sp.pat), wave = pick(WAVES, sp.wave), zd = pick(ZDIST, sp.zd), zs = pick(ZSTR, sp.zs), rp = pick(RANGE, sp.rp);
+  const detail = !!(swP || swI || swM || pat || wave || zd || zs || rp);
+  const structural = !!(structure || dir || score || swP || swI || swM || pat || wave || zd || zs);
   const view = sp.view === "price" ? "price" : sp.view === "structure" || structural || sort === "confidence" || sort === "invalidation" || sort === "zone" ? "structure" : "price";
 
   const [rows, cov] = await Promise.all([
@@ -59,6 +69,9 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
       p_min_price: min, p_max_price: max, p_min_dollar_volume: dv ? Number(dv) : null,
       p_near: near || null, p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE,
       p_structure: structure || null, p_direction: dir || null, p_min_score: score ? Number(score) : null,
+      p_swing_primary: swP || null, p_swing_intermediate: swI || null, p_swing_minor: swM || null,
+      p_pattern: pat || null, p_wave: wave || null, p_zone_max_dist: zd ? Number(zd) : null, p_zone_min_strength: zs ? Number(zs) : null,
+      p_range_min: rp ? RANGE_BOUNDS[rp][0] : null, p_range_max: rp ? RANGE_BOUNDS[rp][1] : null,
     }),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
   ]);
@@ -69,12 +82,13 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
     const merged: Params = {
       trend, exchange, type, min: min ? String(min) : "", max: max ? String(max) : "", dv, near,
       sort: sort === "dollar_volume" ? "" : sort, s: structure, dir, score, view: sp.view === "price" || sp.view === "structure" ? sp.view : "",
+      sp: swP, si: swI, sm: swM, pat, wave, zd, zs, rp,
       page: "", ...patch,
     };
     const p = new URLSearchParams(Object.entries(merged).filter(([, v]) => v) as [string, string][]);
     return `/scanner${p.size ? "?" + p : ""}`;
   };
-  const filtered = !!(trend || exchange || type || min || max || dv || near || structural);
+  const filtered = !!(trend || exchange || type || min || max || dv || near || structural || rp);
   const recomputing = coverage && coverage.ranked < coverage.total;
 
   return (
@@ -100,8 +114,8 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
           </nav>
           {recomputing && (
             <p className="text-[12.5px] text-fg-3">
-              Ranking is being computed across the universe: <span className="num">{coverage!.ranked.toLocaleString("en-US")}</span> of{" "}
-              <span className="num">{coverage!.total.toLocaleString("en-US")}</span> securities so far, most-traded first. Structure filters only see ranked securities.
+              The latest analysis covers <span className="num">{coverage!.ranked.toLocaleString("en-US")}</span> of{" "}
+              <span className="num">{coverage!.total.toLocaleString("en-US")}</span> securities so far; structure filters include only analysed securities.
             </p>
           )}
         </div>
@@ -123,6 +137,19 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
           <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
           {structure && <input type="hidden" name="s" value={structure} />}
+          <details className="col-span-full" open={detail}>
+            <summary className="cursor-pointer text-[13px] text-fg-2 hover:text-fg">Structure and Fibonacci filters{detail ? " (in use)" : ""}</summary>
+            <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+              <Select name="sp" label="Primary structure" value={swP} options={SWINGS} />
+              <Select name="si" label="Intermediate structure" value={swI} options={SWINGS} />
+              <Select name="sm" label="Minor structure" value={swM} options={SWINGS} />
+              <Select name="pat" label="Count pattern" value={pat} options={PATTERNS} />
+              <Select name="wave" label="Wave position" value={wave} options={WAVES} />
+              <Select name="zd" label="Distance to Fib zone" value={zd} options={ZDIST} />
+              <Select name="zs" label="Zone strength" value={zs} options={ZSTR} />
+              <Select name="rp" label="52-week range position" value={rp} options={RANGE} />
+            </div>
+          </details>
           <div className="col-span-2 flex items-end gap-2 md:col-span-1 2xl:col-span-1">
             <button type="submit" className="btn pri w-full md:w-auto">Scan</button>
             {filtered && <Link href="/scanner" className="btn">Reset</Link>}
@@ -141,7 +168,7 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
           <div className="px-6 py-14 text-center text-fg-2">
             {structural
               ? "No ranked security matches this structure right now. Structures change as new bars arrive; try another filter or a lower confidence."
-              : "No securities match. Trend filters need 200 sessions of history, which the backfill is still loading; try removing the trend filter."}
+              : "No securities match these filters. Trend and 52-week measures need up to a year of history for each security; try loosening a filter."}
           </div>
         )}
         {pages > 1 && (
@@ -156,6 +183,7 @@ export default async function ScannerPage({ searchParams }: { searchParams: Prom
         <div className="src">
           <span><b>Structure</b>The preferred count is the highest-ranked rule-valid count at intermediate degree (primary, then minor, when intermediate has none). {RANK_METHOD}</span>
           <span><b>Trend</b>{TREND_METHOD} 52-week measures need a full year of bars.</span>
+          <span><b>Structure by degree</b>Swing structure of confirmed pivots at each degree. Count pattern and wave position describe the preferred count. Zone strength is a weighted count of overlapping Fibonacci relationships, not a probability.</span>
         </div>
       </section>
     </>

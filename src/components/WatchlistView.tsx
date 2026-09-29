@@ -6,9 +6,11 @@ import { useState, useTransition } from "react";
 import type { SearchHit } from "@/lib/types";
 import { exchangeLabel, fmtDate, stockHref } from "@/lib/format";
 import { fmtPrice } from "@/lib/market-data/bars";
-import { fmtDollars, type Trend } from "@/lib/market-data/snapshot";
+import { type Trend } from "@/lib/market-data/snapshot";
 import { SWING_LABEL, type SwingStructure } from "@/lib/analysis/pivots";
-import { addToWatchlist, removeFromWatchlist } from "@/lib/watchlist";
+import { addToWatchlist, removeFromWatchlist, saveWatchNote } from "@/lib/watchlist";
+import { EVENT_LABEL, eventSentence, eventTone, type EventType } from "@/lib/analysis/events";
+import { waveShort } from "@/lib/analysis/mission";
 import { SecuritySearch } from "./SecuritySearch";
 import { TrendLabel } from "./TrendLabel";
 import { EmptyState } from "./ui/EmptyState";
@@ -18,7 +20,9 @@ export type WatchRow = {
   watchlist_id: string; security_id: number; symbol: string; name: string; exchange: string | null; asset_type: string;
   close: number | null; prev_close: number | null; change_pct: number | null; trend: Trend | null;
   high_52w: number | null; low_52w: number | null; adv20: number | null; last_ts: string | null;
-  swing: SwingStructure | null; zones: number; added_at: string;
+  swing: SwingStructure | null; zones: number; added_at: string; notes?: string | null;
+  pattern?: string | null; complete?: boolean | null; wave?: string | null; wave_dir?: string | null; score?: number | null;
+  zone_low?: number | null; zone_high?: number | null; event_type?: EventType | null; event_day?: string | null; event_detail?: Record<string, unknown> | null;
 };
 
 const SWING_TONE: Partial<Record<SwingStructure, string>> = { higher_highs_lows: "text-pos", lower_highs_lows: "text-neg" };
@@ -68,22 +72,25 @@ export function WatchlistView({ userId, initial, asOf }: { userId: string; initi
         </EmptyState>
       ) : (
         <div className="overflow-x-auto">
-          <table className="t min-w-[860px]">
+          <table className="t dense min-w-[980px] text-[13px]">
             <thead>
               <tr>
-                <th>Security</th><th className="r">Last</th><th className="r">Change</th><th>Trend</th>
-                <th>Swing structure</th><th className="r">Fib zones</th><th className="r">52-week range</th><th className="r">$ Vol, 20d</th><th aria-label="Actions" />
+                <th>Security</th><th className="r">Price</th><th className="r">Change</th><th>Trend</th>
+                <th>Structure</th><th>Candidate wave</th><th className="r">Nearest Fib zone</th><th>Last structural change</th><th>Notes</th><th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => {
-                const pos = r.close != null && r.high_52w && r.low_52w && r.high_52w > r.low_52w ? (r.close - r.low_52w) / (r.high_52w - r.low_52w) : null;
+                const wave = waveShort(r.pattern, r.complete, r.wave, r.wave_dir);
+                const zDist = r.close && r.zone_low != null && r.zone_high != null
+                  ? (r.close >= r.zone_low && r.close <= r.zone_high ? 0 : ((r.zone_low + r.zone_high) / 2) / r.close - 1) : null;
+                const ev = r.event_type ? { type: r.event_type, detail: r.event_detail ?? {} } : null;
                 return (
                   <tr key={r.security_id}>
                     <td>
                       <Link href={stockHref(r.symbol)} className="flex items-baseline gap-2.5">
                         <span className="tk w-14">{r.symbol}</span>
-                        <span className="max-w-[240px] truncate text-fg-2">{r.name}</span>
+                        <span className="max-w-[200px] truncate text-fg-2">{r.name}</span>
                         <span className="text-[12px] text-fg-3">{exchangeLabel(r.exchange)}</span>
                       </Link>
                     </td>
@@ -92,17 +99,26 @@ export function WatchlistView({ userId, initial, asOf }: { userId: string; initi
                       {r.change_pct == null ? "—" : `${r.change_pct >= 0 ? "+" : "−"}${Math.abs(r.change_pct * 100).toFixed(2)}%`}
                     </td>
                     <td>{r.trend ? <TrendLabel trend={r.trend} /> : <span className="text-fg-3">—</span>}</td>
-                    <td className={r.swing ? SWING_TONE[r.swing] ?? "" : "text-fg-3"}>{r.swing ? SWING_LABEL[r.swing] : "Loading history"}</td>
-                    <td className="r num">{r.zones || <span className="text-fg-3">—</span>}</td>
-                    <td className="r">
-                      {pos == null ? <span className="text-fg-3">—</span> : (
-                        <span className="ml-auto flex w-[120px] items-center gap-2">
-                          <span className="relative h-1 flex-1 rounded-full bg-hover"><span className="absolute top-1/2 h-2.5 w-[2px] -translate-y-1/2 rounded bg-fg" style={{ left: `${pos * 100}%` }} /></span>
-                          <span className="num w-8 text-right text-[12px] text-fg-3">{Math.round(pos * 100)}%</span>
+                    <td className={r.swing ? SWING_TONE[r.swing] ?? "" : "text-fg-3"}>{r.swing ? SWING_LABEL[r.swing] : "—"}</td>
+                    <td>{wave ? <span title={r.score != null ? `Pattern Confidence ${r.score}` : undefined}>{wave}{r.score != null && <span className="num text-fg-3"> · {r.score}</span>}</span> : <span className="text-fg-3">No count yet</span>}</td>
+                    <td className="r num">
+                      {r.zone_low != null && r.zone_high != null ? (
+                        <span title={`${fmtPrice(r.zone_low)}–${fmtPrice(r.zone_high)}`}>
+                          {fmtPrice(r.zone_low)}–{fmtPrice(r.zone_high)}
+                          <span className="text-fg-3"> {zDist === 0 ? "· inside" : zDist != null ? `· ${zDist > 0 ? "+" : "−"}${Math.abs(zDist * 100).toFixed(1)}%` : ""}</span>
                         </span>
-                      )}
+                      ) : <span className="text-fg-3">—</span>}
                     </td>
-                    <td className="r num text-fg-2">{fmtDollars(r.adv20)}</td>
+                    <td className="max-w-[260px]">
+                      {ev ? (
+                        <span className="flex items-baseline gap-2" title={eventSentence(ev)}>
+                          <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full" style={{ background: eventTone(ev) === "pos" ? "var(--pos-chart)" : eventTone(ev) === "neg" ? "var(--neg)" : "var(--border-2)" }} aria-hidden />
+                          <span className="truncate">{EVENT_LABEL[ev.type]}</span>
+                          <span className="num shrink-0 text-[12px] text-fg-3">{fmtDate(r.event_day)}</span>
+                        </span>
+                      ) : <span className="text-fg-3">None recorded</span>}
+                    </td>
+                    <td className="w-[200px]"><NoteCell id={r.security_id} initial={r.notes ?? ""} /></td>
                     <td className="w-10 !px-2">
                       <button className="btn ghost sm px-2 text-fg-3" onClick={() => remove(r.security_id)} aria-label={`Remove ${r.symbol}`} title="Remove">
                         <Icon name="x" className="h-3.5 w-3.5" />
@@ -116,5 +132,24 @@ export function WatchlistView({ userId, initial, asOf }: { userId: string; initi
         </div>
       )}
     </div>
+  );
+}
+
+/** An inline note for one watched security; saved when the field loses focus. */
+function NoteCell({ id, initial }: { id: number; initial: string }) {
+  const [v, setV] = useState(initial);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const save = async () => {
+    if (v === initial && state !== "error") return;
+    setState("saving");
+    try { await saveWatchNote(id, v); setState("saved"); } catch { setState("error"); }
+  };
+  return (
+    <span className="flex items-center gap-1.5">
+      <input className="field h-7 w-full min-w-0 text-[12.5px]" value={v} maxLength={1000} placeholder="Add a note" aria-label="Note"
+        onChange={(e) => { setV(e.target.value); setState("idle"); }} onBlur={save} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+      {state === "saved" && <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-pos" />}
+      {state === "error" && <span className="shrink-0 text-[11.5px] text-neg" title="The note couldn't be saved">!</span>}
+    </span>
   );
 }

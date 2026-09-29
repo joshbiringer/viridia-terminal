@@ -33,3 +33,8 @@ export async function isWatched(securityId: number): Promise<boolean> {
   const { count } = await browserClient().from("watchlist_items").select("security_id", { count: "exact", head: true }).eq("security_id", securityId);
   return (count ?? 0) > 0;
 }
+
+export async function saveWatchNote(securityId: number, notes: string) {
+  const { error } = await browserClient().from("watchlist_items").update({ notes: notes.trim().slice(0, 1000) || null }).eq("security_id", securityId);
+  if (error) throw error;
+}
