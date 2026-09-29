@@ -609,3 +609,98 @@ Not yet available, and stated on the page: sector, factor and geographic exposur
 ### Not built (no data source, or later)
 
 - Economic and earnings calendars, clients and meetings, alerts, unusual-volume and trend-change tiles, customizable layouts, and advisor versus asset-manager workspace presets.
+
+## Cycle 5 (September 29, 2026)
+
+**Commits:** `3bfd657`, `76f59fe`, `34ed97d`, `e3e2ae2`, `19e1bcb`, `1d83bf8`, `4f7c92c`, and this one.
+**Migrations:** 0022, 0024 and 0025 are applied. 0023 is parked in `supabase/pending/`.
+
+### Phase 1: Database headroom (0022)
+
+- **Weekly counts recompute only when a week completes** (the Friday session). A seven-day catch-all covers holiday Fridays. Daily counts still recompute every session. This roughly halves the nightly analysis reads and writes that throttled the instance.
+- **Daily history is capped at the latest 520 sessions per security** (`prune_price_bars`, weekdays 07:37 UTC). That is more than the analysis window and the replay need. Nothing is deleted yet, since the most any security has is about 505. The cap keeps `price_bars` (302 MB of the 432 MB) from outgrowing the free plan's 500 MB. Hourly bars older than 180 days are dropped.
+- **Still a decision for Josh:** a paid Supabase plan with more IO. The free instance has now throttled twice.
+
+### Phase 2: Fundamentals from SEC EDGAR (built, parked)
+
+**What's built**
+- `/api/sec/frames` compacts XBRL frames for revenue (three tags), net income, operating income, gross profit and shares outstanding.
+- `/api/sec/sic` fetches each company's SIC code.
+- A pg_net job queue (`sec_tick`) stores the results.
+- An SIC-to-sector map, `get_fundamentals`, and `sector_medians` (P/E, P/S, operating margin, growth).
+- Signals **Fundamentals** (growth and profitability) and **Valuation** (P/E or P/S against the sector median; multi-class companies are skipped instead of mispriced).
+- A Portfolio X-Ray sector-exposure card.
+
+**Blocked:** SEC returned 403 to every request. SEC requires a real contact email in the User-Agent, and a placeholder was used. Josh chose to skip this for now.
+- `FUNDAMENTALS_LIVE = false`, so Signals show "Not loaded yet".
+- X-Ray hides sector exposure until sectors exist.
+
+**To enable:**
+1. Set `SEC_UA` in `src/lib/fundamentals/sec.ts` to a real contact.
+2. Deploy, and check that `/api/sec/frames?tag=NetIncomeLoss&period=CY2025` returns rows.
+3. Move `supabase/pending/0023_fundamentals.sql` back to `migrations` and apply it. It seeds about 155 jobs, which take roughly an hour at 3 a minute.
+4. Set `FUNDAMENTALS_LIVE = true`.
+
+### Phase 3: Setup quality from the track record (0024)
+
+**How grades work**
+- Each kind and side is graded from its replayed trials, split at the median trial date (Feb 24, 2026), so each half tests the other out of sample.
+- **Positive:** at least +0.05R overall and above zero in both halves.
+- **Negative:** at most −0.05R overall and below zero in both halves.
+- **Mixed:** anything else.
+- **Little history:** under 100 resolved cases, or under 40 in either half.
+
+**Result** (9,709 resolved trials, 2,389 securities replayed so far)
+- Positive: every buy kind except Correction complete. Wave C buy is +0.19R, and +0.18 / +0.19 in the two halves.
+- Mixed: Correction complete buy, Wave 3 sell.
+- Negative: Correction complete sell (−0.29R), Five waves complete sell, Wave C sell.
+- Little history: Wave 4 pullback sell, Wave 5 sell.
+- Sells were weak in both halves. The replay year was mostly a rising market, and the page says so.
+
+**Where it's used**
+- **Setups:**
+  - The default order is the kind's replayed average, then confidence.
+  - A "No negative records" filter.
+  - A grade chip beside each setup's history.
+- **Mission Control:** "Setups to review" leaves negative kinds out.
+- **Track Record:** an out-of-sample table.
+- **Setup card:** says when a kind lost or made money in both halves.
+- The grades refresh daily at 07:47 UTC.
+
+### Phase 4: Saved portfolios and targets (0025)
+
+- `portfolios` table:
+  - owner-only row-level security, checked with a simulated second user;
+  - up to 25 portfolios per user;
+  - raw holdings text, targets as fractions, and the last review snapshot.
+- **X-Ray:** save, load, save as and delete (delete needs a second click to confirm). A target-weight editor flags drift of 3 or more points.
+- The copy now says nothing is stored unless a signed-in user saves it.
+- **Mission Control:** saved portfolios appear in the rail and the Today strip, with X-Ray and Prep links.
+
+### Phase 5: Meeting prep
+
+`/portfolio/review?id=` covers:
+- since the last review: value, holdings added and removed, weight moves, and count direction flips;
+- concentration and drift;
+- risk and correlation;
+- tax items: loss candidates, and gains 300–365 days old that are close to long-term.
+
+**Talking points** come in two versions:
+- **Advisor**, which keeps the wave-structure terms.
+- **Client**, with no Elliott terms and a not-a-recommendation note. A test enforces both.
+
+Copy, Print, and **Mark as reviewed**, which stores the snapshot the next prep compares against. No client names, meetings or account data are invented.
+
+### Tests
+
+- 82 unit tests (74 before). New suites cover fundamentals, drift, meeting prep and Mission Control routing.
+- TypeScript, lint (0 errors) and the build pass.
+- Live: Track Record, Setups and the security page render with grades, and Signals show "Not loaded yet".
+- Saved portfolios and meeting prep need a signed-in session. They were checked with row-level-security SQL and unit tests, not clicked through live.
+
+### Recommended next
+
+1. Decide on the SEC contact email, which turns on fundamentals. After that, the Supabase plan.
+2. Resume the backtest off-hours at a low rate to finish the last ~1,600 securities, then recheck the grades.
+3. Condition setup grades on market regime (breadth at the time of the signal), so sells are judged fairly outside a rising year.
+4. Earnings and economic calendars need a data source. They are the largest remaining gap on Mission Control.

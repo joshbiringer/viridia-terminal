@@ -39,3 +39,6 @@ drop trigger if exists portfolios_limit on public.portfolios;
 create trigger portfolios_limit before insert on public.portfolios for each row execute function public.limit_portfolios();
 
 grant select, insert, update, delete on public.portfolios to authenticated;
+
+revoke all on function public.limit_portfolios() from public, anon, authenticated;
+revoke all on function public.touch_portfolio() from public, anon, authenticated;
