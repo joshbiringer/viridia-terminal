@@ -197,9 +197,9 @@ export function WatchlistRail({ rows, events, mode }: {
 
 export interface SavedSummary { id: string; name: string; updated_at: string; reviewed_at: string | null }
 
-export function PortfolioSlot({ saved, signedIn }: { saved: SavedSummary[]; signedIn: boolean }) {
+export function PortfolioSlot({ saved, signedIn, now }: { saved: SavedSummary[]; signedIn: boolean; now: number }) {
   const ago = (iso: string) => {
-    const d = Math.floor((Date.now() - Date.parse(iso)) / 864e5);
+    const d = Math.floor((now - Date.parse(iso)) / 864e5);
     return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
   };
   return (

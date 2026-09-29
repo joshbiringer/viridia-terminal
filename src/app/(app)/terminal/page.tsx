@@ -135,7 +135,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
         </div>
         <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[72px] xl:max-h-[calc(100vh-88px)] xl:self-start xl:overflow-y-auto" aria-label="Your workspace">
           <WatchlistRail rows={railRows} events={events} mode={railMode} />
-          <PortfolioSlot saved={savedPortfolios} signedIn={!!viewer} />
+          <PortfolioSlot saved={savedPortfolios} signedIn={!!viewer} now={new Date().getTime()} />
           <NotConnected />
         </aside>
       </div>
