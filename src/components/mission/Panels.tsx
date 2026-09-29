@@ -121,7 +121,7 @@ export function ScannerTiles({ tiles }: { tiles: Tile[] }) {
 export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRecord[] }) {
   return (
     <section className="card" aria-labelledby="setups-t">
-      <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first, 1.5 : 1 or better, $25M+ a day; kinds with a negative record left out"
+      <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first; 1.5 : 1 or better, stop within 20%, $25M+ a day; kinds with a negative record left out"
         action={<><Link href="/setups/track-record" className="btn ghost sm">Track record</Link><Link href="/setups" className="btn ghost sm">All setups</Link></>} />
       {rows.length ? (
         <div className="overflow-x-auto">
@@ -234,8 +234,8 @@ export function NotConnected() {
       <ul className="flex flex-col gap-1.5 px-4 py-3 text-[12.5px] text-fg-3">
         <li>Economic calendar: no data source yet.</li>
         <li>Earnings calendar: no data source yet.</li>
-        <li>Alerts: planned with accounts.</li>
-        <li><Link href="/data-sources" className="text-brand hover:underline">See the roadmap</Link></li>
+        <li>Alerts: not available yet.</li>
+        <li><Link href="/data-sources" className="text-brand hover:underline">Coverage and limitations</Link></li>
       </ul>
     </section>
   );

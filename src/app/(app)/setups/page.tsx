@@ -27,9 +27,10 @@ const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
 const ALIGN = [["", "Any"], ["with", "With the weekly count"], ["against", "Against the weekly count"]] as const;
 const REC = [["", "Any record"], ["ok", "Leave out negative records"]] as const;
+const RISK = [["", "Any"], ["0.1", "Stop within 10%"], ["0.2", "Stop within 20%"], ["0.3", "Stop within 30%"]] as const;
 const SORTS = [["quality", "Track record, then confidence"], ["confidence", "Pattern Confidence"], ["rr", "Reward : risk"], ["risk", "Smallest risk"], ["dollar_volume", "Dollar volume"], ["symbol", "Ticker"]] as const;
 
-type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk" | "rec", string>>;
+type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk" | "rec" | "risk", string>>;
 
 export default async function SetupsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
@@ -38,6 +39,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const rr = pick(RRS, sp.rr), score = pick(SCORES, sp.score), dv = pick(DV, sp.dv), sort = pick(SORTS, sp.sort);
   const wk = pick(ALIGN, sp.wk);
   const rec = pick(REC, sp.rec);
+  const risk = pick(RISK, sp.risk);
   const page = Math.max(1, Number(sp.page) || 1);
 
   const [rows, cov, record] = await Promise.all([
@@ -45,7 +47,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
       p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
       p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null,
       p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE, p_aligned: wk ? wk === "with" : null,
-      p_exclude_negative: rec === "ok" ? true : null,
+      p_exclude_negative: rec === "ok" ? true : null, p_max_risk: risk ? Number(risk) : null,
     }).catch(() => null),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
     getTrackRecord().catch(() => []),
@@ -54,11 +56,11 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const total = rows?.[0]?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const href = (patch: Params) => {
-    const merged: Params = { side, status, kind, rr, score, dv, wk, rec, sort: sort === "quality" ? "" : sort, page: "", ...patch };
+    const merged: Params = { side, status, kind, rr, score, dv, wk, rec, risk, sort: sort === "quality" ? "" : sort, page: "", ...patch };
     const p = new URLSearchParams(Object.entries(merged).filter(([, v]) => v) as [string, string][]);
     return `/setups${p.size ? "?" + p : ""}`;
   };
-  const filtered = !!(side || status || kind || rr || score || dv || wk || rec);
+  const filtered = !!(side || status || kind || rr || score || dv || wk || rec || risk);
   const recomputing = coverage && coverage.ranked < coverage.total;
 
   return (
@@ -85,7 +87,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
             })}
         </nav>
 
-        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
+        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-[repeat(10,minmax(0,1fr))_auto]">
           <Select name="side" label="Side" value={side} options={SIDES} />
           <Select name="status" label="Status" value={status} options={STATUSES} />
           <Select name="kind" label="Setup" value={kind} options={KINDS} />
@@ -93,6 +95,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
           <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
           <Select name="wk" label="Weekly count" value={wk} options={ALIGN} />
           <Select name="rec" label="Track record" value={rec} options={REC} />
+          <Select name="risk" label="Risk to stop" value={risk} options={RISK} />
           <Select name="dv" label="Dollar volume" value={dv} options={DV} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
           <div className="col-span-2 flex items-end gap-2 md:col-span-1">

@@ -44,7 +44,7 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
     getEventCounts(LIQUID).catch(() => []),
     scan({ p_sort: "change", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
     scan({ p_sort: "change_asc", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
-    setupScan({ p_sort: "quality", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true }).catch(() => []),
+    setupScan({ p_sort: "quality", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true, p_max_risk: 0.2 }).catch(() => []),
     getTrackRecord().catch(() => []),
     scan({ p_sort: "dollar_volume", p_limit: 8 }).catch(() => []),
     ...TILES.map((t) => scan({ ...t.params, p_limit: 1, p_min_dollar_volume: LIQUID }).then((r) => r[0]?.total ?? 0).catch(() => null)),
@@ -61,7 +61,7 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
     pulse, breadth, events, eventCounts, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, active, popular,
     tileCounts: tiles, signals: { wave, fib, invalidation, aligned },
   };
-}, ["mission-market-v4"], { revalidate: 300 });
+}, ["mission-market-v5"], { revalidate: 300 });
 
 // last good context held by this server instance, shown (with its own as-of date) if a reload fails
 let lastGood: MarketContext | null = null;
