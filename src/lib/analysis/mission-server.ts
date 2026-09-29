@@ -50,6 +50,14 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
   };
 }, ["mission-market-v1"], { revalidate: 300 });
 
+// last good context held by this server instance, shown (with its own as-of date) if a reload fails
+let lastGood: MarketContext | null = null;
+
 export async function getMarketContext(): Promise<{ ctx: MarketContext; ok: boolean }> {
-  try { return { ctx: await load(), ok: true }; } catch { return { ctx: EMPTY, ok: false }; }
+  try {
+    lastGood = await load();
+    return { ctx: lastGood, ok: true };
+  } catch {
+    return lastGood ? { ctx: lastGood, ok: true } : { ctx: EMPTY, ok: false };
+  }
 }

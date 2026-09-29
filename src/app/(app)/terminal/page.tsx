@@ -88,7 +88,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
       `Regime: ${REGIME_LABEL[reg.id]}`,
       breadth?.measured ? `${Math.round((breadth.uptrend / breadth.measured) * 100)}% of securities in uptrends` : "Breadth measuring",
     ] : ["Market data unavailable"] },
-    { title: "Research", href: "/scanner", cta: "Scanner", lines: [
+    { title: "Research", href: "/scanner", cta: "Scanner", lines: !ok ? ["Research data unavailable"] : [
       viewer ? `${watchSentences.length} watchlist development${watchSentences.length === 1 ? "" : "s"}` : "Sign in for watchlist developments",
       `${n(ctx.tileCounts[0])} strong structures, ${n(ctx.tileCounts[1])} near a Fib zone`,
       `${marketChanges.length} liquid names changed count`,
@@ -101,7 +101,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     <DrawerProvider>
       <GlobeHero
         title={`${greeting().replace(/\.$/, "")}${name}.`}
-        subtitle={`Here's what changed through ${since}. ${m.label} Prices are end of day, as of ${fmtDate(lastTs)}.`}
+        subtitle={ok ? `Here's what changed through ${since}. ${m.label} Prices are end of day, as of ${fmtDate(lastTs)}.` : m.label}
         actions={<PrepareMyDay title={`Prepare my day · ${today}`} sections={day} className="btn sm border-[#F4D38A]/60 bg-[#F4D38A]/15 text-white hover:bg-[#F4D38A]/25" />}
       />
 

@@ -541,3 +541,61 @@ Not yet available, and stated on the page: sector, factor and geographic exposur
 3. **Saved portfolios and models.** Store X-Ray portfolios for signed-in users, set target weights, and flag drift (Stage 2).
 4. **Meeting prep, first version.** For a saved portfolio: since last review, holdings with changes, concentration and tax items, talking points and a client version. Everything is built from X-Ray and the Brief, with no invented client data.
 5. **Database plan.** Price-bar retention or a plan upgrade, so the history and replay window can grow.
+
+## Mission Control (September 28–29, 2026)
+
+`/terminal` was rebuilt from the Brief into **Mission Control**, following the "what happened, what matters to me, what should I investigate next" critique.
+
+### What shipped
+
+- **Header band.**
+  - The globe is compacted into a header band: greeting, "what changed through Friday's close", world sessions and Prepare My Day.
+- **Today strip.**
+  - Four cells: Market, Research, Portfolio, Clients and calendar.
+  - Portfolio, clients and calendars say "not connected" instead of showing placeholders.
+- **Ask Viridia command line.**
+  - Suggested prompts: explain today's market, find improving structures, compare two tickers, show watchlist changes.
+  - A single ticker opens the drawer.
+  - Routing is deterministic and every answer is built from stored data. It does not forecast.
+- **Market Pulse.**
+  - Equities (SPY, QQQ, IWM, DIA), Rates (SHY, IEF, TLT) and Macro (UUP, GLD, USO, IBIT).
+  - A 1D / 1W / 1M switch, 30-session sparklines and trend dots.
+  - The ETF-proxy disclosure sits in an info tooltip.
+- **Market regime.**
+  - Uptrend / mixed / downtrend bar, the share above the 50-day average, and 52-week highs versus lows.
+  - A generated reading that flags narrow participation.
+- **What Changed.** 5–8 developments across the index tape, rates, the largest macro move, breadth, watchlist and market structure changes, and the biggest liquid movers.
+- **Market scanner tiles.** Strong structure, near a Fib zone, near a 52-week high, wave 3, correction complete and near invalidation. Each opens the scanner filtered.
+- **Setups table.** A compact table of the highest-confidence setups.
+- **Right rail.**
+  - Watchlist, or the most traded names when signed out: price, day, trend, wave, setup and latest structure event.
+  - A portfolio slot (Run X-Ray).
+  - Calendar and alerts, marked not connected.
+- **Security drawer.**
+  - Opens from any ticker on the page and shows price, 1W/1M, trend, daily and weekly count, confidence, invalidation, nearest Fibonacci zone, setup and latest history.
+  - Buttons: Open research, Ask Viridia (which opens the panel on the security page) and Watch.
+- **Prepare My Day.** A compiled brief (markets, regime, what changed, watchlist, setups, world sessions, not-connected items) with Copy and Print.
+- **Moves and navigation.**
+  - Most active moved to Markets.
+  - The sidebar is regrouped as Terminal, Research, Markets, Scanner, Portfolio and Workspace. There are no dead links.
+- **Data layer.**
+  - `market_pulse` and `security_preview` RPCs (migration 0021) and `/api/preview/[symbol]`.
+  - Market-wide data cached for 5 minutes; the last good copy is kept if a reload fails.
+
+### Incident: database throttled (September 29, morning)
+
+- **Symptoms.**
+  - From about 10:00 UTC, pg_cron logged "job startup timeout" on most runs.
+  - Reads of cached pages took seconds; breadth took 32 s.
+  - The site rendered empty or stalled.
+- **Cause.** The backtest replay (15 requests every minute) on top of the morning data and analysis work exhausted the small instance's resources.
+- **Action.**
+  - The backtest was slowed, then paused (`viridia-backtest` is inactive). It had replayed 2,389 securities.
+  - Mission Control now caches market-wide data and shows a notice instead of blank panels.
+- **To do.**
+  - Resume the backtest off-hours at a low rate: every 3 minutes, 6 requests.
+  - Consider a larger Supabase compute size, which is a billing decision.
+
+### Not built (no data source, or later)
+
+- Economic and earnings calendars, clients and meetings, alerts, unusual-volume and trend-change tiles, customizable layouts, and advisor versus asset-manager workspace presets.
