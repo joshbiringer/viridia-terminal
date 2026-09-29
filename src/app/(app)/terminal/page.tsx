@@ -91,7 +91,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     { title: "Research", href: "/scanner", cta: "Scanner", lines: !ok ? ["Research data unavailable"] : [
       viewer ? `${watchSentences.length} watchlist development${watchSentences.length === 1 ? "" : "s"}` : "Sign in for watchlist developments",
       `${n(ctx.tileCounts[0])} strong structures, ${n(ctx.tileCounts[1])} near a Fib zone`,
-      `${marketChanges.length} liquid names changed count`,
+      marketChanges.length ? `${marketChanges.length} liquid name${marketChanges.length === 1 ? "" : "s"} changed wave count` : "No wave-count changes since the prior session",
     ] },
     { title: "Portfolio", href: "/portfolio", cta: "Run Portfolio X-Ray", muted: true, lines: ["No portfolio connected", "Check holdings on demand with X-Ray; nothing is stored"] },
     { title: "Clients and calendar", muted: true, lines: ["Not connected yet", "Meetings, clients, earnings and economic calendars need integrations Viridia doesn't have yet"] },
