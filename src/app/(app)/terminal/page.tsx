@@ -7,12 +7,13 @@ import { FirstRun } from "@/components/FirstRun";
 import { GlobeHero } from "@/components/brief/GlobeHero";
 import { getViewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
-import { getChanges } from "@/lib/analysis/brief";
+import { bestPerSymbol, getStructureEvents } from "@/lib/analysis/events-server";
+import { eventSentence, eventTone, isImproving, type StructureEvent } from "@/lib/analysis/events";
 import { entryText } from "@/lib/analysis/setups";
 import { SETUP_LABEL } from "@/lib/analysis/candidates";
 import { TILES, getMarketContext } from "@/lib/analysis/mission-server";
 import {
-  PULSE_GROUPS, REGIME_LABEL, changeSentence, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection,
+  PULSE_GROUPS, REGIME_LABEL, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection,
 } from "@/lib/analysis/mission";
 import { DrawerProvider } from "@/components/mission/SecurityDrawer";
 import { MarketPulse } from "@/components/mission/MarketPulse";
@@ -32,12 +33,12 @@ export default async function MissionControl({ searchParams }: { searchParams: P
 
   const [{ ctx, ok }, watchChanges, watchPulse, savedRes] = await Promise.all([
     getMarketContext(),
-    watched.length ? getChanges({ symbols: watched, limit: 20 }).catch(() => []) : Promise.resolve([]),
+    watched.length ? getStructureEvents({ symbols: watched, days: 1, limit: 60 }).catch(() => [] as StructureEvent[]) : Promise.resolve([] as StructureEvent[]),
     watched.length ? getPulse(watched.slice(0, 40)).catch(() => []) : Promise.resolve([]),
     viewer ? (await authClient()).from("portfolios").select("id, name, updated_at, reviewed_at").order("updated_at", { ascending: false }).limit(5) : Promise.resolve({ data: [] }),
   ]);
   const savedPortfolios = ((savedRes?.data ?? []) as SavedSummary[]);
-  const { pulse, breadth, changes, setups: topSetups, record, active } = ctx;
+  const { pulse, breadth, events: marketEvents, setups: topSetups, record, active } = ctx;
   const railMode = watched.length ? "watchlist" : viewer ? "empty" : "popular";
   const railRows = watched.length ? watchPulse : ctx.popular;
 
@@ -45,8 +46,9 @@ export default async function MissionControl({ searchParams }: { searchParams: P
   const lastTs = spy?.last_ts ?? pulse[0]?.last_ts ?? null;
   const since = closeLabel(lastTs);
   const reg = regime(breadth, spy);
-  const marketChanges = changes.map(changeSentence);
-  const watchSentences = watchChanges.map(changeSentence);
+  const asChange = (e: StructureEvent) => ({ symbol: e.symbol, text: eventSentence(e), tone: eventTone(e), improving: isImproving(e) });
+  const marketChanges = bestPerSymbol(marketEvents).filter((e) => e.weight >= 2).map(asChange);
+  const watchSentences = bestPerSymbol(watchChanges).map(asChange);
   const feed = whatChanged({
     pulse, breadth, market: marketChanges, watchlist: watchSentences,
     gainer: ctx.gainer, loser: ctx.loser,
@@ -93,7 +95,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     { title: "Research", href: "/scanner", cta: "Scanner", lines: !ok ? ["Research data unavailable"] : [
       viewer ? `${watchSentences.length} watchlist development${watchSentences.length === 1 ? "" : "s"}` : "Sign in for watchlist developments",
       `${n(ctx.tileCounts[0])} strong structures, ${n(ctx.tileCounts[1])} near a Fib zone`,
-      marketChanges.length ? `${marketChanges.length} liquid name${marketChanges.length === 1 ? "" : "s"} changed wave count` : "No wave-count changes since the prior session",
+      ctx.eventCounts.length ? `${ctx.eventCounts.reduce((a, c) => a + c.n, 0).toLocaleString("en-US")} structural events on liquid names` : "Structural events start after the next session",
     ] },
     savedPortfolios.length
       ? { title: "Portfolio", href: "/portfolio", cta: "Open X-Ray", lines: [

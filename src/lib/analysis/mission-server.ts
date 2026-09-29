@@ -1,7 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { getBreadth, scan, type Breadth, type ScanRow } from "@/lib/market-data/snapshot";
 import { getPulse } from "@/lib/market-data/pulse";
-import { getChanges, type ChangeRow } from "./brief";
+import { getEventCounts, getStructureEvents } from "./events-server";
+import type { EventType, StructureEvent } from "./events";
 import { setupScan, type SetupRow } from "./setup-scan";
 import { getTrackRecord, type KindRecord } from "./track-record";
 import { PULSE_SYMBOLS, type PulseRow } from "./mission";
@@ -19,11 +20,11 @@ export const TILES: { label: string; hint: string; href: string; params: Record<
 ];
 
 export interface MarketContext {
-  pulse: PulseRow[]; breadth: Breadth | null; changes: ChangeRow[]; gainer: ScanRow | null; loser: ScanRow | null;
+  pulse: PulseRow[]; breadth: Breadth | null; events: StructureEvent[]; eventCounts: { day: string; type: EventType; n: number }[]; gainer: ScanRow | null; loser: ScanRow | null;
   setups: SetupRow[]; record: KindRecord[]; active: ScanRow[]; popular: PulseRow[]; tileCounts: (number | null)[];
 }
 
-const EMPTY: MarketContext = { pulse: [], breadth: null, changes: [], gainer: null, loser: null, setups: [], record: [], active: [], popular: [], tileCounts: TILES.map(() => null) };
+const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts: [], gainer: null, loser: null, setups: [], record: [], active: [], popular: [], tileCounts: TILES.map(() => null) };
 
 /**
  * Everything on Mission Control that is the same for every reader. Prices are end of day, so it is
@@ -31,10 +32,11 @@ const EMPTY: MarketContext = { pulse: [], breadth: null, changes: [], gainer: nu
  * throws inside the cache so it is never stored.
  */
 const load = unstable_cache(async (): Promise<MarketContext> => {
-  const [pulse, breadth, changes, gainers, losers, setups, record, active, ...tiles] = await Promise.all([
+  const [pulse, breadth, events, eventCounts, gainers, losers, setups, record, active, ...tiles] = await Promise.all([
     getPulse(PULSE_SYMBOLS),
     getBreadth(),
-    getChanges({ minDollarVolume: LIQUID, limit: 40 }).catch(() => []),
+    getStructureEvents({ minDollarVolume: LIQUID, days: 1, limit: 120 }).catch(() => []),
+    getEventCounts(LIQUID).catch(() => []),
     scan({ p_sort: "change", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
     scan({ p_sort: "change_asc", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
     setupScan({ p_sort: "quality", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true }).catch(() => []),
@@ -45,10 +47,10 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
   if (!pulse.length) throw new Error("market pulse unavailable");
   const popular = await getPulse(active.map((r) => r.symbol)).catch(() => []);
   return {
-    pulse, breadth, changes, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, active, popular,
+    pulse, breadth, events, eventCounts, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, active, popular,
     tileCounts: tiles,
   };
-}, ["mission-market-v2"], { revalidate: 300 });
+}, ["mission-market-v3"], { revalidate: 300 });
 
 // last good context held by this server instance, shown (with its own as-of date) if a reload fails
 let lastGood: MarketContext | null = null;
