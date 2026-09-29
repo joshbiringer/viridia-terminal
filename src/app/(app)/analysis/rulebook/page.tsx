@@ -107,7 +107,7 @@ export default function RulebookPage() {
             </div>
           </section>
           <section className="card px-5 py-5 text-[13px] leading-relaxed text-fg-2">
-            <p><span className="font-medium text-fg">Where counts come from.</span> Candidate counts (Phase 5) are built only from confirmed
+            <p><span className="font-medium text-fg">Where counts come from.</span> Candidate counts are built only from confirmed
             pivots, then checked here. A count is shown as of the bar its last pivot was confirmed, so no future price is used.</p>
             <Link href="/data-sources" className="mt-3 inline-block text-brand hover:underline">Build progress</Link>
           </section>

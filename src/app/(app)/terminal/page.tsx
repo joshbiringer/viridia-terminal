@@ -119,7 +119,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
       <TodayStrip cells={todayCells} />
       {!ok && (
         <p className="card px-4 py-3 text-[13px]" style={{ color: "var(--warn)" }} role="status">
-          Market data didn&apos;t load this time; the database is busy. Reload in a minute. Your watchlist and the tools below still work.
+          Market data didn&apos;t load this time. Reload in a minute; your watchlist and the tools below still work.
         </p>
       )}
 
