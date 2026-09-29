@@ -12,7 +12,9 @@ import { StructureSummary } from "@/components/StructureSummary";
 import { AskViridiaButton } from "@/components/AskViridiaPanel";
 import { getAnalysisHistory, getDailyAnalysis, getWeeklyGlance } from "@/lib/analysis/server";
 import { WaveCounts } from "@/components/WaveCounts";
-import { ConfluenceZones } from "@/components/ConfluenceZones";
+import { FibMap } from "@/components/analysis/FibMap";
+import { getStructureEvents } from "@/lib/analysis/events-server";
+import { EVENT_LABEL, eventSentence, eventTone, type StructureEvent } from "@/lib/analysis/events";
 import { WatchButton } from "@/components/WatchButton";
 import { TrackEvent } from "@/components/TrackEvent";
 import { WelcomeGuide } from "@/components/WelcomeGuide";
@@ -45,7 +47,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // Only sections that exist are shown; financials, earnings and ownership arrive with research data.
-const TABS: { label: string; live: boolean }[] = [{ label: "Overview", live: true }, { label: "Filings", live: true }];
+const SECTIONS = [["summary", "Summary"], ["structure", "Structure"], ["candidates", "Candidates"], ["fibonacci", "Fibonacci"], ["evidence", "Evidence"], ["engine", "Engine details"]] as const;
+
+function Section({ id, title, note, children }: { id: string; title: string; note?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="flex scroll-mt-[112px] flex-col gap-4" aria-labelledby={`${id}-h`}>
+      <div className="flex items-baseline gap-3 border-b border-line pb-1.5">
+        <h2 id={`${id}-h`} className="text-[11.5px] font-[650] uppercase tracking-[0.08em] text-fg-3">{title}</h2>
+        {note && <span className="text-[12px] text-fg-3">{note}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export default async function StockTerminal({ params, searchParams }: Props) {
   const welcome = (await searchParams).welcome === "1";
@@ -74,7 +88,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     );
   }
 
-  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians, quality] = await Promise.all([
+  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians, quality, changes] = await Promise.all([
     db().from("security_events").select("*").eq("security_id", sec.id).order("id", { ascending: false }).limit(20),
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
@@ -89,6 +103,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     getFundamentals([sec.symbol]).then((r) => r[0] ?? null).catch(() => undefined),
     getSectorMedians().catch(() => [] as SectorMedian[]),
     getSetupQuality().catch(() => []),
+    getStructureEvents({ symbols: [sec.symbol], days: 30, limit: 12 }).catch(() => [] as StructureEvent[]),
   ]);
   const sectorMedian = fund?.sector ? medians.find((m) => m.sector === fund.sector) ?? null : null;
   const sum = (summaryRes.data ?? null) as BarSummary | null;
@@ -141,53 +156,57 @@ export default async function StockTerminal({ params, searchParams }: Props) {
             />
           </div>
         </div>
-        <nav className="-mb-2 flex gap-6 overflow-x-auto border-b border-line" aria-label="Security sections">
-          {TABS.map((t) => {
-            if (t.label === "Filings" && edgar)
-              return <a key={t.label} href={edgar} target="_blank" rel="noreferrer" className="whitespace-nowrap border-b-2 border-transparent pb-3 text-[14px] font-[550] text-fg-2 hover:text-fg">Filings ↗</a>;
-            return (
-              <span
-                key={t.label} aria-current={t.label === "Overview" ? "page" : undefined}
-                title={t.live ? undefined : "Planned"}
-                className={`whitespace-nowrap border-b-2 pb-3 text-[14px] font-[550] ${t.label === "Overview" ? "border-brand text-fg" : "cursor-default border-transparent text-fg-3"}`}
-              >
-                {t.label}
-              </span>
-            );
-          })}
+        <nav className="sticky top-[56px] z-20 -mb-2 flex gap-5 overflow-x-auto border-b border-line bg-bg/95 backdrop-blur" aria-label="Security sections">
+          {SECTIONS.map(([id, label]) => (
+            <a key={id} href={`#${id}`} className="whitespace-nowrap border-b-2 border-transparent py-2.5 text-[13.5px] font-[550] text-fg-2 hover:border-line-2 hover:text-fg">{label}</a>
+          ))}
+          {edgar && <a href={edgar} target="_blank" rel="noreferrer" className="ml-auto whitespace-nowrap py-2.5 text-[13.5px] font-[550] text-fg-3 hover:text-fg">SEC filings ↗</a>}
         </nav>
       </header>
 
       {welcome && <WelcomeGuide symbol={sec.symbol} />}
 
-      <SignalsPanel
-        symbol={sec.symbol} trials={trials}
-        dims={computeSignals({
-          bars: (barsRes.data ?? []) as { ts: string; close: number }[], benchmark: (spyRes.data ?? []) as { ts: string; close: number }[],
-          trend: snap?.trend ?? null, sma50: snap?.sma50 ?? null, sma200: snap?.sma200 ?? null,
-          glance: swings?.glances.auto ?? null, weekly,
-          fundamentals: fund, sector: sectorMedian,
-        })}
-      />
+      <Section id="summary" title="Structural summary" note="What is the structure, what changed, and what would invalidate it">
+        <SignalsPanel
+          symbol={sec.symbol} trials={trials}
+          dims={computeSignals({
+            bars: (barsRes.data ?? []) as { ts: string; close: number }[], benchmark: (spyRes.data ?? []) as { ts: string; close: number }[],
+            trend: snap?.trend ?? null, sma50: snap?.sma50 ?? null, sma200: snap?.sma200 ?? null,
+            glance: swings?.glances.auto ?? null, weekly,
+            fundamentals: fund, sector: sectorMedian,
+          })}
+        />
+        <StructureGlance
+          symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
+          zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf} weekly={weekly}
+        />
+        <RecentChanges events={changes} />
+      </Section>
 
-      <StructureGlance
-        symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
-        zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf} weekly={weekly}
-      />
-      <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} quality={quality} />
+      <Section id="structure" title="Current structure" note="Price, swings and the preferred count on the chart">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
+          <StructureSummary snap={snap} swings={swings} />
+        </div>
+      </Section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
-        <StructureSummary snap={snap} swings={swings} />
-      </div>
-
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <Section id="candidates" title="Candidate interpretations" note="Every count shown passes every hard rule">
         <WaveCounts data={swings?.candidates ?? null} glances={swings?.glances ?? null} asOf={swings?.asOf} version={swings?.version} source={swings?.source} />
-        <div className="flex min-w-0 flex-col gap-6">
-        <ConfluenceZones fib={swings?.fib ?? null} />
+      </Section>
+
+      <Section id="fibonacci" title="Fibonacci map">
+        <FibMap fib={swings?.fib ?? null} />
+      </Section>
+
+      <Section id="evidence" title="Evidence" note="The setup the preferred count implies, and how that kind of setup has done">
+        <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} quality={quality} />
+      </Section>
+
+      <Section id="engine" title="Engine details">
         <div className="card">
-          <div className="card-h"><h2 className="card-t">Details</h2></div>
           <dl className="kv px-5 py-5">
+            <dt>Analysis engine</dt><dd className="num">{swings?.version ?? "—"}</dd>
+            <dt>Bars analysed to</dt><dd className="num">{swings?.asOf ? fmtDate(swings.asOf) : "—"}</dd>
             <dt>Price history</dt><dd>{coverage}</dd>
             <dt>Daily bars</dt><dd className="num">{sum?.bars_1d ? `${sum.bars_1d.toLocaleString("en-US")} since ${fmtDate(sum.first_ts)}` : "—"}</dd>
             <dt>Avg volume, 50 days</dt><dd className="num">{fmtVolume(sum?.avg_volume_50d)}</dd>
@@ -196,11 +215,32 @@ export default async function StockTerminal({ params, searchParams }: Props) {
             <dt>Provider symbols</dt><dd className="num">{providerRows.map((r) => `${r.provider}: ${r.symbol}`).join(" · ")}</dd>
             <dt>Listing changes</dt><dd>{evts.length ? `${evts.length} recorded` : `None since ${fmtDate(sec.first_seen_at)}`}</dd>
           </dl>
-          <SourceFooter source="Nasdaq Trader, SEC, Massive" updated={fmtDateTime(sec.last_seen_at)} method="Security master, daily snapshot diff" />
+          <SourceFooter source="Prices: Massive (end of day, split-adjusted). Listings: Nasdaq Trader, SEC" updated={fmtDateTime(sec.last_seen_at)} method="Security master, daily snapshot diff" />
         </div>
-        </div>
-      </section>
+      </Section>
       </DegreeProvider>
     </>
+  );
+}
+
+/** Structural events for this security over the last month (deterministic comparisons of sessions). */
+function RecentChanges({ events }: { events: StructureEvent[] }) {
+  const tone = { pos: "var(--pos-chart)", neg: "var(--neg)", neutral: "var(--border-2)" } as const;
+  return (
+    <div className="card">
+      <div className="card-h"><h3 className="card-t">What changed</h3><span className="card-s">Structural events, most recent first</span></div>
+      {events.length ? (
+        <ul className="divide-y divide-line">
+          {events.map((e, i) => (
+            <li key={i} className="flex items-baseline gap-3 px-5 py-2 text-[13px]">
+              <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full" style={{ background: tone[eventTone(e)] }} aria-hidden />
+              <span className="num w-20 shrink-0 text-fg-3">{fmtDate(e.day)}</span>
+              <span className="w-[150px] shrink-0 text-[11.5px] font-[560] uppercase tracking-[0.03em] text-fg-3">{EVENT_LABEL[e.type]}</span>
+              <span className="min-w-0 flex-1 text-fg-2">{eventSentence(e)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="px-5 py-4 text-[13px] text-fg-3">No structural events recorded yet. Events compare each analysed session with the previous one.</p>}
+    </div>
   );
 }

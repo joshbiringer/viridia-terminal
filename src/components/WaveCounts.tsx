@@ -13,7 +13,7 @@ const ORDER: Degree[] = ["primary", "intermediate", "minor"];
 const PREFERRED_TAB: Degree[] = ["intermediate", "minor", "primary"];
 
 /**
- * Candidate wave counts (engine Phase 5), ranked by Pattern Confidence (Phase 7). Every count shown
+ * Candidate interpretations: rule-valid wave counts, ranked by Pattern Confidence. Every count shown
  * passes every hard rule; the first is the preferred count, and the alternate is the best-ranked count
  * that tells a different story (see engine rank.ts scenarioKey).
  */
@@ -23,16 +23,20 @@ export function WaveCounts({ data, glances, asOf, version, source }: {
   const first = data ? PREFERRED_TAB.find((d) => data[d].candidates.length) ?? "intermediate" : "intermediate";
   const { degree: deg, setDegree: setDeg } = useDegree(first);
   const [open, setOpen] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   const set = data?.[deg];
+  const SHOWN = 5;
 
   return (
     <div className="card">
       <div className="card-h">
-        <h2 className="card-t" id="counts">Candidate wave counts</h2>
-        {set?.candidates.some((c) => c.score != null) ? <span className="chip">Ranked</span> : <span className="chip">Unranked</span>}
+        <h2 className="card-t" id="counts">Candidate interpretations</h2>
+        {set?.candidates.some((c) => c.score != null)
+          ? <span className="chip" title="Ordered by Pattern Confidence: how well each rule-valid count fits the Elliott guidelines">Ranked by Pattern Confidence</span>
+          : <span className="chip" title="Viridia doesn't designate a preferred count until the ranking has scored these">Unranked</span>}
         <div className="seg ml-auto" role="tablist" aria-label="Wave degree">
           {ORDER.map((d) => (
-            <button key={d} role="tab" aria-selected={deg === d} onClick={() => { setDeg(d); setOpen(null); }}>
+            <button key={d} role="tab" aria-selected={deg === d} onClick={() => { setDeg(d); setOpen(null); setAll(false); }}>
               {DEGREE_LABEL[d]}{data ? <span className="num text-fg-3">{data[d].candidates.length}{data[d].truncated ? "+" : ""}</span> : null}
             </button>
           ))}
@@ -56,20 +60,25 @@ export function WaveCounts({ data, glances, asOf, version, source }: {
 
           {set.candidates.length === 0 && set.anchor && (
             <p className="px-5 py-6 text-[13.5px] text-fg-2">
-              No labeling of the recent {DEGREE_LABEL[deg].toLowerCase()} swings satisfies every rule. The structure is either still forming
-              or is a combination, which is checked once lower-degree counts are reconciled (Phase 9).
+              No labeling of the recent {DEGREE_LABEL[deg].toLowerCase()} swings satisfies every rule. The structure may still be forming,
+              or may be a combination pattern, which the engine does not yet evaluate.
             </p>
           )}
 
           <ul className="divide-y divide-line">
-            {set.candidates.map((c, i) => (
+            {(all ? set.candidates : set.candidates.slice(0, SHOWN)).map((c, i) => (
               <CountRow key={c.id} c={c} rank={c.score == null ? null : i === 0 ? 0 : c.id === glances?.[deg]?.alternate?.id ? 1 : i} open={open === c.id} onToggle={() => setOpen(open === c.id ? null : c.id)} />
             ))}
           </ul>
+          {set.candidates.length > SHOWN && (
+            <button className="border-t border-line px-5 py-2.5 text-left text-[13px] text-brand hover:bg-hover" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+              {all ? "Show the top five" : `View all ${set.candidates.length}${set.truncated ? "+" : ""} candidates`}
+            </button>
+          )}
 
           {set.eliminatedBy.length > 0 && (
             <details className="border-t border-line px-5 py-3.5 text-[12.5px] text-fg-2">
-              <summary className="cursor-pointer text-fg-3">Why labelings were eliminated</summary>
+              <summary className="cursor-pointer text-fg-3">Hard-rule evidence: why {set.eliminated.toLocaleString("en-US")} labelings were eliminated</summary>
               <ul className="mt-2 flex flex-col gap-1.5">
                 {set.eliminatedBy.map((e) => (
                   <li key={e.ruleId} className="flex gap-3"><span className="num w-12 shrink-0 text-right text-fg">{e.count.toLocaleString("en-US")}</span><span>{e.text}</span></li>
