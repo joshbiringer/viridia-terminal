@@ -704,3 +704,84 @@ Copy, Print, and **Mark as reviewed**, which stores the snapshot the next prep c
 2. Resume the backtest off-hours at a low rate to finish the last ~1,600 securities, then recheck the grades.
 3. Condition setup grades on market regime (breadth at the time of the signal), so sells are judged fairly outside a rising year.
 4. Earnings and economic calendars need a data source. They are the largest remaining gap on Mission Control.
+
+## Product sprint: expose the engine (September 29, 2026)
+
+The brief asked the product to show the sophistication the engine already has. One deviation: the brief assumed interpretations were unranked. They aren't: Pattern Confidence ranking and the backtested track record are live. Candidates are therefore labeled "Ranked by Pattern Confidence", the top five show first, and the rest sit behind "View all".
+
+**Migrations:** 0026–0032.
+
+### Reliability (priority 0)
+
+**Charts**
+- `fetchJson` handles timeouts and retries on network errors, 5xx responses and non-JSON bodies. A non-JSON body is the "Unexpected token <" failure.
+- It validates the shape of the response and falls back to the last good copy in session storage.
+- The chart shows "Try again" instead of raw errors. It also shows a notice when it's displaying a saved copy, or when the latest bar is more than six days old.
+
+**`/api/bars`**
+- Each call has its own timeout.
+- Malformed bars are dropped and logged, and responses carry provenance metadata (`meta`).
+- A short shared cache applies, except while a history fetch is queued.
+
+**Integrity checks** (`run_integrity_checks`, weekdays 23:05 UTC)
+- What they check: malformed bars, split-like jumps, moves over 40%, adjustment mismatches, stale prices, duplicate listings, ticker changes and corporate actions.
+- First run: 6 split-like jumps (DAIC, EYPT, TENX, WETO ×3), 2 adjustment mismatches, 82 moves over 40% (including MRNA +177% on Aug 19, worth checking), and 71 duplicate names, which are mostly share classes and preferreds.
+
+**`/system`** (internal)
+- Shows jobs, coverage, storage and findings.
+- Admins only, through `app_admins` (Josh's account is added). Everyone else gets a 404.
+
+### What Changed engine (priority 3, migration 0027)
+
+- `analysis_history` now stores: trend, intermediate swing, latest pivot, hashed top-three counts with labels, nearest zone, zone midpoints within 5%, and the weekly direction.
+- Each new session is compared with the previous one to write structural events:
+  - trend and structure: `TREND_CHANGED`, `SWING_CONFIRMED`, `STRUCTURE_CHANGED`;
+  - counts: `COUNT_ADDED`, `COUNT_REMOVED`, `COUNT_INVALIDATED`;
+  - Fibonacci zones: `FIB_ZONE_CREATED`, `FIB_ZONE_ENTERED`, `FIB_ZONE_EXITED`;
+  - alignment: `TIMEFRAME_ALIGNMENT_CHANGED`.
+- Verified in a rolled-back test on NVDA.
+- **Fixed:** history days were one day early (the New York date of a 00:00 UTC bar stamp). Rows were shifted forward a day.
+- Retention: history 60 days, events 120 days.
+- Events start after the next analysed session. The workers resume at 20:30 UTC today.
+
+### Mission Control, Signals and command bar (priorities 1, 2 and 4)
+
+- **Page order:** Pulse, Regime, What Changed (structural events), Viridia Signals, Setups, Scanner tiles, Ask Viridia.
+- **Viridia Signals tabs:** Structure changes, Wave candidates, Fib confluence, Near invalidation, Multi-timeframe (`timeframe_alignment`, migration 0028).
+- **Command bar (⌘K):**
+  - "Search securities or ask Viridia…";
+  - recent securities and research (kept in this browser);
+  - deterministic natural-language scanner queries ("wave 3 stocks near a fib zone in an uptrend over $100M");
+  - questions routed to Ask Viridia.
+  - Row providers are documented, so portfolios, clients and documents can be added later.
+
+### Security page (priorities 5 and 6)
+
+- **Sections:** structural summary (Signals, the at-a-glance card, this security's structural events), current structure (chart), candidate interpretations (top five plus View all; hard-rule evidence behind details), Fibonacci map, evidence (setup and track record), engine details.
+- A sticky section nav replaces the placeholder tabs.
+- **Fibonacci map:** a vertical price ladder around the close with distance, relationship count, degrees and strength. Selecting a zone lists every contributing relationship. It exposes `onSelect` for a later chart overlay.
+
+### Scanner and watchlist (priorities 7 and 8)
+
+- **Scanner filters** (migration 0029): swing structure by degree (primary, intermediate, minor), count pattern, wave position, distance to a Fibonacci zone, zone strength, and 52-week range position.
+- **Watchlist** (migration 0030):
+  - Columns: price, change, trend, structure, candidate wave, nearest Fibonacci zone, last structural change, and notes saved inline.
+  - `alert_prefs` is stored but not exposed, because alert delivery doesn't exist yet.
+- **Setups** (migration 0032): a risk-to-stop filter. Mission Control shows only setups with the stop within 20%.
+  - **Engine finding:** wave C setups have a median risk of 26%, and some are over 90% (SOXL: entry 151, stop 7). The setup engine should cap risk. It isn't changed here, because that needs a full recompute.
+
+### Customer language and navigation (priorities 9 and 10)
+
+- Data Sources is now **Data & Methodology**. It covers sources, update cadence, coverage, the integrity-check summary (migration 0031), the analysis policy, and limitations.
+- Worker, backfill, queue, database and phase details moved to `/system`.
+- The planned-section placeholder pages were removed; unknown paths return 404.
+- Phase and backfill wording was removed from the breadth panel, the rulebook, the scanner and Mission Control.
+
+### Tests
+
+- 88 unit tests (82 before), with new suites for events and the command-bar query parser. TypeScript, lint (0 errors) and the build pass.
+- **Live checks:**
+  - Mission Control renders the new order and Signals tabs.
+  - The security page renders its sections, the Fibonacci map (4 zones for NVDA) and "View all 12+ candidates".
+  - Data & Methodology renders its integrity checks and limitations.
+  - `/system` returns 404 when signed out.

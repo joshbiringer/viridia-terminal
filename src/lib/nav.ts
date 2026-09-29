@@ -35,7 +35,7 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
 
 export const SIDEBAR_FOOTER: NavItem[] = [
   { label: "Account", href: "/account", icon: "account", live: true, auth: true, keywords: "profile billing plan settings" },
-  { label: "Data Sources", href: "/data-sources", icon: "data", live: true, keywords: "roadmap status coverage" },
+  { label: "Data & Methodology", href: "/data-sources", icon: "data", live: true, keywords: "sources coverage methodology limitations integrity" },
   { label: "Help", href: "/help", icon: "help", live: true, keywords: "shortcuts keyboard support" },
 ];
 

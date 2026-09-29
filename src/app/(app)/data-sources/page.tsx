@@ -8,7 +8,7 @@ import { PIVOT_METHOD } from "@/lib/analysis/pivots";
 import { ANALYSIS_VERSION, CANDIDATE_METHOD, FIB_METHOD } from "@/lib/analysis/candidates";
 import { PageHeader } from "@/components/ui/PageHeader";
 
-export const metadata: Metadata = { title: "Data Sources" };
+export const metadata: Metadata = { title: "Data and methodology" };
 export const dynamic = "force-dynamic"; // always show the latest sync state
 
 type SummaryRow = { exchange: string | null; asset_type: string; asset_subtype: string; active: number; inactive: number };

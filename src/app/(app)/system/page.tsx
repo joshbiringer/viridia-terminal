@@ -5,7 +5,7 @@ import { authClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { fmtInt, stockHref } from "@/lib/format";
 
-export const metadata: Metadata = { title: "System", robots: { index: false } };
+export const metadata: Metadata = { robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 interface Job { name: string; schedule: string; active: boolean; last: { status: string; start: string; end: string | null; message: string | null } | null }
