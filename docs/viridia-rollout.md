@@ -813,3 +813,34 @@ The brief asked the product to show the sophistication the engine already has. O
 ### Tests
 
 - 94 unit tests, including Viridia change grouping and Portfolio Intelligence. TypeScript, lint (0 errors) and the build pass.
+
+## Portfolio X-Ray workspace
+
+`/portfolio` is now a tabbed workspace: Overview, Risk, Exposure, Correlation, Structure, Tax and Holdings, with a persistent Ask Viridia panel. Every figure comes from `buildWorkspace` (`src/lib/portfolio/workspace.ts`), a pure function over the holdings and stored closes. `/api/portfolio/workspace` supplies the data.
+
+### Data (migration 0035)
+
+- `portfolio_closes`: up to 520 daily closes for up to 130 symbols. The proxy ETFs (benchmarks, factors, sectors) are cached for an hour.
+- `portfolio_structure`: each holding's nearest Fibonacci zone.
+- `portfolio_snapshots`: owner-only RLS, at most 60 per portfolio.
+- Advisor Mode hooks on `portfolios`: `kind`, `household`, `benchmark` (see `src/lib/portfolio/advisor.ts`, flag off).
+
+### Methods
+
+| Area | Method |
+|---|---|
+| History | Constant-weight back-cast: today's weights on past daily returns; cash earns BIL. |
+| Risk contribution | wᵢ(Σw)ᵢ / wᵀΣw over the last 252 shared sessions; flagged at 3+ points and 1.25× weight. |
+| Independent exposures | Meucci effective number of bets over the covariance matrix's principal components. |
+| Clusters | Average-linkage, merging while average correlation ≥ 0.60; named by estimated sector. |
+| Sector exposure | Returns-based style analysis on the 11 Select Sector SPDRs plus IEF and BIL. Stocks count toward their best-fitting sector; funds are spread across their mix; fits under 15% are unclassified. SEC industry codes aren't loaded. |
+| Factors | OLS of excess returns on ETF spreads: SPY−BIL, IWM−IWB, IWD−IWF, MTUM−SPY, QUAL−SPY, USMV−SPY. Profitability isn't estimated (needs fundamentals). |
+| Stress | Historical replays of the deepest six-month SPY and IEF drawdowns in stored history. Modeled shocks use one-year beta × proxy move; rates use IEF with an assumed duration of 7 years. 2008, 2020 and 2022 need longer history than the roughly two years stored. |
+| Tax | Per lot (one line per purchase); long-term after more than one year; lots turning long-term within 30 days. |
+| Not available | Income yield (no dividend data); shown as unavailable. |
+
+### Other
+
+- **Ask Viridia:** deterministic answers built only from workspace figures (`src/lib/portfolio/ask.ts`).
+- **Snapshots:** "What changed" diffs value, holdings, weights, trend and count changes, near-invalidation, beta, volatility, independent exposures, sectors and factors.
+- **Tests:** 106 unit tests, including linear algebra, the workspace, Ask Viridia, snapshots, and server rendering of every tab.
