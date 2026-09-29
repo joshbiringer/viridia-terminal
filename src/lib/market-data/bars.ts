@@ -38,6 +38,8 @@ export interface BarsResponse {
   history: HistoryStatus | null;
   bars: BarRow[];
   pivots?: import("@/lib/analysis/pivots").ClientPivots | null;
+  /** Provenance: who supplied the bars, when this response was built, and bars dropped as malformed. */
+  meta?: { source: string; served_at: string; last_bar: string | null; dropped: number };
 }
 
 export interface Coverage {
@@ -100,4 +102,10 @@ export function fmtVolume(v: number | null | undefined) {
   if (a >= 1e6) return (v / 1e6).toFixed(2) + "M";
   if (a >= 1e3) return (v / 1e3).toFixed(1) + "K";
   return String(Math.round(v));
+}
+
+/** A bar the chart can draw: finite, positive prices with low ≤ open/close ≤ high. */
+export function validBar(b: Pick<BarRow, "open" | "high" | "low" | "close">) {
+  const v = [b.open, b.high, b.low, b.close];
+  return v.every((x) => typeof x === "number" && isFinite(x) && x > 0) && b.low <= Math.min(b.open, b.close) + 1e-9 && b.high >= Math.max(b.open, b.close) - 1e-9;
 }

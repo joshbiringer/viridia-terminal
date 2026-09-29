@@ -38,7 +38,7 @@ export function PortfolioXRay() {
     setBusy(true); setErrors([]);
     try {
       const res = await fetch("/api/portfolio/xray", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: input, targets }) });
-      const j = await res.json();
+      const j = await res.json().catch(() => ({ errors: ["The server sent an unreadable response. Try again in a moment."] }));
       setErrors(j.errors ?? []);
       setR(j.result ?? null);
     } catch {

@@ -67,7 +67,7 @@ export function CommandPalette() {
         const data = (await res.json()) as { results: SearchHit[] };
         setHits(data.results); setSel(0); setError(null);
       } catch (e) {
-        if ((e as Error).name !== "AbortError") setError((e as Error).message);
+        if ((e as Error).name !== "AbortError") setError("Search isn't responding right now. Try again in a moment.");
       } finally {
         if (!ctl.signal.aborted) setLoading(false);
       }

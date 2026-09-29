@@ -31,7 +31,7 @@ export function MeetingPrep() {
       if (!row) { setErr("That portfolio wasn't found in your account."); return; }
       setP(row);
       const res = await fetch("/api/portfolio/xray", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: row.holdings_text, targets: row.targets }) });
-      const j = await res.json();
+      const j = await res.json().catch(() => ({ errors: ["The server sent an unreadable response. Try again in a moment."] }));
       if (!live) return;
       if (j.result) setX(j.result); else setErr((j.errors ?? ["The X-Ray couldn't be run."]).join(" "));
     }).catch(() => live && setErr("The portfolio couldn't be loaded."));

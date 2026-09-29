@@ -12,6 +12,7 @@ import {
 } from "@/lib/market-data/bars";
 import { DEGREES, DEGREE_LABEL, PIVOT_ALGORITHM_VERSION, SWING_LABEL, type ClientPivots, type Degree } from "@/lib/analysis/pivots";
 import { SourceFooter } from "./SourceFooter";
+import { fetchJson } from "@/lib/http";
 import type { ClientCandidates, ConfluenceZone } from "@/lib/analysis/candidates";
 import { useViewer } from "./ViewerProvider";
 import { useDegree } from "./analysis/DegreeContext";
@@ -67,6 +68,9 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
   const [history, setHistory] = useState<HistoryStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [staleSince, setStaleSince] = useState<number | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [oldBar, setOldBar] = useState(false);
   const [legend, setLegend] = useState<Legend>(null);
   const [pivots, setPivots] = useState<ClientPivots | null>(null);
   const [showPivots, setShowPivots] = useState(true);
@@ -136,25 +140,30 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
     setLoading(true); setError(null); setLegend(null);
 
     const load = async () => {
-      try {
-        const res = await fetch(`/api/bars/${encodeURIComponent(symbol)}?tf=${tf}`, { cache: "no-store" });
-        const body = (await res.json()) as BarsResponse & { error?: string };
-        if (!res.ok) throw new Error(body.error ?? `Request failed (${res.status})`);
-        if (cancelled) return;
-        setBars(body.bars); setPivots(body.pivots ?? null); setHistory(body.history); setLoading(false);
-        if (body.history?.status === "queued" && Date.now() - started < 8 * 60_000) {
-          wasQueued = true;
-          timer = setTimeout(load, 5_000);
-        } else if (wasQueued) {
-          router.refresh(); // update the header stats with the newly fetched history
-        }
-      } catch (e) {
-        if (!cancelled) { setError((e as Error).message); setLoading(false); }
+      const r = await fetchJson<BarsResponse>(`/api/bars/${encodeURIComponent(symbol)}?tf=${tf}`, {
+        validate: isBarsResponse, init: { cache: "no-store" }, timeoutMs: 15_000, retries: 2, cacheKey: `viridia.bars.${symbol}.${tf}`,
+      });
+      if (cancelled) return;
+      if (!r.ok) {
+        setError(r.status === 404 ? `No price data for ${symbol}.` : "The price service didn't respond. It may be busy; try again in a minute.");
+        setLoading(false);
+        return;
+      }
+      const body = r.data;
+      setStaleSince(r.stale ? r.savedAt : null);
+      setBars(body.bars); setPivots(body.pivots ?? null); setHistory(body.history); setLoading(false);
+      const lastTs = body.bars.at(-1)?.ts;
+      setOldBar(!isIntraday(tf) && !!lastTs && Date.now() - Date.parse(lastTs) > 6 * 864e5);
+      if (!r.stale && body.history?.status === "queued" && Date.now() - started < 8 * 60_000) {
+        wasQueued = true;
+        timer = setTimeout(load, 5_000);
+      } else if (wasQueued) {
+        router.refresh(); // update the header stats with the newly fetched history
       }
     };
     load();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [symbol, tf, router]);
+  }, [symbol, tf, router, attempt]);
 
   // Push data into the chart.
   useEffect(() => {
@@ -294,7 +303,10 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
         {!loading && !bars.length && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-panel px-6 text-center text-fg-2">
             {error ? (
-              <><b className="text-fg">Price data could not load</b><span>{error}</span></>
+              <>
+                <b className="text-fg">The chart couldn&apos;t load</b><span>{error}</span>
+                <button className="btn sm mt-1" onClick={() => setAttempt((n) => n + 1)}>Try again</button>
+              </>
             ) : queued ? (
               <>
                 <b className="text-fg">Fetching {isIntraday(tf) ? "180 days of hourly" : "2 years of daily"} history for {symbol}</b>
@@ -307,6 +319,17 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
             ) : (
               <span>No bars yet.</span>
             )}
+          </div>
+        )}
+        {staleSince != null && bars.length > 0 && (
+          <div className="chip absolute left-4 top-4 z-10" style={{ color: "var(--warn)" }} role="status">
+            Showing the copy loaded at {new Date(staleSince).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}; the price service didn&apos;t respond
+            <button className="ml-2 underline" onClick={() => setAttempt((n) => n + 1)}>Retry</button>
+          </div>
+        )}
+        {staleSince == null && oldBar && last && bars.length > 0 && !queued && (
+          <div className="chip absolute left-4 top-4 z-10" style={{ color: "var(--warn)" }} role="status">
+            Latest bar is {new Date(last.ts).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}; newer prices haven&apos;t arrived yet
           </div>
         )}
         {queued && bars.length > 0 && (
@@ -328,4 +351,11 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
 function paintVolume(vol: ISeriesApi<"Histogram">, bars: BarRow[], tf: ChartTimeframe) {
   const pos = alpha(css("--pos-chart"), 0.28), neg = alpha(css("--neg"), 0.28);
   vol.setData(bars.map((b) => ({ time: chartTime(b.ts, tf) as Time, value: b.volume, color: b.close >= b.open ? pos : neg })));
+}
+
+/** Shape check for /api/bars responses: anything else is treated as a failed load. */
+function isBarsResponse(x: unknown): x is BarsResponse {
+  if (!x || typeof x !== "object") return false;
+  const b = x as Partial<BarsResponse>;
+  return Array.isArray(b.bars) && b.bars.every((r) => r && typeof r.ts === "string" && [r.open, r.high, r.low, r.close].every((v) => typeof v === "number" && isFinite(v)));
 }
