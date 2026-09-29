@@ -321,7 +321,7 @@ function Results({ r }: { r: XRay }) {
               <tr>
                 <th>Symbol</th><th className="r">Weight</th><th className="r hidden sm:table-cell">Value</th><th className="r">Today</th>
                 <th className="r hidden md:table-cell">3 months</th><th className="r hidden md:table-cell">Beta</th>
-                <th className="r hidden lg:table-cell">Unrealized</th><th>Wave structure</th><th className="hidden lg:table-cell">Setup</th>
+                <th className="r hidden lg:table-cell">Unrealized</th><th title="Preferred wave count">Wave</th><th className="hidden lg:table-cell">Setup</th>
               </tr>
             </thead>
             <tbody>

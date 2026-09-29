@@ -12,7 +12,11 @@ import { SETUP_LABEL } from "@/lib/analysis/candidates";
 import { entryText } from "@/lib/analysis/setups";
 import type { SetupRow } from "@/lib/analysis/setup-scan";
 import type { KindRecord } from "@/lib/analysis/track-record";
-import { FEED_LABEL, REGIME_METHOD, fmtPct, returns, waveShort, type FeedItem, type PulseRow, type Regime } from "@/lib/analysis/mission";
+import { FEED_LABEL, REGIME_LABEL, REGIME_METHOD, fmtPct, returns, waveShort, type FeedItem, type PulseRow, type Regime } from "@/lib/analysis/mission";
+import { eventSentence, type ChangeGroup } from "@/lib/analysis/events";
+import type { PortfolioIntel } from "@/lib/portfolio/intel";
+import { SIGNAL_CARDS, type SignalCount } from "@/lib/analysis/mission-server";
+import type { Attention, SavedSummary } from "@/lib/analysis/mission-page";
 import { TickerButton } from "./SecurityDrawer";
 
 const TONE = { pos: "var(--pos-chart)", neg: "var(--neg)", neutral: "var(--border-2)" } as const;
@@ -28,92 +32,137 @@ export function CardHead({ title, sub, action, id }: { title: string; sub?: Reac
   );
 }
 
-/** Market regime: uptrend / mixed / downtrend shares, participation and 52-week extremes, with the reading in words. */
+/** Market regime: one uptrend | mixed | downtrend bar sized by share, four participation stats and the reading in words. */
 export function MarketRegime({ r, b }: { r: Regime; b: Breadth | null }) {
   const seg = [["Uptrend", r.up, "var(--pos-chart)"], ["Mixed", r.mixed, "var(--neutral)"], ["Downtrend", r.down, "var(--neg)"]] as const;
-  const hiLo = r.highs + r.lows;
+  const total = b ? b.advancers + b.decliners : 0;
   return (
     <section className="card flex flex-col" aria-labelledby="regime-t">
       <CardHead id="regime-t" title="Market regime" sub={b ? `${fmtInt(b.measured)} securities measured` : undefined}
         action={<Link href="/markets" className="btn ghost sm">Markets</Link>} />
-      <div className="flex flex-1 flex-col gap-3.5 px-4 py-3.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[20px] font-[650] tracking-[-0.02em]" style={{ color: r.id.includes("up") ? "var(--pos)" : r.id.includes("down") ? "var(--neg)" : undefined }}>
-            {r.sentence.split(":")[0]}
-          </span>
+      <div className="flex flex-1 flex-col gap-3 px-4 py-3">
+        <div className="text-[16px] font-[650] tracking-[-0.015em]" style={{ color: r.id.includes("up") ? "var(--pos)" : r.id.includes("down") ? "var(--neg)" : undefined }}>
+          {REGIME_LABEL[r.id]}
         </div>
-        <div>
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-hover" role="img" aria-label={seg.map(([l, v]) => `${l} ${Math.round(v * 100)}%`).join(", ")}>
-            {seg.map(([l, v, c]) => <i key={l} style={{ width: `${v * 100}%`, background: c }} />)}
-          </div>
-          <div className="mt-1.5 flex gap-4 text-[12px]">
-            {seg.map(([l, v, c]) => (
-              <span key={l} className="inline-flex items-center gap-1.5 text-fg-2"><span className="dot" style={{ background: c }} />{l} <span className="num font-medium text-fg">{Math.round(v * 100)}%</span></span>
-            ))}
-          </div>
+        <div className="flex h-7 overflow-hidden rounded-[var(--r-sm)] text-[11px] font-[600] uppercase tracking-[0.05em] text-white" role="img"
+          aria-label={seg.map(([l, v]) => `${l} ${Math.round(v * 100)}%`).join(", ")}>
+          {seg.map(([l, v, c]) => v > 0 && (
+            <span key={l} className="flex min-w-0 items-center justify-center overflow-hidden whitespace-nowrap px-1" style={{ width: `${v * 100}%`, background: c }} title={`${l} ${Math.round(v * 100)}%`}>
+              {v >= 0.14 ? <>{l} <span className="num ml-1">{Math.round(v * 100)}%</span></> : v >= 0.06 ? <span className="num">{Math.round(v * 100)}%</span> : null}
+            </span>
+          ))}
         </div>
-        <dl className="grid grid-cols-3 gap-2">
-          <Stat k="Above 50-day" v={r.above50 != null ? `${Math.round(r.above50 * 100)}%` : "—"} bar={r.above50} />
-          <Stat k="Near 52w highs" v={fmtInt(r.highs)} bar={hiLo ? r.highs / hiLo : null} color="var(--pos-chart)" />
-          <Stat k="Near 52w lows" v={fmtInt(r.lows)} bar={hiLo ? r.lows / hiLo : null} color="var(--neg)" />
+        <dl className="grid grid-cols-2 border-y border-line sm:grid-cols-4">
+          <Stat k="Above 50DMA" v={r.above50 != null ? `${Math.round(r.above50 * 100)}%` : "—"} />
+          <Stat k="Near 52W high" v={fmtInt(r.highs)} />
+          <Stat k="Near 52W low" v={fmtInt(r.lows)} />
+          <Stat k="Adv / Dec" v={total ? `${fmtInt(b!.advancers)} / ${fmtInt(b!.decliners)}` : "—"} />
         </dl>
         <p className="text-[13px] leading-relaxed text-fg-2">{r.sentence.split(":").slice(1).join(":").trim()}</p>
-        <p className="mt-auto text-[11.5px] text-fg-3" title={REGIME_METHOD}>How it&apos;s measured: price versus the 50- and 200-day averages.</p>
+        <p className="mt-auto text-[11.5px] text-fg-3" title={REGIME_METHOD}>How it&apos;s measured: price versus the 50- and 200-day averages; advancers and decliners at the last close.</p>
       </div>
     </section>
   );
 }
 
-function Stat({ k, v, bar, color = "var(--brand)" }: { k: string; v: string; bar: number | null; color?: string }) {
+function Stat({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-[var(--r-md)] border border-line px-2.5 py-2">
-      <dt className="text-[11.5px] text-fg-3">{k}</dt>
-      <dd className="num text-[15px] font-[620]">{v}</dd>
-      {bar != null && <div className="mt-1 h-1 overflow-hidden rounded-full bg-hover"><i className="block h-full" style={{ width: `${Math.min(1, bar) * 100}%`, background: color }} /></div>}
+    <div className="px-2 py-1.5 first:pl-0 sm:border-l sm:border-line sm:first:border-l-0">
+      <dt className="text-[11px] text-fg-3">{k}</dt>
+      <dd className="num text-[14px] font-[620]">{v}</dd>
     </div>
   );
 }
 
-/** What Changed: 5–8 developments in plain sentences, each tagged by kind, tickers open the drawer. */
-export function WhatChangedFeed({ items, since }: { items: FeedItem[]; since: string }) {
+/**
+ * What Changed: Viridia's own changes first (structure, wave count, new Fib zones, Fib-zone entries,
+ * invalidations, timeframe alignment), each with how many liquid names and a couple of examples;
+ * then market context (equities, Treasury proxies, macro, breadth, movers).
+ */
+export function WhatChangedFeed({ changes, context, since, changeDay }: { changes: ChangeGroup[]; context: FeedItem[]; since: string; changeDay: string | null }) {
   return (
-    <section className="card flex flex-col" aria-labelledby="changed-t">
+    <section id="changes" className="card flex scroll-mt-20 flex-col" aria-labelledby="changed-t">
       <CardHead id="changed-t" title="What changed" sub={`Through ${since}`} />
-      {items.length ? (
+      <h3 className="border-b border-line bg-hover/40 px-4 py-1.5 text-[11px] font-[650] uppercase tracking-[0.07em] text-fg-3">
+        Viridia changes{changeDay ? <span className="ml-2 font-normal normal-case tracking-normal">liquid names, session of {changeDay}</span> : null}
+      </h3>
+      {changes.length ? (
+        <ol className="divide-y divide-line">
+          {changes.map((g) => (
+            <li key={g.id} className="grid grid-cols-[96px_44px_minmax(0,1fr)] gap-2 px-4 py-1.5">
+              <span className="pt-px text-[11.5px] font-[560] uppercase tracking-[0.04em] text-fg-3">{g.label}</span>
+              <span className="num pt-px text-right text-[12.5px] font-[620]">{fmtInt(g.n)}</span>
+              <span className="flex min-w-0 flex-col gap-0.5 text-[12.5px] leading-snug text-fg-2">
+                {g.examples.map((e) => (
+                  <span key={e.symbol} className="flex gap-1.5">
+                    <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TONE[e.tone] }} aria-hidden />
+                    <span><TickerButton symbol={e.symbol} className="tk mr-1 text-fg hover:text-brand" />{e.watched && <span className="mr-1 text-[11px] text-brand">watchlist</span>}{e.text}</span>
+                  </span>
+                ))}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="px-4 py-2.5 text-[12.5px] text-fg-3">Viridia compares each session&apos;s analysis with the one before; changes appear once two sessions have been analysed.</p>}
+      <h3 className="border-y border-line bg-hover/40 px-4 py-1.5 text-[11px] font-[650] uppercase tracking-[0.07em] text-fg-3">Market context</h3>
+      {context.length ? (
         <ol className="flex-1 divide-y divide-line">
-          {items.map((it, i) => (
-            <li key={i} className="flex gap-3 px-4 py-2">
-              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TONE[it.tone] }} aria-hidden />
-              <span className="w-[74px] shrink-0 pt-px text-[11.5px] font-[560] uppercase tracking-[0.04em] text-fg-3">{FEED_LABEL[it.kind]}</span>
-              <p className="min-w-0 flex-1 text-[13px] leading-snug text-fg-2">
-                {it.symbol && (it.kind === "structure" || it.kind === "watchlist" || it.kind === "move") && <TickerButton symbol={it.symbol} className="tk mr-1.5 text-fg hover:text-brand" />}
+          {context.map((it, i) => (
+            <li key={i} className="grid grid-cols-[96px_minmax(0,1fr)] gap-2 px-4 py-1.5">
+              <span className="pt-px text-[11.5px] font-[560] uppercase tracking-[0.04em] text-fg-3">{FEED_LABEL[it.kind]}</span>
+              <p className="min-w-0 text-[12.5px] leading-snug text-fg-2">
+                {it.symbol && it.kind === "move" && <TickerButton symbol={it.symbol} className="tk mr-1.5 text-fg hover:text-brand" />}
                 {it.text}
               </p>
             </li>
           ))}
         </ol>
-      ) : <p className="px-4 py-5 text-[13px] text-fg-3">Nothing to report yet.</p>}
+      ) : <p className="px-4 py-2.5 text-[12.5px] text-fg-3">Market data didn&apos;t load.</p>}
     </section>
   );
 }
 
-export interface Tile { label: string; hint: string; n: number | null; href: string }
-
-/** Market Scanner tiles: live counts of each structure preset, each opening the scanner filtered. */
-export function ScannerTiles({ tiles }: { tiles: Tile[] }) {
+/** Viridia Signals: each structural signal's count, how many are new this session and the change on the prior session; each opens the scanner filtered. */
+export function SignalCards({ counts }: { counts: SignalCount[] }) {
+  const day = counts[0]?.day ?? null;
+  const prior = counts[0]?.prior_day ?? null;
   return (
-    <section className="card" aria-labelledby="tiles-t">
-      <CardHead id="tiles-t" title="Market scanner" sub="Securities trading $25M+ a day" action={<Link href="/scanner" className="btn ghost sm">Open scanner</Link>} />
+    <section className="card" aria-labelledby="sig-t">
+      <CardHead id="sig-t" title="Viridia signals" sub={`Securities trading $25M+ a day${day ? ` · session of ${day}` : ""}`} action={<Link href="/scanner" className="btn ghost sm">Open scanner</Link>} />
       <ul className="grid grid-cols-2 gap-px bg-line sm:grid-cols-3 xl:grid-cols-6">
-        {tiles.map((t) => (
-          <li key={t.label} className="bg-panel">
-            <Link href={t.href} className="flex h-full flex-col px-4 py-2.5 transition-colors hover:bg-hover" title={t.hint}>
-              <span className="num text-[18px] font-[650] tracking-[-0.02em]">{fmtInt(t.n)}</span>
-              <span className="text-[12px] leading-tight text-fg-2">{t.label}</span>
-            </Link>
-          </li>
-        ))}
+        {SIGNAL_CARDS.map((c) => {
+          const s = counts.find((x) => x.signal === c.id);
+          const d = s && s.n_prior != null ? s.n_today - s.n_prior : null;
+          return (
+            <li key={c.id} className="bg-panel">
+              <Link href={c.href} className="flex h-full flex-col gap-1 px-3.5 py-2.5 transition-colors hover:bg-hover" title={c.hint}>
+                <span className="text-[11.5px] font-[600] uppercase tracking-[0.05em] text-fg-2">{c.label}</span>
+                <span className="num text-[20px] font-[650] leading-none tracking-[-0.02em]">{s ? fmtInt(s.n_today) : "—"}</span>
+                <span className="grid grid-cols-2 gap-1 text-[11px] text-fg-3">
+                  <span>New <b className="num font-[600] text-fg-2">{s?.new_today != null ? fmtInt(s.new_today) : "—"}</b></span>
+                  <span>Δ prior <b className={`num font-[600] ${d == null || d === 0 ? "text-fg-2" : d > 0 ? "text-pos" : "text-neg"}`}>{d == null ? "—" : d > 0 ? `+${fmtInt(d)}` : d < 0 ? `−${fmtInt(-d)}` : "0"}</b></span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
+      {!prior && counts.length > 0 && <div className="src"><span>New today and change versus the prior session fill in once a second session has been analysed.</span></div>}
+    </section>
+  );
+}
+
+/** The attention summary under the greeting: each line is a count that links to where it is explained. */
+export function AttentionSummary({ items }: { items: Attention[] }) {
+  return (
+    <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-3 xl:grid-flow-col xl:auto-cols-fr xl:grid-cols-none" aria-label="What requires attention">
+      {items.map((it) => (
+        <Link key={it.id} href={it.href} className="flex flex-col gap-0.5 bg-panel px-4 py-2.5 transition-colors hover:bg-hover">
+          <span className="text-[11px] font-[600] uppercase tracking-[0.06em] text-fg-3">{it.label}</span>
+          <span className={`num text-[17px] font-[650] tracking-[-0.015em] ${it.tone === "pos" ? "text-pos" : it.tone === "neg" ? "text-neg" : ""}`}>{it.value}</span>
+          <span className="text-[12px] leading-snug text-fg-2">{it.detail}</span>
+        </Link>
+      ))}
     </section>
   );
 }
@@ -122,7 +171,7 @@ export function ScannerTiles({ tiles }: { tiles: Tile[] }) {
 export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRecord[] }) {
   return (
     <section className="card" aria-labelledby="setups-t">
-      <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first; 1.5 : 1 or better, stop within 20%, $25M+ a day; kinds with a negative record left out"
+      <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first; 1.5 : 1 or better, invalidation within 20%, $25M+ a day; kinds with a negative record left out"
         action={<><Link href="/setups/track-record" className="btn ghost sm">Track record</Link><Link href="/setups" className="btn ghost sm">All setups</Link></>} />
       {rows.length ? (
         <div className="overflow-x-auto">
@@ -150,16 +199,12 @@ export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRe
   );
 }
 
-/** Right-rail watchlist: price, day, trend and wave; the latest structure change as the event line. */
-export function WatchlistRail({ rows, events, mode }: {
-  rows: PulseRow[]; events: Record<string, string>; mode: "watchlist" | "popular" | "empty";
-}) {
+/** Rail for readers without a watchlist: the most-traded names with price, day, trend and wave. */
+export function WatchlistRail({ rows, mode }: { rows: PulseRow[]; mode: "popular" | "empty" }) {
   return (
     <section className="card" aria-labelledby="wl-t">
-      <CardHead id="wl-t" title={mode === "popular" ? "Most traded" : "Watchlist"}
-        sub={mode === "watchlist" ? `${rows.length}` : undefined}
-        action={mode === "watchlist" ? <Link href="/watchlist" className="btn ghost sm">Manage</Link> : undefined} />
-      {mode !== "watchlist" && (
+      <CardHead id="wl-t" title={mode === "popular" ? "Most traded" : "My watchlist"} />
+      {(
         <p className="border-b border-line px-4 py-2 text-[12.5px] text-fg-2">
           {mode === "popular"
             ? <><Link href="/signin?next=/terminal" className="text-brand hover:underline">Sign in</Link> to keep a watchlist here. Meanwhile, the most-traded names:</>
@@ -183,9 +228,8 @@ export function WatchlistRail({ rows, events, mode }: {
                   </span>
                   <span className="mt-0.5 flex gap-2 pl-4 text-[11.5px] text-fg-3">
                     <span className="truncate">{wave ?? "No count yet"}</span>
-                    {r.setup_side && <span className={r.setup_side === "buy" ? "text-pos" : "text-neg"}>· {r.setup_side} setup</span>}
+                    {r.setup_side && <span className={r.setup_side === "buy" ? "text-pos" : "text-neg"}>· {r.setup_side === "buy" ? "Bullish" : "Bearish"} scenario</span>}
                   </span>
-                  {events[r.symbol] && <span className="mt-0.5 block pl-4 text-[11.5px] leading-snug" style={{ color: "var(--warn)" }}>{events[r.symbol]}</span>}
                 </TickerButton>
               </li>
             );
@@ -196,7 +240,6 @@ export function WatchlistRail({ rows, events, mode }: {
   );
 }
 
-export interface SavedSummary { id: string; name: string; updated_at: string; reviewed_at: string | null }
 
 export function PortfolioSlot({ saved, signedIn, now }: { saved: SavedSummary[]; signedIn: boolean; now: number }) {
   const ago = (iso: string) => {
@@ -228,35 +271,38 @@ export function PortfolioSlot({ saved, signedIn, now }: { saved: SavedSummary[];
   );
 }
 
-export function NotConnected() {
-  return (
-    <section className="card" aria-labelledby="nc-t">
-      <CardHead id="nc-t" title="Calendar and alerts" />
-      <ul className="flex flex-col gap-1.5 px-4 py-3 text-[12.5px] text-fg-3">
-        <li>Economic calendar: no data source yet.</li>
-        <li>Earnings calendar: no data source yet.</li>
-        <li>Alerts: not available yet.</li>
-        <li><Link href="/data-sources" className="text-brand hover:underline">Coverage and limitations</Link></li>
-      </ul>
-    </section>
-  );
-}
+const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(v).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
-export interface TodayCell { title: string; lines: React.ReactNode[]; href?: string; cta?: string; muted?: boolean }
-
-/** The Today strip under the greeting: market, research, portfolio and clients at a glance. */
-export function TodayStrip({ cells }: { cells: TodayCell[] }) {
+/** Portfolio Intelligence: the most recently saved portfolio measured with stored end-of-day data. */
+export function PortfolioIntelligence({ id, name, p, others }: { id: string; name: string; p: PortfolioIntel; others: number }) {
+  const rows: [string, React.ReactNode][] = [
+    ["Value", <span key="v" className="num">{usd(p.value)}</span>],
+    ["Daily move", p.dayMove != null ? <span key="d" className={`num ${p.dayMove >= 0 ? "text-pos" : "text-neg"}`}>{usd(p.dayMove)} ({fmtPct(p.dayPct, 2)})</span> : <span key="d" className="text-fg-3">—</span>],
+    ["Holdings", <span key="h" className="num">{p.holdings}{p.priced < p.holdings ? ` (${p.priced} priced)` : ""}</span>],
+    ["Largest exposure", p.largest ? <span key="l"><TickerButton symbol={p.largest.symbol} className="tk hover:text-brand" /> <span className="num">{(p.largest.weight * 100).toFixed(1)}%</span></span> : "—"],
+    ["Top contributor", p.contributor ? <span key="c"><TickerButton symbol={p.contributor.symbol} className="tk hover:text-brand" /> <span className="num text-pos">{usd(p.contributor.amount)}</span></span> : "—"],
+    ["Top detractor", p.detractor ? <span key="t"><TickerButton symbol={p.detractor.symbol} className="tk hover:text-brand" /> <span className="num text-neg">{usd(p.detractor.amount)}</span></span> : "—"],
+  ];
+  const list = (syms: string[]) => (syms.length ? syms.map((s, i) => <span key={s}>{i ? ", " : ""}<TickerButton symbol={s} className="tk hover:text-brand" /></span>) : <span className="text-fg-3">None</span>);
   return (
-    <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line lg:grid-cols-4" aria-label="Today">
-      {cells.map((c) => (
-        <div key={c.title} className="flex flex-col gap-1 bg-panel px-4 py-3">
-          <div className="text-[11.5px] font-[600] uppercase tracking-[0.06em] text-fg-3">{c.title}</div>
-          <ul className={`flex flex-col gap-0.5 text-[13px] leading-snug ${c.muted ? "text-fg-3" : "text-fg-2"}`}>
-            {c.lines.map((l, i) => <li key={i} className={i === 0 && !c.muted ? "font-[560] text-fg" : ""}>{l}</li>)}
-          </ul>
-          {c.href && c.cta && <Link href={c.href} className="mt-auto pt-1 text-[12.5px] text-brand hover:underline">{c.cta} →</Link>}
+    <section className="card" aria-labelledby="pi-t">
+      <CardHead id="pi-t" title="Portfolio intelligence" sub={name} action={<Link href={`/portfolio?id=${id}`} className="btn ghost sm">X-Ray</Link>} />
+      <dl className="divide-y divide-line text-[12.5px]">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex items-baseline gap-2 px-4 py-1.5"><dt className="text-fg-3">{k}</dt><dd className="ml-auto text-right">{v}</dd></div>
+        ))}
+        <div className="px-4 py-1.5">
+          <dt className="text-fg-3">Structural changes <span className="num text-fg">{p.structural.length}</span></dt>
+          {p.structural.length > 0 && (
+            <dd className="mt-0.5 flex flex-col gap-0.5 text-[12px] leading-snug text-fg-2">
+              {p.structural.slice(0, 4).map((s) => <span key={s.symbol}><TickerButton symbol={s.symbol} className="tk mr-1 hover:text-brand" />{eventSentence(s)}</span>)}
+            </dd>
+          )}
         </div>
-      ))}
+        <div className="flex items-baseline gap-2 px-4 py-1.5"><dt className="text-fg-3">Near invalidation</dt><dd className="ml-auto text-right">{list(p.nearInvalidation)}</dd></div>
+        <div className="flex items-baseline gap-2 px-4 py-1.5"><dt className="text-fg-3">Fib events</dt><dd className="ml-auto text-right">{list(p.fibEvents)}</dd></div>
+      </dl>
+      <div className="src"><span>End-of-day prices; the day&apos;s move needs a prior close for every priced holding.{others > 0 ? ` ${others} other saved portfolio${others === 1 ? "" : "s"} in X-Ray.` : ""}</span></div>
     </section>
   );
 }

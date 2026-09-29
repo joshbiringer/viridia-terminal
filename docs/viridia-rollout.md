@@ -785,3 +785,31 @@ The brief asked the product to show the sophistication the engine already has. O
   - The security page renders its sections, the Fibonacci map (4 zones for NVDA) and "View all 12+ candidates".
   - Data & Methodology renders its integrity checks and limitations.
   - `/system` returns 404 when signed out.
+
+## Mission Control productization sprint
+
+### Setup safety (priority 1)
+
+- Migration 0033 adds `setup_flags`: every setup is checked for price, reference-level distance (30%), side, invalidation distance (25%, 8 ATR, 0.3 ATR), target distance, recomputed reward:risk (15% mismatch, outside 1–10), stale analysis (5 days), suspected unadjusted splits, and a missing degree.
+- Flagged setups are suppressed everywhere (setup scan, security page, drawer) and logged nightly as `questionable_setup` findings on `/system`. On the first run 620 of 940 passed and 320 were held back.
+- Wording: Bullish/Bearish, Reference level, Invalidation, Structural target, plus "Research scenario generated from Viridia's structural model. Not a recommendation."
+
+### Mission Control (priorities 2–9)
+
+- Removed the "Clients and calendar", economic and earnings calendar, and alerts placeholders. The briefing no longer lists what isn't connected.
+- **Header:** "Good afternoon, Name. Here's what requires attention." Prepare My Day is the primary button and opens `/brief`, a dedicated briefing page (Copy, Print, world sessions). Both pages read the same `loadMission()` data.
+- **Attention summary:** market, structural changes, near invalidation, and watchlist and portfolio developments when the reader has them. Each links to its detail.
+- **What Changed:** Viridia changes first (structure, wave count, new Fib zones, Fib-zone entries, invalidations, timeframe alignment) with counts on liquid names and up to two examples each, watchlist names first; then market context. All deterministic, from `structure_events`.
+- **Viridia Signals** (migration 0034, `signal_counts`): Strong structure, Wave 3, Fib confluence, Near invalidation, Correction complete, 52W strength. Each shows the count, new this session, and change versus the prior session, and opens the scanner filtered. New and change fill in after a second analysed session.
+- **Market regime:** one labeled Uptrend | Mixed | Downtrend bar, with Above 50DMA, Near 52W high, Near 52W low and Advancers/Decliners.
+- **Treasury proxies:** SHY, IEF and TLT shown by ticker and marked as ETF prices, not yields.
+- **Rail:** signed-in readers with a watchlist get My Watchlist (price, day, structure, wave, nearest Fib zone, last Viridia change), sortable by latest change, structure, wave, Fib proximity and daily move. Readers with a saved portfolio get Portfolio Intelligence: value, day move, holdings, structural changes, near invalidation, Fib events, largest exposure, largest contributor and detractor.
+
+### Viridia Intelligence taxonomy (priority 10)
+
+- Security page dimensions are Structure (intermediate swings), Wave (preferred count), Fibonacci (nearest confluence zone), Momentum, Regime (50/200-day trend) and Risk. Fundamentals and Valuation appear only when their data is live.
+- Scanner, watchlist and portfolio column headers use the same names.
+
+### Tests
+
+- 94 unit tests, including Viridia change grouping and Portfolio Intelligence. TypeScript, lint (0 errors) and the build pass.

@@ -47,7 +47,7 @@ describe("what changed feed", () => {
     });
     expect(feed[0].kind).toBe("market");
     expect(feed.length).toBeLessThanOrEqual(8);
-    expect(feed.some((f) => f.kind === "rates" && /yields rose/.test(f.text))).toBe(true);
+    expect(feed.some((f) => f.kind === "rates" && /yields rising/.test(f.text))).toBe(true);
     expect(feed.some((f) => f.kind === "macro" && f.symbol === "USO")).toBe(true);
     expect(feed.some((f) => /Small caps lagged/.test(f.text))).toBe(true);
   });
@@ -73,5 +73,50 @@ describe("change sentences and close labels", () => {
     expect(closeLabel("2026-09-25T00:00:00+00:00", monday)).toBe("Friday's close");
     expect(closeLabel("2026-09-28T00:00:00+00:00", new Date("2026-09-28T22:00:00Z"))).toBe("today's close");
     expect(closeLabel("2026-09-28T00:00:00+00:00", new Date("2026-09-29T14:00:00Z"))).toBe("yesterday's close");
+  });
+});
+
+import { viridiaChanges, type StructureEvent } from "../src/lib/analysis/events";
+import { portfolioIntel } from "../src/lib/portfolio/intel";
+
+const ev = (symbol: string, type: StructureEvent["type"], weight = 1, detail: Record<string, unknown> = {}): StructureEvent =>
+  ({ symbol, name: symbol, day: "2026-09-25", type, weight, detail, close: 10, change_pct: 0, adv20: 1e8 });
+
+describe("Viridia changes", () => {
+  it("orders groups structure, count, new Fib, Fib entry, invalidation, alignment and puts watchlist names first", () => {
+    const g = viridiaChanges(
+      [ev("AAA", "COUNT_INVALIDATED", 3, { count: "Impulse", close: 9, level: 9.5 }), ev("BBB", "FIB_ZONE_ENTERED", 1, { low: 9, high: 11 }), ev("CCC", "TREND_CHANGED", 2, { from: "mixed", to: "uptrend" }), ev("DDD", "TREND_CHANGED", 3, { from: "mixed", to: "downtrend" })],
+      [{ type: "TREND_CHANGED", n: 40 }, { type: "COUNT_INVALIDATED", n: 5 }], ["CCC"],
+    );
+    expect(g.map((x) => x.id)).toEqual(["structure", "fib_in", "invalidation"]);
+    expect(g[0].n).toBe(40);
+    expect(g[0].examples[0].symbol).toBe("CCC");
+    expect(g[1].n).toBe(1); // no count row, but an example exists
+  });
+});
+
+describe("Portfolio intelligence", () => {
+  const ctx = (symbol: string, close: number | null, prev: number | null, hold: number | null = null) =>
+    ({ symbol, name: symbol, asset_subtype: "stock", close, prev_close: prev, trend: null, glance_pattern: null, glance_complete: null, glance_wave: null, glance_wave_dir: null, glance_score: null, glance_hold: hold, setup_side: null, setup_kind: null, setup_rr: null, weekly_dir: null });
+  it("measures value, day move, exposure and contributors only from priced holdings", () => {
+    const p = portfolioIntel(
+      [{ symbol: "A", shares: 10, avgCost: null, acquired: null }, { symbol: "B", shares: 5, avgCost: null, acquired: null }],
+      [ctx("A", 100, 90, 98), ctx("B", 50, 55)],
+      [ev("A", "FIB_ZONE_ENTERED"), ev("B", "TREND_CHANGED", 2, { from: "uptrend", to: "mixed" }), ev("Z", "TREND_CHANGED")],
+    );
+    expect(p.value).toBe(1250);
+    expect(p.dayMove).toBe(100 - 25);
+    expect(p.dayPct).toBeCloseTo(75 / 1175, 6);
+    expect(p.largest).toEqual({ symbol: "A", weight: 0.8 });
+    expect(p.contributor?.symbol).toBe("A");
+    expect(p.detractor?.symbol).toBe("B");
+    expect(p.nearInvalidation).toEqual(["A"]);
+    expect(p.fibEvents).toEqual(["A"]);
+    expect(p.structural.map((s) => s.symbol)).toEqual(["B"]);
+  });
+  it("gives no day move when a priced holding lacks a prior close", () => {
+    const p = portfolioIntel([{ symbol: "A", shares: 1, avgCost: null, acquired: null }], [ctx("A", 10, null)], []);
+    expect(p.dayMove).toBeNull();
+    expect(p.contributor).toBeNull();
   });
 });

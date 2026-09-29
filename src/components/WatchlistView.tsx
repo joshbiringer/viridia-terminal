@@ -75,8 +75,8 @@ export function WatchlistView({ userId, initial, asOf }: { userId: string; initi
           <table className="t dense min-w-[980px] text-[13px]">
             <thead>
               <tr>
-                <th>Security</th><th className="r">Price</th><th className="r">Change</th><th>Trend</th>
-                <th>Structure</th><th>Candidate wave</th><th className="r">Nearest Fib zone</th><th>Last structural change</th><th>Notes</th><th aria-label="Actions" />
+                <th>Security</th><th className="r">Price</th><th className="r">Change</th><th title="Price versus the 50- and 200-day averages">Regime</th>
+                <th title="Intermediate swing structure">Structure</th><th title="Preferred wave count">Wave</th><th className="r" title="Nearest Fibonacci confluence zone">Fibonacci</th><th>Last Viridia change</th><th>Notes</th><th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>

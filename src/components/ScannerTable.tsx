@@ -25,15 +25,15 @@ export function ScannerTable({ rows, compact = false, structure = false }: { row
             <th className="r">Change</th>
             {structure ? (
               <>
-                <th>Preferred count</th>
+                <th title="Wave: the preferred daily count">Wave</th>
                 <th className="r" title="Pattern Confidence of the preferred count">Conf.</th>
-                <th className="r hidden sm:table-cell" title="Distance from the close to the preferred count's invalidation level">To invalidation</th>
-                <th className="r hidden lg:table-cell" title="Distance to the nearest Fibonacci confluence zone">To zone</th>
-                <th className="hidden xl:table-cell">Trend</th>
+                <th className="r hidden sm:table-cell" title="Risk: distance from the close to the preferred count's invalidation level">To invalidation</th>
+                <th className="r hidden lg:table-cell" title="Fibonacci: distance to the nearest confluence zone">Fibonacci</th>
+                <th className="hidden xl:table-cell" title="Regime: price versus the 50- and 200-day averages">Regime</th>
               </>
             ) : (
               <>
-                <th>Trend</th>
+                <th title="Regime: price versus the 50- and 200-day averages">Regime</th>
                 <th className="r hidden sm:table-cell">vs 50-day</th>
                 <th className="r hidden sm:table-cell">vs 200-day</th>
                 <th className="r hidden lg:table-cell">From 52w high</th>

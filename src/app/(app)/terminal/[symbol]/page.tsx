@@ -175,6 +175,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
             bars: (barsRes.data ?? []) as { ts: string; close: number }[], benchmark: (spyRes.data ?? []) as { ts: string; close: number }[],
             trend: snap?.trend ?? null, sma50: snap?.sma50 ?? null, sma200: snap?.sma200 ?? null,
             glance: swings?.glances.auto ?? null, weekly,
+            swing: swings?.pivots.degrees.intermediate.structure ?? null, zones: swings?.fib?.zones ?? null,
             fundamentals: fund, sector: sectorMedian,
           })}
         />

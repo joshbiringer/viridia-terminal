@@ -1,15 +1,27 @@
 /**
- * Viridia Signals: context across several dimensions instead of a single buy/sell rating. Each state
- * is computed from stored data with the stated rule; dimensions without data say so.
+ * Viridia Intelligence: context across a fixed set of dimensions instead of a single buy/sell rating.
+ * The same taxonomy is used on the security page, the scanner, the watchlist and the portfolio:
+ * Structure, Wave, Fibonacci, Momentum, Regime, Risk (Fundamentals, Valuation and Earnings join when
+ * their data is live). Each state is computed from stored data with the stated rule; dimensions
+ * without data say so.
  */
 import type { Glance } from "@engine/glance";
+import type { ConfluenceZone } from "@engine/fib";
+import { SWING_LABEL, type SwingStructure } from "./pivots";
 import { beta, dailyReturns, maxDrawdown, periodReturn, volatility, type Close } from "./stats";
 import { fundamentalDims, type Fundamentals, type SectorMedian } from "@/lib/fundamentals/model";
+
+export type IntelKey = "structure" | "wave" | "fibonacci" | "momentum" | "regime" | "risk";
+/** The Viridia Intelligence dimensions, in display order. */
+export const INTEL_DIMENSIONS: { key: IntelKey; label: string }[] = [
+  { key: "structure", label: "Structure" }, { key: "wave", label: "Wave" }, { key: "fibonacci", label: "Fibonacci" },
+  { key: "momentum", label: "Momentum" }, { key: "regime", label: "Regime" }, { key: "risk", label: "Risk" },
+];
 
 export type Tone = "pos" | "neg" | "neutral" | "warn" | "na";
 
 export interface SignalDim {
-  key: "structure" | "trend" | "momentum" | "risk" | "fundamentals" | "valuation";
+  key: IntelKey | "fundamentals" | "valuation";
   label: string;
   state: string;
   tone: Tone;
@@ -25,6 +37,10 @@ export interface SignalsInput {
   sma200: number | null;
   glance: Glance | null;
   weekly: Glance | null;
+  /** Intermediate-degree swing structure from the engine's pivots. */
+  swing?: SwingStructure | null;
+  /** Fibonacci confluence zones around the latest close. */
+  zones?: ConfluenceZone[] | null;
   /** SEC fundamentals and the sector's medians; undefined when not loaded. */
   fundamentals?: Fundamentals | null;
   sector?: SectorMedian | null;
@@ -33,40 +49,69 @@ export interface SignalsInput {
 const pc = (x: number, d = 1) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x * 100).toFixed(d)}%`;
 
 export const SIGNALS_METHOD =
-  "Structure: the preferred daily wave count's expected direction (constructive up, defensive down), unresolved when the alternate is within 5 points. Trend: price against its 50- and 200-day averages. Momentum: 3-month return and its lead over SPY (strong when both are positive and the lead is over 5 points; weak when both are negative). Risk: 20-day volatility against the 1-year level (elevated above 1.25×), and the 1-year drawdown and beta to SPY. Fundamentals: revenue growth (5% either way) and profitability from SEC filings. Valuation: P/E (or P/S when earnings are negative) against the sector median, 1.5× apart counting as above or below. Fundamentals come from SEC EDGAR XBRL filings.";
+  "Structure: the intermediate-degree swing structure (higher highs and lows, lower highs and lows, expanding or contracting). Wave: the preferred daily wave count's expected direction (constructive up, defensive down), unresolved when the alternate is within 5 points. Fibonacci: the nearest confluence zone of Fibonacci relationships and the distance to it (inside, or within 3%, counts as at a zone). Regime: price against its 50- and 200-day averages. Momentum: 3-month return and its lead over SPY (strong when both are positive and the lead is over 5 points; weak when both are negative). Risk: 20-day volatility against the 1-year level (elevated above 1.25×), and the 1-year drawdown and beta to SPY.";
 
 export function computeSignals(i: SignalsInput): SignalDim[] {
   const close = i.bars.at(-1)?.close ?? null;
   const out: SignalDim[] = [];
 
   // ---------------------------------------------------------------- structure
+  const sw = i.swing ?? null;
+  if (sw && sw !== "insufficient") {
+    out.push({
+      key: "structure", label: "Structure", state: SWING_LABEL[sw][0].toUpperCase() + SWING_LABEL[sw].slice(1),
+      tone: sw === "higher_highs_lows" ? "pos" : sw === "lower_highs_lows" ? "neg" : "neutral",
+      detail: "Intermediate-degree swings on the daily chart.", rule: "Intermediate swing structure",
+    });
+  } else {
+    out.push({ key: "structure", label: "Structure", state: "Not enough swings", tone: "na", detail: "Needs more confirmed intermediate swings.", rule: "Intermediate swing structure" });
+  }
+
+  // ---------------------------------------------------------------- wave
   const g = i.glance?.preferred ?? null;
   if (g && i.glance) {
     const up = g.waveDirection === "up";
     const where = g.complete ? `${g.pattern.replace("_", " ")} complete, next move ${g.waveDirection}` : `${g.pattern.replace("_", " ")}, wave ${g.wave} ${g.waveDirection}`;
     const wk = i.weekly ? (i.weekly.preferred.waveDirection === g.waveDirection ? "; the weekly count agrees" : "; the weekly count points the other way") : "";
     out.push({
-      key: "structure", label: "Structure",
+      key: "wave", label: "Wave",
       state: i.glance.closeCall ? "Unresolved" : up ? "Constructive" : "Defensive",
       tone: i.glance.closeCall ? "warn" : up ? "pos" : "neg",
       detail: `${where[0].toUpperCase()}${where.slice(1)} (Pattern Confidence ${g.score})${wk}.`,
       rule: "Preferred daily wave count",
     });
   } else {
-    out.push({ key: "structure", label: "Structure", state: "No count", tone: "na", detail: "No rule-valid wave count yet.", rule: "Preferred daily wave count" });
+    out.push({ key: "wave", label: "Wave", state: "No count", tone: "na", detail: "No rule-valid wave count yet.", rule: "Preferred daily wave count" });
   }
 
-  // ---------------------------------------------------------------- trend
+  // ---------------------------------------------------------------- fibonacci
+  const zones = close != null ? i.zones ?? [] : [];
+  const near = [...zones].sort((a, b) => Math.abs(a.distancePct) - Math.abs(b.distancePct))[0];
+  if (near && close != null) {
+    const inside = close >= near.low && close <= near.high;
+    const at = inside || Math.abs(near.distancePct) <= 0.03;
+    out.push({
+      key: "fibonacci", label: "Fibonacci",
+      state: inside ? "Inside a zone" : at ? "At a zone" : `Zone ${near.side}`,
+      tone: at ? "warn" : "neutral",
+      detail: `Nearest confluence ${near.low.toLocaleString("en-US", { maximumFractionDigits: 2 })}–${near.high.toLocaleString("en-US", { maximumFractionDigits: 2 })} (${near.count} relationships), ${inside ? "price inside it" : `${pc(near.mid / close - 1)} from the close`}.`,
+      rule: "Nearest Fibonacci confluence zone",
+    });
+  } else {
+    out.push({ key: "fibonacci", label: "Fibonacci", state: "No zone", tone: "na", detail: "No confluence zone near price.", rule: "Nearest Fibonacci confluence zone" });
+  }
+
+  // ---------------------------------------------------------------- regime (the security's own trend state)
   if (close && i.sma50 && i.sma200 && i.trend && i.trend !== "insufficient") {
     out.push({
-      key: "trend", label: "Trend",
+      key: "regime", label: "Regime",
       state: i.trend === "uptrend" ? "Uptrend" : i.trend === "downtrend" ? "Downtrend" : "Mixed",
       tone: i.trend === "uptrend" ? "pos" : i.trend === "downtrend" ? "neg" : "neutral",
       detail: `${pc(close / i.sma50 - 1)} vs the 50-day average, ${pc(close / i.sma200 - 1)} vs the 200-day.`,
       rule: "Price vs 50- and 200-day averages",
     });
   } else {
-    out.push({ key: "trend", label: "Trend", state: "Not enough history", tone: "na", detail: "Needs 200 sessions.", rule: "Price vs 50- and 200-day averages" });
+    out.push({ key: "regime", label: "Regime", state: "Not enough history", tone: "na", detail: "Needs 200 sessions.", rule: "Price vs 50- and 200-day averages" });
   }
 
   // ---------------------------------------------------------------- momentum
@@ -106,11 +151,9 @@ export function computeSignals(i: SignalsInput): SignalDim[] {
     out.push({ key: "risk", label: "Risk", state: "Not enough history", tone: "na", detail: "Needs a month of sessions.", rule: "Volatility regime, drawdown, beta" });
   }
 
-  if (i.fundamentals === undefined) {
-    out.push({ key: "fundamentals", label: "Fundamentals", state: "Not loaded yet", tone: "na", detail: "SEC filing data isn't loaded yet.", rule: "Revenue growth and margins from SEC filings" });
-    out.push({ key: "valuation", label: "Valuation", state: "Not loaded yet", tone: "na", detail: "SEC filing data isn't loaded yet.", rule: "P/E or P/S against the sector median" });
-  } else {
-    out.push(...fundamentalDims(i.fundamentals, i.sector));
-  }
-  return out;
+  // Fundamentals and Valuation join only when their data is live; nothing is shown for them otherwise
+  if (i.fundamentals) out.push(...fundamentalDims(i.fundamentals, i.sector));
+  // Momentum sits after Fibonacci, Regime after Momentum
+  const order = ["structure", "wave", "fibonacci", "momentum", "regime", "risk", "fundamentals", "valuation"];
+  return out.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
 }

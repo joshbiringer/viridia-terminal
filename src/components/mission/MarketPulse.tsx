@@ -22,7 +22,7 @@ export function MarketPulse({ rows, asOf }: { rows: PulseRow[]; asOf: string }) 
         <h2 id="pulse-t" className="card-t">Market pulse</h2>
         <span
           className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-line text-[11px] text-fg-3" tabIndex={0}
-          title="Source: Massive, end-of-day closes. Index, yield and futures data aren't in the current data plan, so each market is shown through a liquid ETF that tracks it. Rates are Treasury ETF prices, which fall when yields rise."
+          title="Source: Massive, end-of-day closes. Index, yield and futures data aren't in the current data plan, so each market is shown through a liquid ETF that tracks it. Treasury proxies are ETF prices, not yields; they fall when yields rise."
           aria-label="About these prices: ETF proxies"
         >i</span>
         <span className="text-[12px] text-fg-3">End of day, {asOf}</span>
@@ -35,7 +35,7 @@ export function MarketPulse({ rows, asOf }: { rows: PulseRow[]; asOf: string }) 
           <div key={g.id} className="bg-panel px-2 py-2">
             <div className="flex items-baseline gap-2 px-2 pb-1 pt-0.5">
               <span className="text-[11.5px] font-[600] uppercase tracking-[0.06em] text-fg-3">{g.label}</span>
-              <span className="truncate text-[11px] text-fg-3/80" title={g.note}>{g.id === "rates" ? "price ↓ = yield ↑" : ""}</span>
+              <span className="truncate text-[11px] text-fg-3/80" title={g.note}>{g.id === "rates" ? "ETF prices, not yields" : ""}</span>
             </div>
             <ul>
               {g.items.map((it) => {
@@ -53,7 +53,7 @@ export function MarketPulse({ rows, asOf }: { rows: PulseRow[]; asOf: string }) 
                           {r?.trend && <span className="dot" style={{ background: TREND_DOT[r.trend] }} title={TREND_LABEL[r.trend]} />}
                           <span className="truncate">{it.label}</span>
                         </span>
-                        <span className="block text-[11px] text-fg-3">{it.symbol}{r?.trend ? ` · ${TREND_LABEL[r.trend]}` : ""}</span>
+                        <span className="block truncate text-[11px] text-fg-3">{g.id === "rates" && it.hint ? it.hint.replace("iShares ", "") : it.symbol}{r?.trend ? ` · ${TREND_LABEL[r.trend]}` : ""}</span>
                       </span>
                       {r && r.spark.length > 1 ? <Sparkline values={r.spark} width={60} height={22} /> : <span />}
                       <span className="text-right">

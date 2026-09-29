@@ -6,8 +6,8 @@ import type { SymbolTrial } from "@/lib/analysis/track-record";
 const TONE: Record<Tone, string> = { pos: "var(--pos)", neg: "var(--neg)", warn: "var(--warn)", neutral: "var(--text)", na: "var(--text-3)" };
 
 /**
- * Viridia Signals: one row of context (structure, trend, momentum, risk, and the dimensions not yet
- * covered by data) instead of a single rating, plus this security's own setup history.
+ * Viridia Intelligence: one row of context (Structure, Wave, Fibonacci, Momentum, Regime, Risk)
+ * instead of a single rating, plus this security's own setup history.
  */
 export function SignalsPanel({ symbol, dims, trials }: { symbol: string; dims: SignalDim[]; trials: SymbolTrial[] }) {
   const done = trials.filter((t) => t.outcome === "target" || t.outcome === "stop" || t.outcome === "expired");
@@ -18,7 +18,7 @@ export function SignalsPanel({ symbol, dims, trials }: { symbol: string; dims: S
     <section className="card" aria-labelledby="signals-title">
       <div className="card-h">
         <div>
-          <h2 id="signals-title" className="card-t">Viridia Signals</h2>
+          <h2 id="signals-title" className="card-t">Viridia Intelligence</h2>
           <p className="card-s mt-0.5">Context across dimensions, not a rating</p>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function SignalsPanel({ symbol, dims, trials }: { symbol: string; dims: S
               {done.length < 10 && <span className="text-fg-3"> (small sample)</span>}
             </span>
             <span className="text-fg-3">
-              Latest: {recent.map((t) => `${t.ts.slice(5, 10)} ${t.side} ${SETUP_LABEL[t.kind] ?? t.kind} → ${t.outcome}`).join(" · ")}
+              Latest: {recent.map((t) => `${t.ts.slice(5, 10)} ${t.side === "buy" ? "bullish" : "bearish"} ${SETUP_LABEL[t.kind] ?? t.kind} → ${t.outcome === "stop" ? "invalidated" : t.outcome === "target" ? "reached target" : t.outcome}`).join(" · ")}
             </span>
           </>
         )}

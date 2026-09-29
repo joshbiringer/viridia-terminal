@@ -22,16 +22,16 @@ describe("price statistics", () => {
   });
 });
 
-describe("Viridia Signals", () => {
+describe("Viridia Intelligence", () => {
   it("always reports every dimension, marking missing data instead of guessing", () => {
     const d = computeSignals({ bars: [], benchmark: [], trend: null, sma50: null, sma200: null, glance: null, weekly: null });
-    expect(d.map((x) => x.key)).toEqual(["structure", "trend", "momentum", "risk", "fundamentals", "valuation"]);
+    expect(d.map((x) => x.key)).toEqual(["structure", "wave", "fibonacci", "momentum", "regime", "risk"]);
     expect(d.every((x) => x.tone === "na")).toBe(true);
   });
   it("calls strong momentum only when ahead of the benchmark", () => {
     const up = series((i) => 100 * (1 + 0.003 * i)), flat = series(() => 100);
     const d = computeSignals({ bars: up, benchmark: flat, trend: "uptrend", sma50: 150, sma200: 140, glance: null, weekly: null });
     expect(d.find((x) => x.key === "momentum")!.state).toBe("Strong");
-    expect(d.find((x) => x.key === "trend")!.state).toBe("Uptrend");
+    expect(d.find((x) => x.key === "regime")!.state).toBe("Uptrend");
   });
 });

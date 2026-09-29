@@ -22,8 +22,9 @@ export const PULSE_GROUPS: { id: PulseGroupId; label: string; note: string; item
   { id: "equities", label: "Equities", note: "ETFs tracking each index", items: [
     { symbol: "SPY", label: "S&P 500" }, { symbol: "QQQ", label: "Nasdaq-100" }, { symbol: "IWM", label: "Russell 2000" }, { symbol: "DIA", label: "Dow Jones" },
   ]},
-  { id: "rates", label: "Rates", note: "Treasury ETF prices, which fall when yields rise", items: [
-    { symbol: "SHY", label: "2Y", hint: "1–3 year Treasuries" }, { symbol: "IEF", label: "10Y", hint: "7–10 year Treasuries" }, { symbol: "TLT", label: "30Y", hint: "20+ year Treasuries" },
+  // ETF prices, not yields: shown by ticker so nothing reads as a 2Y/10Y/30Y yield
+  { id: "rates", label: "Treasury proxies", note: "Treasury ETF prices, not yields. Prices fall when yields rise.", items: [
+    { symbol: "SHY", label: "SHY", hint: "iShares 1–3 Year Treasury ETF" }, { symbol: "IEF", label: "IEF", hint: "iShares 7–10 Year Treasury ETF" }, { symbol: "TLT", label: "TLT", hint: "iShares 20+ Year Treasury ETF" },
   ]},
   { id: "macro", label: "Macro", note: "ETFs tracking each asset", items: [
     { symbol: "UUP", label: "Dollar" }, { symbol: "GLD", label: "Gold" }, { symbol: "USO", label: "Oil" }, { symbol: "IBIT", label: "Bitcoin" },
@@ -86,7 +87,7 @@ export function regime(b: Breadth | null, spy?: PulseRow | null): Regime {
 export type FeedKind = "market" | "rates" | "macro" | "breadth" | "structure" | "watchlist" | "move";
 export interface FeedItem { kind: FeedKind; text: string; symbol?: string; tone: "pos" | "neg" | "neutral" }
 export const FEED_LABEL: Record<FeedKind, string> = {
-  market: "Equities", rates: "Rates", macro: "Macro", breadth: "Breadth", structure: "Structure", watchlist: "Watchlist", move: "Mover",
+  market: "Equities", rates: "Treasuries", macro: "Macro", breadth: "Breadth", structure: "Structure", watchlist: "Watchlist", move: "Mover",
 };
 
 export interface StructureChange { symbol: string; text: string; tone: "pos" | "neg" | "neutral" }
@@ -117,9 +118,9 @@ export function whatChanged(opts: {
     const w = returns(tlt).w1;
     if (w != null && Math.abs(w) >= 0.01) {
       out.push({ kind: "rates", symbol: "TLT", tone: "neutral",
-        text: `Long Treasuries ${fmtPct(w)} over five sessions: long-term yields ${w < 0 ? "rose" : "fell"}${shy && returns(shy).w1 != null && Math.abs(returns(shy).w1!) < 0.003 ? " while the short end held steady" : ""}.` });
+        text: `TLT (long-Treasury ETF) ${fmtPct(w)} over five sessions, consistent with long-term yields ${w < 0 ? "rising" : "falling"}${shy && returns(shy).w1 != null && Math.abs(returns(shy).w1!) < 0.003 ? "; SHY (short end) held steady" : ""}.` });
     } else if (w != null) {
-      out.push({ kind: "rates", symbol: "TLT", tone: "neutral", text: `Treasuries were little changed over five sessions (long end ${fmtPct(w)}).` });
+      out.push({ kind: "rates", symbol: "TLT", tone: "neutral", text: `Treasury ETF proxies were little changed over five sessions (TLT ${fmtPct(w)}).` });
     }
   }
   const macro = ["UUP", "GLD", "USO", "IBIT"].map((s) => by.get(s)).filter((r): r is PulseRow => !!r)
