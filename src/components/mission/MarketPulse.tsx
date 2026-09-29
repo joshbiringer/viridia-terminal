@@ -22,7 +22,7 @@ export function MarketPulse({ rows, asOf }: { rows: PulseRow[]; asOf: string }) 
         <h2 id="pulse-t" className="card-t">Market pulse</h2>
         <span
           className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-line text-[11px] text-fg-3" tabIndex={0}
-          title="Index, yield and futures data aren't in the current data plan, so each market is shown through a liquid ETF that tracks it. Rates are Treasury ETF prices, which fall when yields rise."
+          title="Source: Massive, end-of-day closes. Index, yield and futures data aren't in the current data plan, so each market is shown through a liquid ETF that tracks it. Rates are Treasury ETF prices, which fall when yields rise."
           aria-label="About these prices: ETF proxies"
         >i</span>
         <span className="text-[12px] text-fg-3">End of day, {asOf}</span>

@@ -10,9 +10,22 @@ import { browserClient } from "@/lib/supabase/client";
 import { track } from "@/lib/track";
 import { Icon, type IconName } from "./Icon";
 import { useViewer } from "./ViewerProvider";
+import { looksLikeQuestion, parseScanQuery, type ScanQuery } from "@/lib/command/scan-query";
+import { pushRecent, readRecent, type RecentItem } from "@/lib/command/recent";
 
 type Command = { key: string; label: string; icon: IconName; hint?: string; keywords?: string; run: () => void; group: "Actions" | "Go to" };
-type Row = { key: string; kind: "security"; hit: SearchHit } | { key: string; kind: "command"; cmd: Command } | { key: string; kind: "browse"; q: string };
+/**
+ * Row providers, in the order they appear: recent items (empty box), a parsed scanner query, an
+ * Ask Viridia question, securities from the master, commands and pages, and "see all matches".
+ * New sources (portfolios, clients, documents) slot in as another row kind with its own run().
+ */
+type Row =
+  | { key: string; kind: "security"; hit: SearchHit }
+  | { key: string; kind: "command"; cmd: Command }
+  | { key: string; kind: "browse"; q: string }
+  | { key: string; kind: "scan"; scan: ScanQuery }
+  | { key: string; kind: "ask"; text: string }
+  | { key: string; kind: "recent"; item: RecentItem };
 
 const TIMEFRAMES = [["1h", "1H"], ["4h", "4H"], ["1d", "1D"], ["1w", "1W"], ["1mo", "1M"]] as const;
 const matches = (q: string, text: string) => q.toLowerCase().split(/\s+/).filter(Boolean).every((t) => text.toLowerCase().includes(t));
@@ -34,7 +47,8 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const show = useCallback(() => { setOpen(true); setQ(""); setHits([]); setSel(0); setError(null); }, []);
+  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const show = useCallback(() => { setOpen(true); setQ(""); setHits([]); setSel(0); setError(null); setRecent(readRecent()); }, []);
   const hide = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
@@ -77,6 +91,14 @@ export function CommandPalette() {
 
   const symbol = path.startsWith("/terminal/") ? decodeURIComponent(path.split("/")[2] ?? "").toUpperCase() : null;
 
+  // remember securities and research pages as they're opened
+  useEffect(() => {
+    if (symbol) { pushRecent({ kind: "security", label: symbol, sub: document.title.split(" · ")[1], href: `/terminal/${encodeURIComponent(symbol)}` }); return; }
+    const qs = window.location.search;
+    if (path === "/scanner" && qs) pushRecent({ kind: "research", label: "Scanner query", sub: decodeURIComponent(qs.slice(1)).replace(/&/g, " · "), href: `/scanner${qs}` });
+    else if (path === "/portfolio/review" && qs) pushRecent({ kind: "research", label: "Meeting prep", href: `${path}${qs}` });
+  }, [path, symbol]);
+
   const commands = useMemo<Command[]>(() => {
     const nav = (href: string) => () => router.push(href);
     const dark = typeof document !== "undefined" && document.documentElement.dataset.theme === "dark";
@@ -102,21 +124,38 @@ export function CommandPalette() {
   }, [router, path, symbol, viewer]);
 
   const term = q.trim();
+  const scan = useMemo(() => (term ? parseScanQuery(term) : null), [term]);
   const rows: Row[] = useMemo(() => {
-    const cmds = term ? commands.filter((c) => matches(term, `${c.label} ${c.keywords ?? ""}`)).slice(0, 6) : commands.filter((c) => c.group === "Actions" || c.key.startsWith("nav-")).slice(0, 12);
+    if (!term) {
+      const rec: Row[] = recent.slice(0, 5).map((r) => ({ key: `r-${r.href}`, kind: "recent", item: r }));
+      const cmds: Row[] = commands.filter((c) => c.group === "Actions" || c.key.startsWith("nav-")).slice(0, 12).map((c) => ({ key: c.key, kind: "command", cmd: c }));
+      return [...rec, ...cmds];
+    }
+    const cmds = commands.filter((c) => matches(term, `${c.label} ${c.keywords ?? ""}`)).slice(0, 6);
     const secs: Row[] = hits.map((h) => ({ key: `s${h.id}`, kind: "security", hit: h }));
     const cmdRows: Row[] = cmds.map((c) => ({ key: c.key, kind: "command", cmd: c }));
-    // a ticker-like query shows securities first; a word-like one shows commands first
+    const scanRow: Row[] = scan ? [{ key: "scan", kind: "scan", scan }] : [];
+    const question = looksLikeQuestion(term) || (term.split(/\s+/).length >= 3 && !scan);
+    const askRow: Row[] = question ? [{ key: "ask", kind: "ask", text: term }] : [];
+    // a ticker-like query shows securities first; a phrase shows the scan or question first
     const tickerish = /^[A-Za-z.\-]{1,6}$/.test(term) && hits.length > 0;
-    return [...(tickerish ? [...secs, ...cmdRows] : [...cmdRows, ...secs]), ...(term && hits.length ? [{ key: "browse", kind: "browse", q: term } as Row] : [])];
-  }, [term, commands, hits]);
+    const browse: Row[] = hits.length ? [{ key: "browse", kind: "browse", q: term }] : [];
+    return tickerish ? [...secs, ...scanRow, ...askRow, ...cmdRows, ...browse] : [...scanRow, ...askRow, ...cmdRows, ...secs, ...browse];
+  }, [term, commands, hits, scan, recent]);
 
   const run = (i: number) => {
     const r = rows[i];
     if (!r) return;
     hide();
-    if (r.kind === "security") { void track("ticker_searched", { symbol: r.hit.symbol }); router.push(stockHref(r.hit.symbol)); }
+    if (r.kind === "security") { void track("ticker_searched", { symbol: r.hit.symbol }); pushRecent({ kind: "security", label: r.hit.symbol, sub: r.hit.name, href: stockHref(r.hit.symbol) }); router.push(stockHref(r.hit.symbol)); }
     else if (r.kind === "browse") router.push(`/markets/stocks?q=${encodeURIComponent(r.q)}`);
+    else if (r.kind === "scan") { pushRecent({ kind: "research", label: "Scanner query", sub: r.scan.parts.join(" · "), href: r.scan.href }); router.push(r.scan.href); }
+    else if (r.kind === "ask") {
+      // on a security page the question goes to that security's Ask Viridia; elsewhere to Mission Control's
+      if (symbol) window.dispatchEvent(new CustomEvent("viridia:ask", { detail: r.text }));
+      else router.push(`/terminal?ask=${encodeURIComponent(r.text)}`);
+    }
+    else if (r.kind === "recent") router.push(r.item.href);
     else r.cmd.run();
   };
 
@@ -142,7 +181,7 @@ export function CommandPalette() {
               else if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
               else if (e.key === "Enter") { e.preventDefault(); run(sel); }
             }}
-            placeholder="Search stocks, ETFs, pages and actions…"
+            placeholder="Search securities or ask Viridia…"
             className="palette-input h-[54px] min-w-0 flex-1 bg-transparent text-[15.5px] tracking-[-0.01em] text-fg"
             autoComplete="off" spellCheck={false} role="combobox" aria-expanded="true" aria-controls="palette-results"
             aria-activedescendant={rows[sel] ? `pal-${rows[sel].key}` : undefined}
@@ -152,10 +191,10 @@ export function CommandPalette() {
         <div ref={listRef} id="palette-results" className="max-h-[400px] overflow-y-auto p-1.5" role="listbox">
           {error && <div className="px-3 py-3 text-[12.5px] text-neg">{error}</div>}
           {term && !loading && !error && rows.length === 0 && (
-            <div className="px-3 py-5 text-[13px] text-fg-2">Nothing matches “{term}”. Try a ticker like NVDA or a company name.</div>
+            <div className="px-3 py-5 text-[13px] text-fg-2">Nothing matches “{term}”. Try a ticker (NVDA), a company, a scan (“wave 3 stocks near a fib zone”) or a question.</div>
           )}
           {rows.map((r, i) => {
-            const group = r.kind === "command" ? r.cmd.group : r.kind === "security" ? "Securities" : "";
+            const group = r.kind === "command" ? r.cmd.group : r.kind === "security" ? "Securities" : r.kind === "recent" ? "Recent" : r.kind === "scan" || r.kind === "ask" ? "Viridia" : "";
             const header = group && group !== lastGroup ? group : null;
             lastGroup = group || lastGroup;
             return (
@@ -172,6 +211,24 @@ export function CommandPalette() {
                       <span className="min-w-0 flex-1 truncate text-[13.5px] text-fg-2">{r.hit.name}</span>
                       <span className="hidden text-[12px] text-fg-3 sm:inline">{subtypeLabel(r.hit.asset_subtype)}</span>
                       <span className="w-[88px] flex-none text-right text-[12px] text-fg-3">{exchangeLabel(r.hit.exchange)}</span>
+                    </>
+                  ) : r.kind === "recent" ? (
+                    <>
+                      <Icon name={r.item.kind === "security" ? "stocks" : "research"} className="h-[15px] w-[15px] text-fg-3" />
+                      <span className={`${r.item.kind === "security" ? "tk" : ""} text-[13.5px]`}>{r.item.label}</span>
+                      {r.item.sub && <span className="min-w-0 flex-1 truncate text-[12.5px] text-fg-3">{r.item.sub}</span>}
+                    </>
+                  ) : r.kind === "scan" ? (
+                    <>
+                      <Icon name="scanner" className="h-[15px] w-[15px] text-brand" />
+                      <span className="text-[13.5px]">Scan:</span>
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] text-fg-2">{r.scan.parts.join(" · ")}</span>
+                    </>
+                  ) : r.kind === "ask" ? (
+                    <>
+                      <Icon name="sparkle" className="h-[15px] w-[15px] text-brand" />
+                      <span className="text-[13.5px]">Ask Viridia{symbol ? ` about ${symbol}` : ""}:</span>
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] text-fg-2">{r.text}</span>
                     </>
                   ) : r.kind === "command" ? (
                     <>

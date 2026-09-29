@@ -23,11 +23,19 @@ export function AskViridiaButton(props: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    const onOpen = () => setOpen(true);
+    // the command bar can pass a typed question along with the event
+    const onOpen = (e: Event) => {
+      setOpen(true);
+      const text = (e as CustomEvent<unknown>).detail;
+      if (typeof text === "string" && text.trim()) {
+        const id = route(text);
+        setAsked({ id: id && QUESTIONS.some((q) => q.id === id) ? id : null, text });
+      }
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("viridia:ask", onOpen);
     // arriving from Mission Control's "Ask Viridia" opens the panel straight away
-    if (new URLSearchParams(window.location.search).get("ask") === "1") queueMicrotask(onOpen);
+    if (new URLSearchParams(window.location.search).get("ask") === "1") queueMicrotask(() => setOpen(true));
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("viridia:ask", onOpen); };
   }, []);
 

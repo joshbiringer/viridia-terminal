@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ViridiaMark } from "@/components/ViridiaMark";
 import { Icon } from "@/components/Icon";
 import { fmtPrice } from "@/lib/market-data/bars";
@@ -52,10 +52,17 @@ export function AskCommand({ market, improving, watchlist, setups }: {
       default: return setResult({ kind: "unknown" });
     }
   };
+  // questions sent from the command bar arrive as ?ask=…
+  const boxRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("ask");
+    if (q) queueMicrotask(() => { run(q); boxRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const submit = (e: React.FormEvent) => { e.preventDefault(); if (draft.trim()) { run(draft.trim()); setDraft(""); } };
 
   return (
-    <section className="card overflow-hidden" aria-label="Ask Viridia">
+    <section ref={boxRef} className="card overflow-hidden" aria-label="Ask Viridia">
       <form onSubmit={submit} className="flex items-center gap-3 px-4 py-3">
         <ViridiaMark size={18} className="shrink-0 text-brand" />
         <input

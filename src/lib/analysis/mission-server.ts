@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { db } from "@/lib/supabase";
 import { getBreadth, scan, type Breadth, type ScanRow } from "@/lib/market-data/snapshot";
 import { getPulse } from "@/lib/market-data/pulse";
 import { getEventCounts, getStructureEvents } from "./events-server";
@@ -19,12 +20,16 @@ export const TILES: { label: string; hint: string; href: string; params: Record<
   { label: "Near invalidation", hint: "Within 3% of the level that breaks the preferred count", href: `/scanner?s=near_invalidation&${DV}`, params: { p_structure: "near_invalidation" } },
 ];
 
+export interface FibRow { symbol: string; name: string; close: number; low: number; high: number; mid: number; strength: number; relationships: number; degrees: string[]; side: string; distance_pct: number; adv20: number | null }
+export interface AlignRow { symbol: string; name: string; close: number | null; change_pct: number | null; dir: string; d_pattern: string | null; d_complete: boolean | null; d_wave: string | null; d_score: number | null; w_pattern: string | null; w_complete: boolean | null; w_wave: string | null; w_score: number | null; total: number }
+export interface SignalsData { wave: ScanRow[]; fib: FibRow[]; invalidation: ScanRow[]; aligned: AlignRow[] }
+
 export interface MarketContext {
   pulse: PulseRow[]; breadth: Breadth | null; events: StructureEvent[]; eventCounts: { day: string; type: EventType; n: number }[]; gainer: ScanRow | null; loser: ScanRow | null;
-  setups: SetupRow[]; record: KindRecord[]; active: ScanRow[]; popular: PulseRow[]; tileCounts: (number | null)[];
+  setups: SetupRow[]; record: KindRecord[]; active: ScanRow[]; popular: PulseRow[]; tileCounts: (number | null)[]; signals: SignalsData;
 }
 
-const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts: [], gainer: null, loser: null, setups: [], record: [], active: [], popular: [], tileCounts: TILES.map(() => null) };
+const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts: [], gainer: null, loser: null, setups: [], record: [], active: [], popular: [], tileCounts: TILES.map(() => null), signals: { wave: [], fib: [], invalidation: [], aligned: [] } };
 
 /**
  * Everything on Mission Control that is the same for every reader. Prices are end of day, so it is
@@ -45,12 +50,18 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
     ...TILES.map((t) => scan({ ...t.params, p_limit: 1, p_min_dollar_volume: LIQUID }).then((r) => r[0]?.total ?? 0).catch(() => null)),
   ]);
   if (!pulse.length) throw new Error("market pulse unavailable");
-  const popular = await getPulse(active.map((r) => r.symbol)).catch(() => []);
+  const [popular, wave, fib, invalidation, aligned] = await Promise.all([
+    getPulse(active.map((r) => r.symbol)).catch(() => []),
+    scan({ p_structure: "wave3", p_sort: "confidence", p_limit: 10, p_min_dollar_volume: LIQUID }).catch(() => []),
+    db().rpc("fib_zone_scan", { p_max_distance: 0.03, p_min_count: 3, p_min_dollar_volume: LIQUID, p_limit: 10 }).then((r) => (r.data ?? []) as FibRow[], () => []),
+    scan({ p_structure: "near_invalidation", p_sort: "confidence", p_limit: 10, p_min_dollar_volume: LIQUID }).catch(() => []),
+    db().rpc("timeframe_alignment", { p_min_dollar_volume: LIQUID, p_limit: 10 }).then((r) => ((r.data ?? []) as AlignRow[]).map((x) => ({ ...x, total: Number(x.total) })), () => []),
+  ]);
   return {
     pulse, breadth, events, eventCounts, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, active, popular,
-    tileCounts: tiles,
+    tileCounts: tiles, signals: { wave, fib, invalidation, aligned },
   };
-}, ["mission-market-v3"], { revalidate: 300 });
+}, ["mission-market-v4"], { revalidate: 300 });
 
 // last good context held by this server instance, shown (with its own as-of date) if a reload fails
 let lastGood: MarketContext | null = null;

@@ -29,10 +29,10 @@ export function TopNav() {
       <button
         className="mx-auto hidden h-9 w-full max-w-[560px] min-w-0 items-center sm:flex gap-2.5 rounded-[var(--r-md)] border border-line bg-bg px-3 text-left text-[13.5px] text-fg-3 transition-colors duration-[var(--t-fast)] hover:border-line-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
-        aria-label="Search stocks, ETFs and commands" aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
+        aria-label="Search securities or ask Viridia" aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
       >
         <Icon name="search" />
-        <span className="min-w-0 flex-1 truncate">Search stocks, ETFs and commands…</span>
+        <span className="min-w-0 flex-1 truncate">Search securities or ask Viridia…</span>
         <kbd className="hidden sm:inline">{mac ? "⌘ K" : "Ctrl K"}</kbd>
       </button>
       <button

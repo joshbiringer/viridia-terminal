@@ -17,6 +17,7 @@ import {
 } from "@/lib/analysis/mission";
 import { DrawerProvider } from "@/components/mission/SecurityDrawer";
 import { MarketPulse } from "@/components/mission/MarketPulse";
+import { SignalsTabs } from "@/components/mission/SignalsTabs";
 import { AskCommand, type Line } from "@/components/mission/AskCommand";
 import { PrepareMyDay } from "@/components/mission/PrepareMyDay";
 import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, TodayStrip, WatchlistRail, WhatChangedFeed, type SavedSummary, type Tile, type TodayCell } from "@/components/mission/Panels";
@@ -126,14 +127,15 @@ export default async function MissionControl({ searchParams }: { searchParams: P
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-4">
-          <AskCommand market={marketLines} improving={improving} watchlist={watchLines} setups={setupLines} />
           <MarketPulse rows={pulse} asOf={fmtDate(lastTs)} />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <MarketRegime r={reg} b={breadth} />
             <WhatChangedFeed items={feed} since={since} />
           </div>
+          <SignalsTabs events={bestPerSymbol(marketEvents)} data={ctx.signals} day={marketEvents[0]?.day ?? null} />
           <ScannerTiles tiles={tiles} />
           <SetupsPanel rows={topSetups} record={record} />
+          <AskCommand market={marketLines} improving={improving} watchlist={watchLines} setups={setupLines} />
         </div>
         <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[72px] xl:max-h-[calc(100vh-88px)] xl:self-start xl:overflow-y-auto" aria-label="Your workspace">
           <WatchlistRail rows={railRows} events={events} mode={railMode} />
