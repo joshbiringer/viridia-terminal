@@ -9,7 +9,7 @@ export default function PortfolioPage() {
     <>
       <PageHeader
         title="Portfolio X-Ray"
-        description="Paste or upload holdings to see concentration, risk, how positions move together, tax lots and each holding's wave structure. Nothing you enter is stored."
+        description="Paste or upload holdings to see concentration, risk, how positions move together, tax lots and each holding's wave structure. Nothing is stored unless you sign in and save it."
       />
       <PortfolioXRay />
     </>

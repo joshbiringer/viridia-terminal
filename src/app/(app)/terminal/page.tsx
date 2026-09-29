@@ -18,7 +18,7 @@ import { DrawerProvider } from "@/components/mission/SecurityDrawer";
 import { MarketPulse } from "@/components/mission/MarketPulse";
 import { AskCommand, type Line } from "@/components/mission/AskCommand";
 import { PrepareMyDay } from "@/components/mission/PrepareMyDay";
-import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, TodayStrip, WatchlistRail, WhatChangedFeed, type Tile, type TodayCell } from "@/components/mission/Panels";
+import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, TodayStrip, WatchlistRail, WhatChangedFeed, type SavedSummary, type Tile, type TodayCell } from "@/components/mission/Panels";
 
 export const metadata: Metadata = { title: "Mission Control" };
 export const dynamic = "force-dynamic";
@@ -30,11 +30,13 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     : [];
   const welcome = (await searchParams).welcome === "1";
 
-  const [{ ctx, ok }, watchChanges, watchPulse] = await Promise.all([
+  const [{ ctx, ok }, watchChanges, watchPulse, savedRes] = await Promise.all([
     getMarketContext(),
     watched.length ? getChanges({ symbols: watched, limit: 20 }).catch(() => []) : Promise.resolve([]),
     watched.length ? getPulse(watched.slice(0, 40)).catch(() => []) : Promise.resolve([]),
+    viewer ? (await authClient()).from("portfolios").select("id, name, updated_at, reviewed_at").order("updated_at", { ascending: false }).limit(5) : Promise.resolve({ data: [] }),
   ]);
+  const savedPortfolios = ((savedRes?.data ?? []) as SavedSummary[]);
   const { pulse, breadth, changes, setups: topSetups, record, active } = ctx;
   const railMode = watched.length ? "watchlist" : viewer ? "empty" : "popular";
   const railRows = watched.length ? watchPulse : ctx.popular;
@@ -93,7 +95,13 @@ export default async function MissionControl({ searchParams }: { searchParams: P
       `${n(ctx.tileCounts[0])} strong structures, ${n(ctx.tileCounts[1])} near a Fib zone`,
       marketChanges.length ? `${marketChanges.length} liquid name${marketChanges.length === 1 ? "" : "s"} changed wave count` : "No wave-count changes since the prior session",
     ] },
-    { title: "Portfolio", href: "/portfolio", cta: "Run Portfolio X-Ray", muted: true, lines: ["No portfolio connected", "Check holdings on demand with X-Ray; nothing is stored"] },
+    savedPortfolios.length
+      ? { title: "Portfolio", href: "/portfolio", cta: "Open X-Ray", lines: [
+          `${savedPortfolios.length} saved portfolio${savedPortfolios.length === 1 ? "" : "s"}`,
+          `${savedPortfolios.filter((p) => !p.reviewed_at).length} never reviewed`,
+          "Drift and meeting prep in X-Ray",
+        ] }
+      : { title: "Portfolio", href: "/portfolio", cta: "Run Portfolio X-Ray", muted: true, lines: ["No saved portfolio", viewer ? "Save one in X-Ray to track drift and prep reviews" : "Check holdings on demand with X-Ray; nothing is stored"] },
     { title: "Clients and calendar", muted: true, lines: ["Not connected yet", "Meetings, clients, earnings and economic calendars need integrations Viridia doesn't have yet"] },
   ];
 
@@ -127,7 +135,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
         </div>
         <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[72px] xl:max-h-[calc(100vh-88px)] xl:self-start xl:overflow-y-auto" aria-label="Your workspace">
           <WatchlistRail rows={railRows} events={events} mode={railMode} />
-          <PortfolioSlot />
+          <PortfolioSlot saved={savedPortfolios} signedIn={!!viewer} />
           <NotConnected />
         </aside>
       </div>

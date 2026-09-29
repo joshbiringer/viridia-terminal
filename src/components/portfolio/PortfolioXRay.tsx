@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useViewer } from "@/components/ViewerProvider";
+import { deletePortfolio, getPortfolio, listPortfolios, savePortfolio, type SavedPortfolio } from "@/lib/portfolio/saved";
 import { fmtDollars, pct } from "@/lib/market-data/snapshot";
 import { stockHref } from "@/lib/format";
 import { PATTERN_LABEL, SETUP_LABEL, type CandidatePattern, type SetupKind } from "@/lib/analysis/candidates";
-import { FUNDS_BUCKET, UNCLASSIFIED, type Position, type XRay } from "@/lib/portfolio/xray";
+import { DRIFT_BAND, FUNDS_BUCKET, UNCLASSIFIED, type Position, type XRay } from "@/lib/portfolio/xray";
 
 const EXAMPLE = `symbol,shares,avg cost,acquired
 QQQ,120,410.00,2024-03-15
@@ -20,22 +22,75 @@ const pp = (x: number | null, d = 1) => (x == null ? "—" : pct(x, d));
 const w = (x: number) => `${(x * 100).toFixed(1)}%`;
 
 export function PortfolioXRay() {
+  const { viewer } = useViewer();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [r, setR] = useState<XRay | null>(null);
+  const [saved, setSaved] = useState<SavedPortfolio[]>([]);
+  const [current, setCurrent] = useState<SavedPortfolio | null>(null);
+  const [name, setName] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const run = async (input = text) => {
+  const run = async (input = text, targets = current?.targets) => {
     setBusy(true); setErrors([]);
     try {
-      const res = await fetch("/api/portfolio/xray", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: input }) });
+      const res = await fetch("/api/portfolio/xray", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: input, targets }) });
       const j = await res.json();
       setErrors(j.errors ?? []);
       setR(j.result ?? null);
     } catch {
       setErrors(["The analysis couldn't be run. Check your connection and try again."]);
     } finally { setBusy(false); }
+  };
+
+  const load = (p: SavedPortfolio) => {
+    setCurrent(p); setName(p.name); setText(p.holdings_text); setConfirmDelete(false); setNote(null);
+    void run(p.holdings_text, p.targets);
+  };
+
+  // saved portfolios for signed-in readers; ?id= opens one (links from Mission Control)
+  useEffect(() => {
+    if (!viewer) return;
+    let live = true;
+    listPortfolios().then((list) => {
+      if (!live) return;
+      setSaved(list);
+      const id = new URLSearchParams(window.location.search).get("id");
+      const hit = id ? list.find((p) => p.id === id) : null;
+      if (hit) load(hit);
+      else if (id) void getPortfolio(id).then((p) => { if (live && p) load(p); });
+    }).catch(() => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewer]);
+
+  const save = async (asNew = false) => {
+    if (!text.trim()) return;
+    try {
+      const p = await savePortfolio({ id: asNew ? null : current?.id, name: name || "Untitled portfolio", holdings_text: text, targets: current?.targets });
+      setCurrent(p); setName(p.name);
+      setSaved((s) => [p, ...s.filter((x) => x.id !== p.id)]);
+      setNote("Saved.");
+    } catch (e) { setNote((e as Error).message || "Couldn't save."); }
+  };
+  const remove = async () => {
+    if (!current) return;
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    try {
+      await deletePortfolio(current.id);
+      setSaved((s) => s.filter((x) => x.id !== current.id));
+      setCurrent(null); setName(""); setConfirmDelete(false); setNote("Deleted.");
+    } catch (e) { setNote((e as Error).message); }
+  };
+  const saveTargets = async (targets: Record<string, number>) => {
+    if (!current) return;
+    const p = await savePortfolio({ id: current.id, name: current.name, holdings_text: current.holdings_text, targets });
+    setCurrent(p);
+    setSaved((s) => s.map((x) => (x.id === p.id ? p : x)));
+    await run(p.holdings_text, p.targets);
   };
   const onFile = async (f: File | undefined) => {
     if (!f) return;
@@ -52,6 +107,33 @@ export function PortfolioXRay() {
             <p className="card-s mt-0.5">One per line: symbol, shares, and optionally average cost per share and date acquired. A CSV export with a header row works too.</p>
           </div>
         </div>
+        {viewer ? (
+          <div className="flex flex-wrap items-end gap-2 border-b border-line px-5 py-3">
+            <label className="flex min-w-[200px] flex-col gap-1">
+              <span className="label">Saved portfolios</span>
+              <select className="field" value={current?.id ?? ""} onChange={(e) => {
+                const p = saved.find((x) => x.id === e.target.value);
+                if (p) load(p); else { setCurrent(null); setName(""); setR(null); setText(""); }
+              }}>
+                <option value="">New portfolio</option>
+                {saved.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-[200px] flex-1 flex-col gap-1">
+              <span className="label">Name</span>
+              <input className="field" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="e.g. Smith household, growth model" />
+            </label>
+            <button className="btn" onClick={() => save()} disabled={!text.trim()}>{current ? "Save changes" : "Save portfolio"}</button>
+            {current && <button className="btn ghost" onClick={() => save(true)}>Save as new</button>}
+            {current && <button className={`btn ghost ${confirmDelete ? "text-neg" : ""}`} onClick={remove}>{confirmDelete ? "Confirm delete" : "Delete"}</button>}
+            {current && <Link className="btn" href={`/portfolio/review?id=${current.id}`}>Meeting prep</Link>}
+            {note && <span className="text-[12.5px] text-fg-3" role="status">{note}</span>}
+          </div>
+        ) : (
+          <p className="border-b border-line px-5 py-2.5 text-[12.5px] text-fg-2">
+            <Link href="/signin?next=/portfolio" className="text-brand hover:underline">Sign in</Link> to save portfolios, set target weights and prepare review meetings.
+          </p>
+        )}
         <div className="flex flex-col gap-3 px-5 py-4">
           <textarea
             className="field min-h-[160px] w-full font-mono text-[13px]" value={text} onChange={(e) => setText(e.target.value)}
@@ -61,8 +143,8 @@ export function PortfolioXRay() {
             <button className="btn pri" onClick={() => run()} disabled={!text.trim()} aria-busy={busy}>Run X-Ray</button>
             <button className="btn" onClick={() => fileRef.current?.click()}>Upload CSV</button>
             <input ref={fileRef} type="file" accept=".csv,.txt,text/csv,text/plain" hidden onChange={(e) => onFile(e.target.files?.[0])} />
-            <button className="btn ghost" onClick={() => { setText(EXAMPLE); run(EXAMPLE); }}>Try an example portfolio</button>
-            <span className="ml-auto text-[12px] text-fg-3">Analyzed on request and never stored.</span>
+            <button className="btn ghost" onClick={() => { setCurrent(null); setName(""); setText(EXAMPLE); run(EXAMPLE, undefined); }}>Try an example portfolio</button>
+            <span className="ml-auto text-[12px] text-fg-3">{current ? "Saved to your account; only you can see it." : "Analyzed on request. Nothing is stored unless you save it."}</span>
           </div>
           {errors.length > 0 && (
             <ul className="rounded-[var(--r-md)] px-3 py-2 text-[13px] text-neg" style={{ background: "var(--neg-soft)" }} role="alert">
@@ -73,7 +155,84 @@ export function PortfolioXRay() {
       </section>
 
       {r && <Results r={r} />}
+      {r && (current
+        ? <TargetsCard key={`${current.id}-${current.updated_at}`} r={r} targets={current.targets} onSave={saveTargets} />
+        : viewer && <p className="text-[13px] text-fg-3">Save this portfolio to set target weights and track drift.</p>)}
     </div>
+  );
+}
+
+/** Target weights: edit a percentage per holding, then see drift against it. */
+function TargetsCard({ r, targets, onSave }: { r: XRay; targets: Record<string, number>; onSave: (t: Record<string, number>) => Promise<void> }) {
+  const syms = [...new Set([...r.positions.map((p) => p.symbol), ...Object.keys(targets)])];
+  const [draft, setDraft] = useState<Record<string, string>>(() => Object.fromEntries(syms.map((s) => [s, targets[s] != null ? String(+(targets[s] * 100).toFixed(2)) : ""])));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const sum = Object.values(draft).reduce((a, v) => a + (Number(v) || 0), 0);
+  const submit = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const t = Object.fromEntries(Object.entries(draft).filter(([, v]) => v.trim() !== "" && isFinite(Number(v))).map(([k, v]) => [k, Math.min(100, Math.max(0, Number(v))) / 100]));
+      await onSave(t);
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+  const drift = r.drift;
+  return (
+    <section className="card">
+      <div className="card-h">
+        <div>
+          <h2 className="card-t">Target weights and drift</h2>
+          <p className="card-s mt-0.5">Set a target for each holding; anything {Math.round(DRIFT_BAND * 100)} or more points away is flagged</p>
+        </div>
+      </div>
+      <div className="grid gap-px bg-line lg:grid-cols-2">
+        <div className="bg-panel px-5 py-4">
+          <table className="t dense">
+            <thead><tr><th>Symbol</th><th className="r">Now</th><th className="r">Target %</th></tr></thead>
+            <tbody>
+              {syms.map((s) => (
+                <tr key={s}>
+                  <td className="tk">{s}</td>
+                  <td className="r num text-fg-2">{w(r.positions.find((p) => p.symbol === s)?.weight ?? 0)}</td>
+                  <td className="r">
+                    <input className="field h-8 w-20 text-right num" inputMode="decimal" value={draft[s] ?? ""} aria-label={`${s} target percent`}
+                      onChange={(e) => setDraft((d) => ({ ...d, [s]: e.target.value.replace(/[^0-9.]/g, "") }))} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="mt-3 flex items-center gap-3">
+            <button className="btn pri sm" onClick={submit} aria-busy={busy}>Save targets</button>
+            <span className={`num text-[12.5px] ${Math.abs(sum - 100) < 0.05 || sum === 0 ? "text-fg-3" : ""}`} style={Math.abs(sum - 100) >= 0.05 && sum > 0 ? { color: "var(--warn)" } : undefined}>
+              Targets add to {sum.toFixed(1)}%
+            </span>
+            {err && <span className="text-[12.5px] text-neg">{err}</span>}
+          </div>
+        </div>
+        <div className="bg-panel px-5 py-4 text-[13.5px] text-fg-2">
+          {drift ? (
+            <>
+              {drift.some((d) => d.flag)
+                ? <Flag tone="warn">{drift.filter((d) => d.flag).length} holding{drift.filter((d) => d.flag).length === 1 ? " is" : "s are"} {Math.round(DRIFT_BAND * 100)}+ points from target.</Flag>
+                : <Flag tone="pos">Every holding is within {Math.round(DRIFT_BAND * 100)} points of its target.</Flag>}
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {drift.map((d) => (
+                  <li key={d.symbol} className="flex items-baseline gap-3">
+                    <span className="tk w-16 text-fg">{d.symbol}</span>
+                    <span className="num text-fg-3">{w(d.weight)} vs {w(d.target)}</span>
+                    <span className={`num ml-auto font-medium ${d.flag ? (d.diff > 0 ? "text-neg" : "text-pos") : "text-fg-3"}`}>
+                      {d.diff >= 0 ? "+" : "−"}{Math.abs(d.diff * 100).toFixed(1)} pts{d.flag ? (d.diff > 0 ? " over" : " under") : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[12px] text-fg-3">Drift is research output, not a trade instruction. Rebalancing has tax and cost consequences the X-Ray doesn&apos;t model.</p>
+            </>
+          ) : <p>No targets saved yet.</p>}
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
  * the measurements. The holdings are not stored or logged anywhere.
  */
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => null)) as { text?: string } | null;
+  const body = (await req.json().catch(() => null)) as { text?: string; targets?: unknown } | null;
+  const targets = sanitizeTargets(body?.targets);
   const text = typeof body?.text === "string" ? body.text.slice(0, 20_000) : "";
   const { holdings, errors } = parseHoldings(text);
   if (!holdings.length) return NextResponse.json({ errors: errors.length ? errors : ["No holdings found."] }, { status: 400 });
@@ -34,5 +35,16 @@ export async function POST(req: Request) {
     }
   }
   const ctx = ((ctxRes.data ?? []) as Context[]).filter((c) => holdings.some((h) => h.symbol === c.symbol));
-  return NextResponse.json({ errors, result: xray(holdings, ctx, closes) }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ errors, result: xray(holdings, ctx, closes, new Date(), targets) }, { headers: { "Cache-Control": "no-store" } });
+}
+
+/** Targets arrive as {SYMBOL: fraction}; anything else is dropped. */
+function sanitizeTargets(v: unknown): Record<string, number> | null {
+  if (!v || typeof v !== "object") return null;
+  const out: Record<string, number> = {};
+  for (const [k, x] of Object.entries(v as Record<string, unknown>).slice(0, 200)) {
+    const sym = k.trim().toUpperCase();
+    if (/^[A-Z0-9.\-]{1,12}$/.test(sym) && typeof x === "number" && isFinite(x) && x >= 0 && x <= 1) out[sym] = x;
+  }
+  return Object.keys(out).length ? out : null;
 }

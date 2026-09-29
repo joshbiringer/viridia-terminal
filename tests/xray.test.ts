@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHoldings, xray, type Context } from "../src/lib/portfolio/xray";
+import { driftOf, parseHoldings, xray, type Context } from "../src/lib/portfolio/xray";
 
 const ctx = (symbol: string, close: number, sub = "common"): Context => ({
   symbol, name: symbol, asset_subtype: sub, close, prev_close: close, trend: "uptrend", glance_pattern: "impulse", glance_complete: false,
@@ -31,5 +31,13 @@ describe("Portfolio X-Ray", () => {
     expect(r.sectors).toEqual([{ sector: "Unclassified", weight: 0.75, symbols: ["AAA"] }, { sector: "Funds (not looked through)", weight: 0.25, symbols: ["BBB"] }]);
     const s = xray(holdings, [{ ...ctx("AAA", 100), sector: "Energy" }, ctx("BBB", 100, "etf")], m);
     expect(s.sectors[0]).toMatchObject({ sector: "Energy", weight: 0.75 });
+  });
+});
+
+describe("target drift", () => {
+  it("flags holdings 3+ points from target, including targets not held", () => {
+    const d = driftOf([{ symbol: "A", weight: 0.6 }, { symbol: "B", weight: 0.4 }], { A: 0.5, B: 0.39, C: 0.11 })!;
+    expect(d.map((x) => [x.symbol, x.flag])).toEqual([["C", true], ["A", true], ["B", false]]);
+    expect(driftOf([{ symbol: "A", weight: 1 }], {})).toBeNull();
   });
 });

@@ -195,14 +195,34 @@ export function WatchlistRail({ rows, events, mode }: {
   );
 }
 
-export function PortfolioSlot() {
+export interface SavedSummary { id: string; name: string; updated_at: string; reviewed_at: string | null }
+
+export function PortfolioSlot({ saved, signedIn }: { saved: SavedSummary[]; signedIn: boolean }) {
+  const ago = (iso: string) => {
+    const d = Math.floor((Date.now() - Date.parse(iso)) / 864e5);
+    return d <= 0 ? "today" : d === 1 ? "yesterday" : `${d} days ago`;
+  };
   return (
     <section className="card" aria-labelledby="pf-t">
-      <CardHead id="pf-t" title="Portfolio" />
-      <div className="flex flex-col gap-2.5 px-4 py-3">
-        <p className="text-[12.5px] leading-relaxed text-fg-2">Paste or upload holdings to see concentration, risk, correlation and each position&apos;s wave structure. Nothing is saved.</p>
-        <Link href="/portfolio" className="btn sm self-start"><Icon name="gauge" className="h-[14px] w-[14px]" /> Run Portfolio X-Ray</Link>
-      </div>
+      <CardHead id="pf-t" title="Portfolios" action={saved.length ? <Link href="/portfolio" className="btn ghost sm">X-Ray</Link> : undefined} />
+      {saved.length ? (
+        <ul className="divide-y divide-line">
+          {saved.map((p) => (
+            <li key={p.id} className="flex items-center gap-2 px-4 py-2">
+              <Link href={`/portfolio?id=${p.id}`} className="min-w-0 flex-1 truncate text-[13px] font-[560] hover:text-brand">{p.name}</Link>
+              <span className="text-[11.5px] text-fg-3">{p.reviewed_at ? `reviewed ${ago(p.reviewed_at)}` : "not reviewed"}</span>
+              <Link href={`/portfolio/review?id=${p.id}`} className="btn ghost sm px-2 text-[12px]">Prep</Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="flex flex-col gap-2.5 px-4 py-3">
+          <p className="text-[12.5px] leading-relaxed text-fg-2">
+            {signedIn ? "Save a portfolio in X-Ray to track drift against targets and prepare review meetings here." : "Paste or upload holdings to see concentration, risk, correlation and each position's wave structure. Nothing is stored unless you sign in and save it."}
+          </p>
+          <Link href="/portfolio" className="btn sm self-start"><Icon name="gauge" className="h-[14px] w-[14px]" /> Run Portfolio X-Ray</Link>
+        </div>
+      )}
     </section>
   );
 }

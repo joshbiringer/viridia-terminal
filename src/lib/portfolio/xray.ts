@@ -108,13 +108,32 @@ export interface XRay {
   structure: { up: number; down: number; none: number; setups: Position[]; nearLevel: Position[] };
   /** Weight by sector; funds are one bucket because their holdings aren't looked through. */
   sectors: { sector: string; weight: number; symbols: string[] }[];
+  /** Current weight against the saved target for each symbol that has one or is held; null without targets. */
+  drift: DriftRow[] | null;
+}
+
+export interface DriftRow { symbol: string; weight: number; target: number; diff: number; flag: boolean }
+
+/** A holding is flagged when its weight is 3 or more percentage points from its target. */
+export const DRIFT_BAND = 0.03;
+
+export function driftOf(positions: { symbol: string; weight: number }[], targets: Record<string, number> | null | undefined): DriftRow[] | null {
+  const t = Object.entries(targets ?? {}).filter(([, v]) => typeof v === "number" && isFinite(v) && v >= 0);
+  if (!t.length) return null;
+  const syms = new Set([...t.map(([k]) => k), ...positions.map((p) => p.symbol)]);
+  return [...syms].map((symbol) => {
+    const weight = positions.find((p) => p.symbol === symbol)?.weight ?? 0;
+    const target = Object.fromEntries(t)[symbol] ?? 0;
+    const diff = weight - target;
+    return { symbol, weight, target, diff, flag: Math.abs(diff) >= DRIFT_BAND - 1e-9 };
+  }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
 }
 
 /**
  * Measure a portfolio. Weights are today's market values; the portfolio's history is today's weights
  * applied to each holding's past returns (a constant-weight back-cast, not the account's actual record).
  */
-export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Close[]>, today = new Date()): XRay {
+export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Close[]>, today = new Date(), targets?: Record<string, number> | null): XRay {
   const bySym = new Map(ctx.map((c) => [c.symbol, c]));
   const unknown = holdings.filter((h) => !bySym.has(h.symbol)).map((h) => h.symbol);
   const noPrice = holdings.filter((h) => bySym.has(h.symbol) && !(bySym.get(h.symbol)!.close! > 0)).map((h) => h.symbol);
@@ -199,6 +218,7 @@ export function xray(holdings: Holding[], ctx: Context[], closes: Map<string, Cl
       nearLevel: positions.filter((p) => p.ctx.glance_hold != null && Math.abs(p.ctx.glance_hold / p.close - 1) <= 0.03),
     },
     sectors,
+    drift: driftOf(positions, targets),
   };
 }
 
