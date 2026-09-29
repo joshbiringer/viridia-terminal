@@ -19,7 +19,7 @@ import { WelcomeGuide } from "@/components/WelcomeGuide";
 import { DegreeProvider } from "@/components/analysis/DegreeContext";
 import { StructureGlance } from "@/components/analysis/StructureGlance";
 import { SetupCard } from "@/components/analysis/SetupCard";
-import { getSymbolTrials, getTrackRecord } from "@/lib/analysis/track-record";
+import { getSymbolTrials, getSetupQuality, getTrackRecord } from "@/lib/analysis/track-record";
 import { computeSignals } from "@/lib/analysis/signals";
 import { SignalsPanel } from "@/components/analysis/SignalsPanel";
 import { getFundamentals, getSectorMedians } from "@/lib/fundamentals/server";
@@ -74,7 +74,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     );
   }
 
-  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians] = await Promise.all([
+  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians, quality] = await Promise.all([
     db().from("security_events").select("*").eq("security_id", sec.id).order("id", { ascending: false }).limit(20),
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
@@ -88,6 +88,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     getSymbolTrials(sec.symbol, 40).catch(() => []),
     getFundamentals([sec.symbol]).then((r) => r[0] ?? null).catch(() => undefined),
     getSectorMedians().catch(() => [] as SectorMedian[]),
+    getSetupQuality().catch(() => []),
   ]);
   const sectorMedian = fund?.sector ? medians.find((m) => m.sector === fund.sector) ?? null : null;
   const sum = (summaryRes.data ?? null) as BarSummary | null;
@@ -173,7 +174,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
         symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
         zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf} weekly={weekly}
       />
-      <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} />
+      <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} quality={quality} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />

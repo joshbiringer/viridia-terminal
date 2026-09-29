@@ -3,6 +3,7 @@ import { Icon } from "@/components/Icon";
 import { Sparkline } from "@/components/Sparkline";
 import { SideChip } from "@/components/analysis/SideChip";
 import { HistoryTag } from "@/components/analysis/HistoryTag";
+import { GradeChip } from "@/components/analysis/GradeChip";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { TREND_LABEL, type Breadth } from "@/lib/market-data/snapshot";
 import { fmtInt } from "@/lib/format";
@@ -120,7 +121,7 @@ export function ScannerTiles({ tiles }: { tiles: Tile[] }) {
 export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRecord[] }) {
   return (
     <section className="card" aria-labelledby="setups-t">
-      <CardHead id="setups-t" title="Setups to review" sub="Highest confidence at 1.5 : 1 or better, $25M+ a day"
+      <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first, 1.5 : 1 or better, $25M+ a day; kinds with a negative record left out"
         action={<><Link href="/setups/track-record" className="btn ghost sm">Track record</Link><Link href="/setups" className="btn ghost sm">All setups</Link></>} />
       {rows.length ? (
         <div className="overflow-x-auto">
@@ -135,7 +136,7 @@ export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRe
                   <td className="r num text-neg">{r.setup ? fmtPrice(r.setup.stop.price) : "—"}</td>
                   <td className="r num text-pos">{r.setup ? fmtPrice(r.setup.target.price) : "—"}</td>
                   <td className="r num font-medium">{r.rr.toFixed(1)}</td>
-                  <td className="r hidden lg:table-cell"><HistoryTag h={record.find((x) => x.kind === r.kind && x.side === r.side)} /></td>
+                  <td className="r hidden lg:table-cell"><span className="flex flex-col items-end gap-0.5"><GradeChip grade={r.grade} avgR={r.kind_avg_r} /><HistoryTag h={record.find((x) => x.kind === r.kind && x.side === r.side)} /></span></td>
                   <td className="r num">{r.score ?? "—"}</td>
                 </tr>
               ))}

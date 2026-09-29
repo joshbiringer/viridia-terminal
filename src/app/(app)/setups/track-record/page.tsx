@@ -2,7 +2,10 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { fmtInt } from "@/lib/format";
 import { SETUP_LABEL } from "@/lib/analysis/candidates";
-import { TRACK_METHOD, getBacktestCoverage, getTrackRecord, type KindRecord } from "@/lib/analysis/track-record";
+import { TRACK_METHOD, getBacktestCoverage, getSetupQuality, getTrackRecord, type KindRecord } from "@/lib/analysis/track-record";
+import { GradeChip } from "@/components/analysis/GradeChip";
+import { QUALITY_METHOD } from "@/lib/analysis/quality";
+import { SETUP_LABEL as KIND_LABEL } from "@/lib/analysis/candidates";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SideChip } from "@/components/analysis/SideChip";
 
@@ -19,7 +22,8 @@ export default async function TrackRecordPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const score = SCORES.some(([k]) => k === sp.score) ? sp.score! : "";
   const rr = RRS.some(([k]) => k === sp.rr) ? sp.rr! : "";
-  const [rows, cov] = await Promise.all([getTrackRecord(score ? Number(score) : null, rr ? Number(rr) : null), getBacktestCoverage()]);
+  const [rows, cov, quality] = await Promise.all([getTrackRecord(score ? Number(score) : null, rr ? Number(rr) : null), getBacktestCoverage(), getSetupQuality().catch(() => [])]);
+  const split = quality[0]?.split_date ?? null;
   const all = rows.reduce(
     (a, r) => ({ resolved: a.resolved + r.resolved, targets: a.targets + r.targets, rSum: a.rSum + (r.avg_r ?? 0) * r.resolved, trials: a.trials + r.trials }),
     { resolved: 0, targets: 0, rSum: 0, trials: 0 },
@@ -43,6 +47,35 @@ export default async function TrackRecordPage({ searchParams }: { searchParams: 
         <Stat label="Average result" value={rTxt(all.resolved ? all.rSum / all.resolved : null)} note="per setup, in units of risk" />
         <Stat label="Securities replayed" value={cov ? `${fmtInt(cov.done)} of ${fmtInt(cov.total)}` : "—"} note="most-traded first; fills in over the day" />
       </section>
+
+      {quality.length > 0 && (
+        <section className="card">
+          <div className="card-h">
+            <div>
+              <h2 className="card-t">Out of sample: does each kind hold up?</h2>
+              <p className="card-s mt-0.5">Trials split at {split ? new Date(`${split}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "the median date"}; a kind earns a grade only when both halves agree</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="t dense">
+              <thead><tr><th>Setup</th><th>Grade</th><th className="r">Resolved</th><th className="r">Avg result</th><th className="r">First half</th><th className="r">Second half</th></tr></thead>
+              <tbody>
+                {quality.map((q) => (
+                  <tr key={`${q.kind}-${q.side}`}>
+                    <td className="whitespace-nowrap"><span className={q.side === "buy" ? "text-pos" : "text-neg"}>{q.side === "buy" ? "Buy" : "Sell"}</span> · {KIND_LABEL[q.kind] ?? q.kind}</td>
+                    <td><GradeChip grade={q.grade} avgR={q.avg_r} /></td>
+                    <td className="r num">{fmtInt(q.n)}</td>
+                    <td className="r num">{rTxt(q.avg_r)}</td>
+                    <td className="r num text-fg-2">{rTxt(q.r_early)} <span className="text-fg-3">({fmtInt(q.n_early)})</span></td>
+                    <td className="r num text-fg-2">{rTxt(q.r_late)} <span className="text-fg-3">({fmtInt(q.n_late)})</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="src"><span><b>Grades</b>{QUALITY_METHOD}</span><span><b>Used for</b>The Setups screen ranks by this record by default and can leave negative kinds out; Mission Control leaves them out.</span></div>
+        </section>
+      )}
 
       <section className="card">
         <div className="card-h flex-wrap gap-3">

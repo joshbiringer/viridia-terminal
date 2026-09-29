@@ -11,6 +11,8 @@ import { setupScan } from "@/lib/analysis/setup-scan";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SideChip } from "@/components/analysis/SideChip";
 import { HistoryTag } from "@/components/analysis/HistoryTag";
+import { GradeChip } from "@/components/analysis/GradeChip";
+import { QUALITY_METHOD } from "@/lib/analysis/quality";
 import { getTrackRecord } from "@/lib/analysis/track-record";
 
 export const metadata: Metadata = { title: "Setups" };
@@ -24,9 +26,10 @@ const RRS = [["", "Any"], ["1.5", "1.5 : 1 or better"], ["2", "2 : 1 or better"]
 const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+)"]] as const;
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
 const ALIGN = [["", "Any"], ["with", "With the weekly count"], ["against", "Against the weekly count"]] as const;
-const SORTS = [["confidence", "Pattern Confidence"], ["rr", "Reward : risk"], ["risk", "Smallest risk"], ["dollar_volume", "Dollar volume"], ["symbol", "Ticker"]] as const;
+const REC = [["", "Any record"], ["ok", "Leave out negative records"]] as const;
+const SORTS = [["quality", "Track record, then confidence"], ["confidence", "Pattern Confidence"], ["rr", "Reward : risk"], ["risk", "Smallest risk"], ["dollar_volume", "Dollar volume"], ["symbol", "Ticker"]] as const;
 
-type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk", string>>;
+type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk" | "rec", string>>;
 
 export default async function SetupsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const sp = await searchParams;
@@ -34,6 +37,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const side = pick(SIDES, sp.side), status = pick(STATUSES, sp.status), kind = pick(KINDS, sp.kind);
   const rr = pick(RRS, sp.rr), score = pick(SCORES, sp.score), dv = pick(DV, sp.dv), sort = pick(SORTS, sp.sort);
   const wk = pick(ALIGN, sp.wk);
+  const rec = pick(REC, sp.rec);
   const page = Math.max(1, Number(sp.page) || 1);
 
   const [rows, cov, record] = await Promise.all([
@@ -41,6 +45,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
       p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
       p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null,
       p_sort: sort, p_limit: PAGE, p_offset: (page - 1) * PAGE, p_aligned: wk ? wk === "with" : null,
+      p_exclude_negative: rec === "ok" ? true : null,
     }).catch(() => null),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
     getTrackRecord().catch(() => []),
@@ -49,11 +54,11 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const total = rows?.[0]?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const href = (patch: Params) => {
-    const merged: Params = { side, status, kind, rr, score, dv, wk, sort: sort === "confidence" ? "" : sort, page: "", ...patch };
+    const merged: Params = { side, status, kind, rr, score, dv, wk, rec, sort: sort === "quality" ? "" : sort, page: "", ...patch };
     const p = new URLSearchParams(Object.entries(merged).filter(([, v]) => v) as [string, string][]);
     return `/setups${p.size ? "?" + p : ""}`;
   };
-  const filtered = !!(side || status || kind || rr || score || dv || wk);
+  const filtered = !!(side || status || kind || rr || score || dv || wk || rec);
   const recomputing = coverage && coverage.ranked < coverage.total;
 
   return (
@@ -67,9 +72,9 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
       <section className="card">
         <nav className="flex flex-wrap gap-2 border-b border-line px-5 py-4" aria-label="Quick filters">
           {([["Buy setups", { side: "buy" }], ["Sell setups", { side: "sell" }], ["Active now", { status: "active" }],
-             ["Waiting for a pullback", { status: "waiting" }], ["With the weekly count", { wk: "with" }], ["Wave 3 under way", { kind: "wave3" }], ["2 : 1 or better", { rr: "2" }]] as [string, Params][])
+             ["Waiting for a pullback", { status: "waiting" }], ["With the weekly count", { wk: "with" }], ["No negative records", { rec: "ok" }], ["Wave 3 under way", { kind: "wave3" }], ["2 : 1 or better", { rr: "2" }]] as [string, Params][])
             .map(([label, patch]) => {
-              const on = Object.entries(patch).every(([k, v]) => ({ side, status, kind, rr, wk } as Record<string, string>)[k] === v);
+              const on = Object.entries(patch).every(([k, v]) => ({ side, status, kind, rr, wk, rec } as Record<string, string>)[k] === v);
               const next = on ? Object.fromEntries(Object.keys(patch).map((k) => [k, ""])) : patch;
               return (
                 <Link key={label} href={href(next)} aria-current={on ? "true" : undefined}
@@ -80,13 +85,14 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
             })}
         </nav>
 
-        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-[repeat(8,minmax(0,1fr))_auto]">
+        <form action="/setups" className="grid grid-cols-2 gap-3 border-b border-line px-5 py-4 md:grid-cols-4 xl:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
           <Select name="side" label="Side" value={side} options={SIDES} />
           <Select name="status" label="Status" value={status} options={STATUSES} />
           <Select name="kind" label="Setup" value={kind} options={KINDS} />
           <Select name="rr" label="Reward : risk" value={rr} options={RRS} />
           <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
           <Select name="wk" label="Weekly count" value={wk} options={ALIGN} />
+          <Select name="rec" label="Track record" value={rec} options={REC} />
           <Select name="dv" label="Dollar volume" value={dv} options={DV} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
           <div className="col-span-2 flex items-end gap-2 md:col-span-1">
@@ -144,7 +150,9 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                     <td className="r num text-neg">{r.setup ? fmtPrice(r.setup.stop.price) : "—"}</td>
                     <td className="r num text-pos">{r.setup ? fmtPrice(r.setup.target.price) : "—"}</td>
                     <td className="r num font-medium">{r.rr.toFixed(1)}</td>
-                    <td className="r hidden xl:table-cell"><HistoryTag h={record.find((x) => x.kind === r.kind && x.side === r.side)} /></td>
+                    <td className="r hidden xl:table-cell">
+                      <span className="flex flex-col items-end gap-0.5"><GradeChip grade={r.grade} avgR={r.kind_avg_r} /><HistoryTag h={record.find((x) => x.kind === r.kind && x.side === r.side)} /></span>
+                    </td>
                     <td className="r num hidden text-fg-2 sm:table-cell">{pct(r.risk_pct, 1).replace("+", "")}</td>
                     <td className="r num hidden sm:table-cell">{r.score ?? "—"}</td>
                     <td className="hidden whitespace-nowrap text-[12.5px] md:table-cell">
@@ -175,6 +183,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
         )}
         <div className="src">
           <span><b>Method</b>{SETUP_METHOD}</span>
+          <span><b>Track record</b>{QUALITY_METHOD} The default order ranks by the kind&apos;s replayed average result, then Pattern Confidence.</span>
           <span><b>Degree</b>Each security&apos;s setup comes from its preferred count at intermediate degree (primary, then minor, when intermediate has none).</span>
         </div>
       </section>

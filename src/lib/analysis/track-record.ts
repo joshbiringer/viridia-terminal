@@ -32,3 +32,13 @@ export async function getBacktestCoverage(): Promise<{ done: number; total: numb
   const { data } = await db().rpc("backtest_coverage", { p_version: BACKTEST_VERSION });
   return (data ?? null) as { done: number; total: number; trials: number } | null;
 }
+
+export interface KindQuality {
+  kind: SetupKind; side: "buy" | "sell"; n: number; avg_r: number | null; hit_rate: number | null;
+  split_date: string | null; n_early: number; r_early: number | null; n_late: number; r_late: number | null;
+  grade: "positive" | "mixed" | "negative" | "thin"; updated_at: string;
+}
+export async function getSetupQuality(): Promise<KindQuality[]> {
+  const { data } = await db().rpc("setup_quality");
+  return (data ?? []) as KindQuality[];
+}
