@@ -20,7 +20,7 @@ import { TrackEvent } from "@/components/TrackEvent";
 import { WelcomeGuide } from "@/components/WelcomeGuide";
 import { DegreeProvider } from "@/components/analysis/DegreeContext";
 import { StructureGlance } from "@/components/analysis/StructureGlance";
-import { SetupCard } from "@/components/analysis/SetupCard";
+import { SetupCard, type SetupCheck } from "@/components/analysis/SetupCard";
 import { getSymbolTrials, getSetupQuality, getTrackRecord } from "@/lib/analysis/track-record";
 import { computeSignals } from "@/lib/analysis/signals";
 import { SignalsPanel } from "@/components/analysis/SignalsPanel";
@@ -88,7 +88,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     );
   }
 
-  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians, quality, changes] = await Promise.all([
+  const [events, mappings, summaryRes, snapRes, swings, weekly, history, record, barsRes, spyRes, trials, fund, medians, quality, changes, checkRes] = await Promise.all([
     db().from("security_events").select("*").eq("security_id", sec.id).order("id", { ascending: false }).limit(20),
     db().from("security_provider_symbols").select("provider, provider_symbol, valid_from").eq("security_id", sec.id),
     db().rpc("get_bar_summary", { p_symbol: sec.symbol }),
@@ -104,7 +104,9 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     getSectorMedians().catch(() => [] as SectorMedian[]),
     getSetupQuality().catch(() => []),
     getStructureEvents({ symbols: [sec.symbol], days: 30, limit: 12 }).catch(() => [] as StructureEvent[]),
+    db().rpc("setup_check", { p_symbol: sec.symbol }),
   ]);
+  const setupCheck = (checkRes.data ?? null) as SetupCheck | null;
   const sectorMedian = fund?.sector ? medians.find((m) => m.sector === fund.sector) ?? null : null;
   const sum = (summaryRes.data ?? null) as BarSummary | null;
   const snap = (snapRes.data ?? null) as Snapshot | null;
@@ -199,7 +201,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
       </Section>
 
       <Section id="evidence" title="Evidence" note="The setup the preferred count implies, and how that kind of setup has done">
-        <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} quality={quality} />
+        <SetupCard setups={swings?.setups ?? null} reasons={swings?.setupReasons ?? null} close={sum?.last_close ?? null} record={record} quality={quality} check={setupCheck} />
       </Section>
 
       <Section id="engine" title="Engine details">

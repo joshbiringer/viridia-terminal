@@ -4,6 +4,7 @@ import { Sparkline } from "@/components/Sparkline";
 import { SideChip } from "@/components/analysis/SideChip";
 import { HistoryTag } from "@/components/analysis/HistoryTag";
 import { GradeChip } from "@/components/analysis/GradeChip";
+import { SCENARIO_NOTE } from "@/lib/analysis/scenario";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { TREND_LABEL, type Breadth } from "@/lib/market-data/snapshot";
 import { fmtInt } from "@/lib/format";
@@ -126,7 +127,7 @@ export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRe
       {rows.length ? (
         <div className="overflow-x-auto">
           <table className="t dense text-[13px]">
-            <thead><tr><th>Ticker</th><th>Setup</th><th className="r">Entry</th><th className="r">Stop</th><th className="r">Target</th><th className="r">R : R</th><th className="r hidden lg:table-cell">History</th><th className="r">Conf.</th></tr></thead>
+            <thead><tr><th>Ticker</th><th>Setup</th><th className="r">Reference</th><th className="r">Invalidation</th><th className="r">Structural target</th><th className="r">R : R</th><th className="r hidden lg:table-cell">History</th><th className="r">Conf.</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.symbol}>
@@ -144,7 +145,7 @@ export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRe
           </table>
         </div>
       ) : <p className="px-4 py-5 text-[13px] text-fg-2">No liquid setup at 1.5 : 1 or better right now.</p>}
-      <div className="src"><span>Research output from each security&apos;s preferred count, not a recommendation. The track record shows how each kind has done.</span></div>
+      <div className="src"><span>{SCENARIO_NOTE} Each is checked for sane levels before it is shown; the track record shows how each kind has done.</span></div>
     </section>
   );
 }

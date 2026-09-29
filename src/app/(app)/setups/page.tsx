@@ -14,12 +14,13 @@ import { HistoryTag } from "@/components/analysis/HistoryTag";
 import { GradeChip } from "@/components/analysis/GradeChip";
 import { QUALITY_METHOD } from "@/lib/analysis/quality";
 import { getTrackRecord } from "@/lib/analysis/track-record";
+import { SCENARIO_NOTE } from "@/lib/analysis/scenario";
 
 export const metadata: Metadata = { title: "Setups" };
 export const dynamic = "force-dynamic";
 
 const PAGE = 50;
-const SIDES = [["", "Buy and sell"], ["buy", "Buy"], ["sell", "Sell"]] as const;
+const SIDES = [["", "Bullish and bearish"], ["buy", "Bullish"], ["sell", "Bearish"]] as const;
 const STATUSES = [["", "Active and waiting"], ["active", "Active now"], ["waiting", "Waiting for entry"]] as const;
 const KINDS = [["", "Any setup"], ...(Object.entries(SETUP_LABEL) as [SetupKind, string][])] as const;
 const RRS = [["", "Any"], ["1.5", "1.5 : 1 or better"], ["2", "2 : 1 or better"], ["3", "3 : 1 or better"]] as const;
@@ -27,7 +28,7 @@ const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+
 const DV = [["", "Any"], ["5000000", "$5M+"], ["25000000", "$25M+"], ["100000000", "$100M+"], ["1000000000", "$1B+"]] as const;
 const ALIGN = [["", "Any"], ["with", "With the weekly count"], ["against", "Against the weekly count"]] as const;
 const REC = [["", "Any record"], ["ok", "Leave out negative records"]] as const;
-const RISK = [["", "Any"], ["0.1", "Stop within 10%"], ["0.2", "Stop within 20%"], ["0.3", "Stop within 30%"]] as const;
+const RISK = [["", "Any"], ["0.1", "Within 10%"], ["0.2", "Within 20%"], ["0.3", "Within 30%"]] as const;
 const SORTS = [["quality", "Track record, then confidence"], ["confidence", "Pattern Confidence"], ["rr", "Reward : risk"], ["risk", "Smallest risk"], ["dollar_volume", "Dollar volume"], ["symbol", "Ticker"]] as const;
 
 type Params = Partial<Record<"side" | "status" | "kind" | "rr" | "score" | "dv" | "sort" | "page" | "wk" | "rec" | "risk", string>>;
@@ -42,7 +43,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
   const risk = pick(RISK, sp.risk);
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const [rows, cov, record] = await Promise.all([
+  const [rows, cov, record, all] = await Promise.all([
     setupScan({
       p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
       p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null,
@@ -51,7 +52,13 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
     }).catch(() => null),
     db().rpc("structure_coverage", { p_version: ANALYSIS_VERSION }),
     getTrackRecord().catch(() => []),
+    setupScan({
+      p_side: side || null, p_status: status || null, p_kind: kind || null, p_min_rr: rr ? Number(rr) : null,
+      p_min_score: score ? Number(score) : null, p_min_dollar_volume: dv ? Number(dv) : null, p_limit: 1,
+      p_aligned: wk ? wk === "with" : null, p_exclude_negative: rec === "ok" ? true : null, p_max_risk: risk ? Number(risk) : null, p_include_flagged: true,
+    }).catch(() => null),
   ]);
+  const heldBack = Math.max(0, (all?.[0]?.total ?? 0) - (rows?.[0]?.total ?? 0));
   const coverage = (cov.data ?? null) as { ranked: number; total: number } | null;
   const total = rows?.[0]?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
@@ -67,13 +74,13 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
     <>
       <PageHeader
         title="Setups"
-        description="Buy and sell setups from each security's preferred daily wave count: where to enter, where the count is wrong, and where it points."
+        description="Bullish and bearish scenarios from each security's preferred daily wave count: the reference level, where the count is invalidated, and the structural target. Each is checked for sane levels before it is shown."
         actions={<Link href="/setups/track-record" className="btn">Track record</Link>}
       />
 
       <section className="card">
         <nav className="flex flex-wrap gap-2 border-b border-line px-5 py-4" aria-label="Quick filters">
-          {([["Buy setups", { side: "buy" }], ["Sell setups", { side: "sell" }], ["Active now", { status: "active" }],
+          {([["Bullish", { side: "buy" }], ["Bearish", { side: "sell" }], ["Active now", { status: "active" }],
              ["Waiting for a pullback", { status: "waiting" }], ["With the weekly count", { wk: "with" }], ["No negative records", { rec: "ok" }], ["Wave 3 under way", { kind: "wave3" }], ["2 : 1 or better", { rr: "2" }]] as [string, Params][])
             .map(([label, patch]) => {
               const on = Object.entries(patch).every(([k, v]) => ({ side, status, kind, rr, wk, rec } as Record<string, string>)[k] === v);
@@ -95,7 +102,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
           <Select name="score" label="Pattern Confidence" value={score} options={SCORES} />
           <Select name="wk" label="Weekly count" value={wk} options={ALIGN} />
           <Select name="rec" label="Track record" value={rec} options={REC} />
-          <Select name="risk" label="Risk to stop" value={risk} options={RISK} />
+          <Select name="risk" label="Invalidation distance" value={risk} options={RISK} />
           <Select name="dv" label="Dollar volume" value={dv} options={DV} />
           <Select name="sort" label="Sort by" value={sort} options={SORTS} />
           <div className="col-span-2 flex items-end gap-2 md:col-span-1">
@@ -106,6 +113,7 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
 
         <div className="flex flex-wrap items-center gap-3 px-5 py-3 text-[13px]">
           <span className="num font-medium">{fmtInt(total)} setups</span>
+          {heldBack > 0 && <span className="text-fg-3" title="Scenarios whose levels failed a sanity check (distance, ATR, reward/risk, freshness or a suspected split) are not shown">{fmtInt(heldBack)} held back by level checks</span>}
           {recomputing && (
             <span className="text-fg-3">
               Setups appear as the engine recomputes: <span className="num">{fmtInt(coverage!.ranked)}</span> of <span className="num">{fmtInt(coverage!.total)}</span> securities so far, most-traded first.
@@ -124,10 +132,10 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
                   <th className="hidden lg:table-cell">Company</th>
                   <th>Setup</th>
                   <th className="r">Close</th>
-                  <th className="r">Entry</th>
-                  <th className="r">Stop</th>
-                  <th className="r">Target</th>
-                  <th className="r" title="Reward ÷ risk from the middle of the entry range">R : R</th>
+                  <th className="r">Reference</th>
+                  <th className="r">Invalidation</th>
+                  <th className="r">Structural target</th>
+                  <th className="r" title="Reward ÷ risk from the middle of the reference range">R : R</th>
                   <th className="r hidden xl:table-cell" title="How this kind of setup has done in the replayed history">History</th>
                   <th className="r hidden sm:table-cell" title="Distance from entry to stop">Risk</th>
                   <th className="r hidden sm:table-cell" title="Pattern Confidence of the preferred count">Conf.</th>
@@ -185,6 +193,8 @@ export default async function SetupsPage({ searchParams }: { searchParams: Promi
           </div>
         )}
         <div className="src">
+          <span><b>Note</b>{SCENARIO_NOTE}</span>
+          <span><b>Checks</b>A scenario is shown only if its reference level is within 30% of price, its invalidation within 25% and 8 ATR, its target within 100% and 25 ATR, reward/risk reconciles and sits between 1 and 10, the analysis is current, and the history shows no recent split-like jump.</span>
           <span><b>Method</b>{SETUP_METHOD}</span>
           <span><b>Track record</b>{QUALITY_METHOD} The default order ranks by the kind&apos;s replayed average result, then Pattern Confidence.</span>
           <span><b>Degree</b>Each security&apos;s setup comes from its preferred count at intermediate degree (primary, then minor, when intermediate has none).</span>

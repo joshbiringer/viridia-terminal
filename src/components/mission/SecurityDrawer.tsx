@@ -10,6 +10,7 @@ import { fmtPrice } from "@/lib/market-data/bars";
 import { TREND_LABEL, fmtDollars } from "@/lib/market-data/snapshot";
 import { stockHref } from "@/lib/format";
 import { SETUP_LABEL, type SetupKind } from "@/lib/analysis/candidates";
+import { FLAG_LABEL, SCENARIO_NOTE } from "@/lib/analysis/scenario";
 import { confidenceBand, fmtPct, returns, waveShort, type SecurityPreview } from "@/lib/analysis/mission";
 
 type Ctx = { open: (symbol: string) => void; symbol: string | null };
@@ -114,7 +115,9 @@ const toneOf = (v: number | null) => (v == null ? undefined : v >= 0 ? "pos" : "
 
 function PreviewBody({ p }: { p: SecurityPreview }) {
   const r = returns(p);
-  const d = p.daily, s = p.setup, z = p.zone;
+  const d = p.daily, z = p.zone;
+  const flags = p.setup_check?.flags ?? [];
+  const s = flags.length ? null : p.setup;
   const count = d ? waveShort(d.pattern, d.complete, d.wave, d.wave_dir) : null;
   const weekly = p.weekly ? waveShort(p.weekly.pattern, p.weekly.complete, p.weekly.wave, p.weekly.wave_dir) : null;
   const band = confidenceBand(d?.score);
@@ -165,17 +168,18 @@ function PreviewBody({ p }: { p: SecurityPreview }) {
         <h3 className="label mb-1">Setup</h3>
         {s ? (
           <dl className="divide-y divide-line">
-            <Row k={s.side === "buy" ? "Buy" : "Sell"} v={SETUP_LABEL[s.kind as SetupKind] ?? s.kind} note={s.status === "waiting" ? "Waiting for entry" : "Active"} tone={s.side === "buy" ? "pos" : "neg"} />
-            <Row k="Entry" v={s.entry.low === s.entry.high ? fmtPrice(s.entry.low) : `${fmtPrice(s.entry.low)} – ${fmtPrice(s.entry.high)}`} />
-            <Row k="Stop" v={fmtPrice(s.stop.price)} tone="neg" />
-            <Row k="Target" v={fmtPrice(s.target.price)} tone="pos" />
+            <Row k={s.side === "buy" ? "Bullish" : "Bearish"} v={SETUP_LABEL[s.kind as SetupKind] ?? s.kind} note={s.status === "waiting" ? "Waiting for the reference level" : "Active"} tone={s.side === "buy" ? "pos" : "neg"} />
+            <Row k="Reference level" v={s.entry.low === s.entry.high ? fmtPrice(s.entry.low) : `${fmtPrice(s.entry.low)} – ${fmtPrice(s.entry.high)}`} />
+            <Row k="Invalidation" v={fmtPrice(s.stop.price)} tone="neg" />
+            <Row k="Structural target" v={fmtPrice(s.target.price)} tone="pos" />
             <Row k="Reward : risk" v={`${s.rr.toFixed(1)} : 1`} />
           </dl>
-        ) : <p className="text-[13px] text-fg-3">No setup passes the checks for this count right now.</p>}
+        ) : <p className="text-[13px] text-fg-3">{p.setup && flags.length ? `The scenario was held back: ${flags.map((f) => FLAG_LABEL[f] ?? f).join("; ")}.` : "No scenario passes the checks for this count right now."}</p>}
+        {s && <p className="mt-1.5 text-[11.5px] text-fg-3">{SCENARIO_NOTE}</p>}
       </section>
 
       <section>
-        <h3 className="label mb-1">Recent and upcoming</h3>
+        <h3 className="label mb-1">Recent</h3>
         <ul className="flex flex-col gap-1.5 text-[13px] text-fg-2">
           {last ? (
             <li>
@@ -184,7 +188,6 @@ function PreviewBody({ p }: { p: SecurityPreview }) {
                 : <>Count unchanged at the last recorded session ({last.day}).</>}
             </li>
           ) : <li>No recorded structure history yet.</li>}
-          <li className="text-fg-3">Earnings and economic calendars aren&apos;t connected yet.</li>
           {p.adv20 != null && <li className="text-fg-3">Trades {fmtDollars(p.adv20)} a day (20-day average).</li>}
         </ul>
       </section>

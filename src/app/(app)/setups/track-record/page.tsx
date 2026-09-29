@@ -62,7 +62,7 @@ export default async function TrackRecordPage({ searchParams }: { searchParams: 
               <tbody>
                 {quality.map((q) => (
                   <tr key={`${q.kind}-${q.side}`}>
-                    <td className="whitespace-nowrap"><span className={q.side === "buy" ? "text-pos" : "text-neg"}>{q.side === "buy" ? "Buy" : "Sell"}</span> · {KIND_LABEL[q.kind] ?? q.kind}</td>
+                    <td className="whitespace-nowrap"><span className={q.side === "buy" ? "text-pos" : "text-neg"}>{q.side === "buy" ? "Bullish" : "Bearish"}</span> · {KIND_LABEL[q.kind] ?? q.kind}</td>
                     <td><GradeChip grade={q.grade} avgR={q.avg_r} /></td>
                     <td className="r num">{fmtInt(q.n)}</td>
                     <td className="r num">{rTxt(q.avg_r)}</td>
@@ -92,7 +92,7 @@ export default async function TrackRecordPage({ searchParams }: { searchParams: 
                 <tr>
                   <th>Setup</th>
                   <th className="r">Resolved</th>
-                  <th className="r" title="Target reached before the stop">Hit rate</th>
+                  <th className="r" title="Structural target reached before the invalidation">Hit rate</th>
                   <th className="r" title="Average result per setup in multiples of the initial risk">Avg result</th>
                   <th className="r hidden sm:table-cell">Stopped</th>
                   <th className="r hidden sm:table-cell">Expired</th>

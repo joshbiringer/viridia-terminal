@@ -388,7 +388,7 @@ function Row({ p }: { p: Position }) {
         {g.weekly_dir && g.glance_wave_dir && <span className="text-[12px] text-fg-3"> · weekly {g.weekly_dir === g.glance_wave_dir ? "agrees" : "differs"}</span>}
       </td>
       <td className="hidden whitespace-nowrap text-[13px] lg:table-cell">
-        {g.setup_side ? <span className={g.setup_side === "buy" ? "text-pos" : "text-neg"}>{g.setup_side === "buy" ? "Buy" : "Sell"} · {SETUP_LABEL[g.setup_kind as SetupKind] ?? g.setup_kind}</span> : <span className="text-fg-3">—</span>}
+        {g.setup_side ? <span className={g.setup_side === "buy" ? "text-pos" : "text-neg"}>{g.setup_side === "buy" ? "Bullish" : "Bearish"} · {SETUP_LABEL[g.setup_kind as SetupKind] ?? g.setup_kind}</span> : <span className="text-fg-3">—</span>}
       </td>
     </tr>
   );

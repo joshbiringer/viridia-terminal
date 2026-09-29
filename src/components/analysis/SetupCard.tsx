@@ -8,6 +8,9 @@ import { BAND_LABEL, SETUP_LABEL, SETUP_METHOD, type SetupReasons, type Setups }
 import { SETUP_STORY, entryText } from "@/lib/analysis/setups";
 import { useDegree } from "./DegreeContext";
 import { SideChip } from "./SideChip";
+import { FLAG_LABEL, SCENARIO_HORIZON, SCENARIO_NOTE, setupFlags } from "@/lib/analysis/scenario";
+
+export interface SetupCheck { atr: number | null; analysis_ts: string | null; last_ts: string | null; split: boolean }
 
 const dist = (price: number, close: number | null) => (close ? price / close - 1 : null);
 
@@ -18,34 +21,48 @@ const dist = (price: number, close: number | null) => (close ? price / close - 1
 export interface KindStat { kind: string; side: string; resolved: number; hit_rate: number | null; avg_r: number | null }
 export interface KindGrade { kind: string; side: string; grade: string; r_early: number | null; r_late: number | null }
 
-export function SetupCard({ setups, reasons, close, record, quality }: { setups: Setups | null; reasons?: SetupReasons | null; close: number | null; record?: KindStat[] | null; quality?: KindGrade[] | null }) {
+export function SetupCard({ setups, reasons, close, record, quality, check }: { setups: Setups | null; reasons?: SetupReasons | null; close: number | null; record?: KindStat[] | null; quality?: KindGrade[] | null; check?: SetupCheck | null }) {
   const { degree, setDegree } = useDegree("intermediate");
-  const s = setups?.[degree] ?? null;
+  const raw = setups?.[degree] ?? null;
+  // every scenario is checked for sane levels before it is shown (same checks as the database's setup_flags)
+  const flags = raw ? setupFlags(raw, raw.side, close, check?.atr ?? null, check?.analysis_ts, check?.last_ts, check?.split ?? false) : [];
+  const s = flags.length ? null : raw;
   const others = DEGREES.filter((d) => d !== degree && setups?.[d]);
 
   return (
     <section className="card" aria-labelledby="setup-title">
       <div className="card-h">
         <div>
-          <h2 id="setup-title" className="card-t">Wave setup</h2>
+          <h2 id="setup-title" className="card-t">Setup</h2>
           <p className="card-s mt-0.5">{DEGREE_LABEL[degree]} degree · from the preferred count</p>
         </div>
-        {s && <div className="ml-auto flex items-center gap-2"><SideChip side={s.side} /><span className="chip">{s.status === "active" ? "Active now" : "Waiting for entry"}</span></div>}
+        {s && <div className="ml-auto flex items-center gap-2"><SideChip side={s.side} /><span className="chip">{s.status === "active" ? "Active now" : "Waiting for the reference level"}</span></div>}
       </div>
 
       {!s ? (
         <div className="px-5 py-5">
-          <p className="text-[14px] font-medium">No setup at {DEGREE_LABEL[degree].toLowerCase()} degree right now</p>
-          <p className="mt-1 max-w-[680px] text-[13px] leading-relaxed text-fg-2">
-            {reasons?.[degree] ?? "A setup needs the preferred count to define a stop and a target on the right sides of the entry."}{" "}
-            Viridia shows nothing rather than a guess.
-          </p>
+          {raw && flags.length ? (
+            <>
+              <p className="text-[14px] font-medium">The {DEGREE_LABEL[degree].toLowerCase()}-degree scenario was held back</p>
+              <p className="mt-1 max-w-[680px] text-[13px] leading-relaxed text-fg-2">
+                Its levels didn&apos;t pass Viridia&apos;s checks: {flags.map((f) => FLAG_LABEL[f] ?? f).join("; ")}. It&apos;s listed for review instead of shown.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-[14px] font-medium">No scenario at {DEGREE_LABEL[degree].toLowerCase()} degree right now</p>
+              <p className="mt-1 max-w-[680px] text-[13px] leading-relaxed text-fg-2">
+                {reasons?.[degree] ?? "A scenario needs the preferred count to define an invalidation and a structural target on opposite sides of the reference level."}{" "}
+                Viridia shows nothing rather than a guess.
+              </p>
+            </>
+          )}
           {others.length > 0 && (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-fg-2">
               Setups at other degrees:
               {others.map((d) => (
                 <button key={d} className="btn sm" onClick={() => setDegree(d as Degree)}>
-                  {DEGREE_LABEL[d]} · {setups![d]!.side === "buy" ? "Buy" : "Sell"}
+                  {DEGREE_LABEL[d]} · {setups![d]!.side === "buy" ? "Bullish" : "Bearish"}
                 </button>
               ))}
             </p>
@@ -61,15 +78,18 @@ export function SetupCard({ setups, reasons, close, record, quality }: { setups:
             </p>
           </div>
           <div className="flex flex-col gap-3.5 bg-panel px-5 py-5">
-            <Row name="Entry" value={entryText(s)} d={dist((s.entry.low + s.entry.high) / 2, close)} note={s.entry.zoneCount ? `${s.entry.basis} (${s.entry.zoneCount} relationships)` : s.entry.basis} />
-            <Row name="Stop" value={fmtPrice(s.stop.price)} d={dist(s.stop.price, close)} note={s.stop.rule ? `${s.stop.basis} (hard rule)` : s.stop.basis} tone="neg" />
-            <Row name="Target" value={fmtPrice(s.target.price)} d={dist(s.target.price, close)} note={s.target.basis} tone="pos" />
+            <Row name="Reference level" value={entryText(s)} d={dist((s.entry.low + s.entry.high) / 2, close)} note={s.entry.zoneCount ? `${s.entry.basis} (${s.entry.zoneCount} relationships)` : s.entry.basis} />
+            <Row name="Invalidation" value={fmtPrice(s.stop.price)} d={dist(s.stop.price, close)} note={s.stop.rule ? `${s.stop.basis} (hard rule)` : s.stop.basis} tone="neg" />
+            <Row name="Structural target" value={fmtPrice(s.target.price)} d={dist(s.target.price, close)} note={s.target.basis} tone="pos" />
           </div>
           <div className="flex flex-col gap-3 bg-panel px-5 py-5">
             <div>
               <div className="text-[12.5px] text-fg-3">Reward : risk</div>
               <div className="num text-[26px] font-[650] tracking-[-0.02em]">{s.rr.toFixed(1)}<span className="text-[15px] text-fg-3"> : 1</span></div>
-              <p className="text-[12px] text-fg-3">Risk to the stop: {pct(s.riskPct, 1).replace("+", "")} of the entry price</p>
+              <p className="text-[12px] text-fg-3">
+                Invalidation {pct(s.riskPct, 1).replace("+", "")} from the reference level
+                {check?.atr ? <> · {(Math.abs((s.entry.low + s.entry.high) / 2 - s.stop.price) / check.atr).toFixed(1)} ATR</> : null}
+              </p>
             </div>
             <TrackLine stat={record?.find((r) => r.kind === s.kind && r.side === s.side) ?? null} grade={quality?.find((q) => q.kind === s.kind && q.side === s.side) ?? null} />
             {s.cautions.length > 0 && (
@@ -80,7 +100,11 @@ export function SetupCard({ setups, reasons, close, record, quality }: { setups:
           </div>
         </div>
       )}
-      <div className="src"><span><b>Method</b>{SETUP_METHOD}</span></div>
+      <div className="src">
+        <span><b>Note</b>{SCENARIO_NOTE}</span>
+        {s && <span><b>Basis</b>{DEGREE_LABEL[degree]} degree, daily bars{check?.analysis_ts ? ` through ${new Date(check.analysis_ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}. {SCENARIO_HORIZON}</span>}
+        <span><b>Method</b>{SETUP_METHOD}</span>
+      </div>
     </section>
   );
 }

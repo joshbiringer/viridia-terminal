@@ -67,7 +67,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
   const watchLines: Line[] | null = viewer ? watchSentences.map((c) => ({ symbol: c.symbol, text: c.text })) : null;
   const setupLines: Line[] = topSetups.map((r) => ({
     symbol: r.symbol,
-    text: `${r.side === "buy" ? "Buy" : "Sell"} · ${SETUP_LABEL[r.kind] ?? r.kind}${r.status === "waiting" ? " (waiting)" : ""} · entry ${r.setup ? entryText(r.setup) : "—"}, stop ${r.setup ? fmtPrice(r.setup.stop.price) : "—"}, target ${r.setup ? fmtPrice(r.setup.target.price) : "—"} · ${r.rr.toFixed(1)} : 1`,
+    text: `${r.side === "buy" ? "Bullish" : "Bearish"} · ${SETUP_LABEL[r.kind] ?? r.kind}${r.status === "waiting" ? " (waiting)" : ""} · reference ${r.setup ? entryText(r.setup) : "—"}, invalidation ${r.setup ? fmtPrice(r.setup.stop.price) : "—"}, structural target ${r.setup ? fmtPrice(r.setup.target.price) : "—"} · ${r.rr.toFixed(1)} : 1`,
   }));
   const events = Object.fromEntries(watchSentences.map((c) => [c.symbol, c.text]));
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" });

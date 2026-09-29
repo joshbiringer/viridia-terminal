@@ -244,6 +244,7 @@ export interface SecurityPreview {
     alt_score: number | null; hold: number | null; hold_side: string | null; target: number | null } | null;
   weekly: { pattern: string | null; complete: boolean | null; wave: string | null; wave_dir: string | null; score: number | null } | null;
   setup: PreviewSetup | null; zone: PreviewZone | null;
+  setup_check?: { flags: string[]; atr: number | null; analysis_ts: string | null; last_ts: string | null; split: boolean } | null;
   history: { day: string; pattern: string | null; wave: string | null; wave_dir: string | null; score: number | null; setup_side: string | null; setup_kind: string | null }[];
 }
 

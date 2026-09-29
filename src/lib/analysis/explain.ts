@@ -47,7 +47,7 @@ export const QUESTIONS = [
   { id: "invalidate", q: "What invalidates this count?", keys: ["invalid", "stop", "break", "wrong", "risk", "level"] },
   { id: "targets", q: "Explain the Fibonacci targets.", keys: ["target", "fib", "zone", "confluence", "where"] },
   { id: "alternate", q: "Show the alternate count.", keys: ["alternate", "other", "else", "second"] },
-  { id: "setup", q: "Is there a buy or sell setup?", keys: ["setup", "buy", "sell", "signal", "trade", "entry"] },
+  { id: "setup", q: "Is there a bullish or bearish setup?", keys: ["setup", "buy", "sell", "signal", "trade", "entry"] },
   { id: "wave", q: "What is the wave in progress usually like?", keys: ["like", "personality", "wave 1", "wave 2", "wave 3", "wave 4", "wave 5", "wave a", "wave b", "wave c", "learn", "teach", "explain wave"] },
   { id: "weekly", q: "Compare the weekly and daily structures.", keys: ["weekly", "week", "daily", "timeframe", "compare", "align"] },
   { id: "changed", q: "What changed since yesterday?", keys: ["change", "yesterday", "new", "different", "since"] },
@@ -218,18 +218,18 @@ function setup(ctx: ExplainContext): Answer {
   const title = "The setup";
   const s = ctx.setups?.[ctx.degree] ?? null;
   if (!s) {
-    const why = ctx.setupReasons?.[ctx.degree] ?? "A setup needs a stop and a target on the right sides of the entry, with at least as much reward as risk.";
+    const why = ctx.setupReasons?.[ctx.degree] ?? "A setup needs an invalidation and a structural target on opposite sides of the reference level, with at least as much reward as risk.";
     return { title, blocks: [p(`The preferred ${DEGREE_LABEL[ctx.degree].toLowerCase()} count doesn't define a setup right now. ${why} Viridia shows nothing rather than a guess.`)], sources: ["Viridia setup method"] };
   }
   return {
-    title: `${s.side === "buy" ? "Buy" : "Sell"} setup: ${SETUP_LABEL[s.kind]}`,
+    title: `${s.side === "buy" ? "Bullish" : "Bearish"} setup: ${SETUP_LABEL[s.kind]}`,
     blocks: [
       p(SETUP_STORY[s.kind]),
       { kind: "levels", rows: [
-        { name: s.status === "active" ? "Entry (now)" : "Entry (waiting)", value: entryText(s), note: s.entry.basis },
-        { name: "Stop", value: fmtPrice(s.stop.price), note: `${s.stop.basis}${dist(s.stop.price, ctx.close)}`, tone: "neg" },
-        { name: "Target", value: fmtPrice(s.target.price), note: `${s.target.basis}${dist(s.target.price, ctx.close)}`, tone: "pos" },
-        { name: "Reward : risk", value: `${s.rr.toFixed(1)} : 1`, note: `Risk to the stop is ${pct(s.riskPct, 1).replace("+", "")} of the entry price.` },
+        { name: s.status === "active" ? "Reference level (now)" : "Reference level (waiting)", value: entryText(s), note: s.entry.basis },
+        { name: "Invalidation", value: fmtPrice(s.stop.price), note: `${s.stop.basis}${dist(s.stop.price, ctx.close)}`, tone: "neg" },
+        { name: "Structural target", value: fmtPrice(s.target.price), note: `${s.target.basis}${dist(s.target.price, ctx.close)}`, tone: "pos" },
+        { name: "Reward : risk", value: `${s.rr.toFixed(1)} : 1`, note: `The invalidation is ${pct(s.riskPct, 1).replace("+", "")} from the reference level.` },
       ] },
       ...(s.cautions.length ? [{ kind: "list", items: s.cautions.map((c) => ({ text: c })) } as Block] : []),
       p("This restates the wave count as a trade. It is research output, not a recommendation; position size and whether to act are yours."),
@@ -386,7 +386,7 @@ export function clientAnswer(id: QuestionId, ctx: ExplainContext): Answer {
     case "setup": {
       const s = ctx.setups?.[ctx.degree] ?? null;
       return { title, blocks: [
-        p(s ? `The pattern defines a clear risk point at ${fmtPrice(s.stop.price)} and a reference level at ${fmtPrice(s.target.price)}. For every dollar of downside to the risk point, the distance to the reference level is about ${s.rr.toFixed(1)} dollars.` : "The pattern doesn't define a clear risk point and reference level right now."),
+        p(s ? `The pattern defines a level where this view would be wrong, ${fmtPrice(s.stop.price)}, and a structural target, ${fmtPrice(s.target.price)}. The distance to the target is about ${s.rr.toFixed(1)} times the distance to that level.` : "The pattern doesn't define a clear invalidation level and target right now."),
         p("Whether that matters depends on your goals, time horizon and the role this holding plays in your plan."), p(CLIENT_NOTE),
       ], sources: [] };
     }

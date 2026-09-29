@@ -11,13 +11,14 @@ export interface SetupRow {
   weekly_dir: "up" | "down" | null;
   /** The setup kind's replayed record (setup_kind_quality); null until graded. */
   grade: Grade | null; kind_avg_r: number | null;
+  atr: number | null; analysis_ts: string | null; flags: string[];
   total: number;
 }
 
 export interface SetupScanParams {
   p_side?: string | null; p_status?: string | null; p_kind?: string | null; p_min_rr?: number | null;
   p_min_score?: number | null; p_min_dollar_volume?: number | null; p_sort?: string; p_limit?: number; p_offset?: number;
-  p_aligned?: boolean | null; p_exclude_negative?: boolean | null; p_max_risk?: number | null;
+  p_aligned?: boolean | null; p_exclude_negative?: boolean | null; p_max_risk?: number | null; p_include_flagged?: boolean;
 }
 
 /** Securities whose preferred daily count defines a setup (setup_scan). */

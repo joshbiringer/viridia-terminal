@@ -37,7 +37,7 @@ export function AskCommand({ market, improving, watchlist, setups }: {
     switch (cmd.kind) {
       case "market": return setResult({ kind: "lines", title: "Today's market", lines: market, empty: "Market data couldn't be loaded." });
       case "improving": return setResult({ kind: "lines", title: "Improving structures", lines: improving,
-        empty: "No security's count turned up or gained a buy setup between the last two recorded sessions.",
+        empty: "No security's count turned up or gained a bullish setup between the last two recorded sessions.",
         more: { href: "/scanner?s=wave3&score=58&dv=25000000&sort=confidence", label: "Wave 3 in progress, medium confidence or higher" } });
       case "watchlist": return setResult(watchlist === null
         ? { kind: "lines", title: "Watchlist changes", lines: [], empty: "Sign in and add securities to a watchlist to track their changes here.", more: { href: "/signin?next=/terminal", label: "Sign in" } }
@@ -134,7 +134,7 @@ function ResultView({ r }: { r: Result }) {
     ["Daily count", (p) => (p.daily ? waveShort(p.daily.pattern, p.daily.complete, p.daily.wave, p.daily.wave_dir) ?? "—" : "—")],
     ["Pattern Confidence", (p) => (p.daily?.score != null ? String(p.daily.score) : "—")],
     ["Weekly count", (p) => (p.weekly ? waveShort(p.weekly.pattern, p.weekly.complete, p.weekly.wave, p.weekly.wave_dir) ?? "—" : "—")],
-    ["Setup", (p) => (p.setup ? `${p.setup.side === "buy" ? "Buy" : "Sell"} · ${SETUP_LABEL[p.setup.kind as SetupKind] ?? p.setup.kind} · ${p.setup.rr.toFixed(1)} : 1` : "None")],
+    ["Setup", (p) => (p.setup ? `${p.setup.side === "buy" ? "Bullish" : "Bearish"} · ${SETUP_LABEL[p.setup.kind as SetupKind] ?? p.setup.kind} · ${p.setup.rr.toFixed(1)} : 1` : "None")],
     ["Nearest Fib zone", (p) => (p.zone ? `${fmtPrice(p.zone.low)}–${fmtPrice(p.zone.high)} (${fmtPct(p.zone.distancePct)})` : "—")],
   ];
   return (
