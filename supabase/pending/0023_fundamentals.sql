@@ -1,3 +1,7 @@
+-- NOT APPLIED. Waiting on an SEC contact email for the User-Agent (SEC returned 403 to the placeholder).
+-- To enable: set SEC_UA in src/lib/fundamentals/sec.ts, deploy, confirm /api/sec/frames returns rows,
+-- then move this file back to supabase/migrations and apply it.
+
 -- Fundamentals from SEC EDGAR (Cycle 5, phase 2). Public data only:
 --   * XBRL frames: revenue, net income, operating income, gross profit (fiscal years nearest
 --     calendar 2024 and 2025) and shares outstanding (latest quarter ends), for every filer at once.

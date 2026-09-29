@@ -132,7 +132,7 @@ function Results({ r }: { r: XRay }) {
         </section>
       </div>
 
-      <section className="card">
+      {r.sectors.some((s) => s.sector !== FUNDS_BUCKET && s.sector !== UNCLASSIFIED) && <section className="card">
         <div className="card-h">
           <h2 className="card-t">Sector exposure</h2>
           <span className="card-s">Stocks by the sector of their SEC industry code</span>
@@ -152,7 +152,7 @@ function Results({ r }: { r: XRay }) {
           </ul>
           <p className="text-[12px] text-fg-3">Sectors are mapped from each company&apos;s SEC SIC code, an approximation of the usual 11 sectors. Funds are one bucket because their holdings aren&apos;t looked through yet.</p>
         </div>
-      </section>
+      </section>}
 
       <section className="card">
         <div className="card-h"><h2 className="card-t">Holdings</h2></div>
@@ -200,7 +200,7 @@ function Results({ r }: { r: XRay }) {
       </div>
 
       <section className="rounded-[var(--r-lg)] border border-dashed border-line px-5 py-4 text-[13px] text-fg-2">
-        <b className="font-medium text-fg">Not in the X-Ray yet.</b> Geographic and factor exposure, fund look-through (the overlap inside QQQ and VGT), and
+        <b className="font-medium text-fg">Not in the X-Ray yet.</b> Sector, geographic and factor exposure, fund look-through (the overlap inside QQQ and VGT), and
         income all need data Viridia doesn&apos;t have yet. They&apos;ll appear here when it does, rather than as estimates. Portfolio history uses today&apos;s
         weights applied to each holding&apos;s past returns; it is not the account&apos;s actual record.
       </section>

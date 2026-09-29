@@ -107,8 +107,8 @@ export function computeSignals(i: SignalsInput): SignalDim[] {
   }
 
   if (i.fundamentals === undefined) {
-    out.push({ key: "fundamentals", label: "Fundamentals", state: "Not available", tone: "na", detail: "Fundamentals couldn't be loaded.", rule: "Revenue growth and margins from SEC filings" });
-    out.push({ key: "valuation", label: "Valuation", state: "Not available", tone: "na", detail: "Fundamentals couldn't be loaded.", rule: "P/E or P/S against the sector median" });
+    out.push({ key: "fundamentals", label: "Fundamentals", state: "Not loaded yet", tone: "na", detail: "SEC filing data isn't loaded yet.", rule: "Revenue growth and margins from SEC filings" });
+    out.push({ key: "valuation", label: "Valuation", state: "Not loaded yet", tone: "na", detail: "SEC filing data isn't loaded yet.", rule: "P/E or P/S against the sector median" });
   } else {
     out.push(...fundamentalDims(i.fundamentals, i.sector));
   }
