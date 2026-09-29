@@ -1,40 +1,27 @@
 import type { Metadata } from "next";
-import { getBreadth, scan } from "@/lib/market-data/snapshot";
 import { getPulse } from "@/lib/market-data/pulse";
 import { greeting, marketState } from "@/lib/market-hours";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtInt } from "@/lib/format";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { FirstRun } from "@/components/FirstRun";
 import { GlobeHero } from "@/components/brief/GlobeHero";
 import { getViewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
 import { getChanges } from "@/lib/analysis/brief";
-import { setupScan } from "@/lib/analysis/setup-scan";
 import { entryText } from "@/lib/analysis/setups";
 import { SETUP_LABEL } from "@/lib/analysis/candidates";
-import { getTrackRecord } from "@/lib/analysis/track-record";
+import { TILES, getMarketContext } from "@/lib/analysis/mission-server";
 import {
-  PULSE_GROUPS, PULSE_SYMBOLS, changeSentence, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection,
+  PULSE_GROUPS, REGIME_LABEL, changeSentence, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection,
 } from "@/lib/analysis/mission";
 import { DrawerProvider } from "@/components/mission/SecurityDrawer";
 import { MarketPulse } from "@/components/mission/MarketPulse";
 import { AskCommand, type Line } from "@/components/mission/AskCommand";
 import { PrepareMyDay } from "@/components/mission/PrepareMyDay";
-import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, WatchlistRail, WhatChangedFeed, type Tile } from "@/components/mission/Panels";
+import { MarketRegime, NotConnected, PortfolioSlot, ScannerTiles, SetupsPanel, TodayStrip, WatchlistRail, WhatChangedFeed, type Tile, type TodayCell } from "@/components/mission/Panels";
 
 export const metadata: Metadata = { title: "Mission Control" };
 export const dynamic = "force-dynamic";
-
-const LIQUID = 25_000_000; // $25M average daily dollar volume
-const DV = `dv=${LIQUID}`;
-const TILES: (Omit<Tile, "n"> & { params: Record<string, unknown> })[] = [
-  { label: "Strong structure", hint: "Preferred daily count with Pattern Confidence 70+", href: `/scanner?score=70&${DV}&sort=confidence`, params: { p_min_score: 70 } },
-  { label: "Near a Fib zone", hint: "Within 3% of a Fibonacci confluence zone", href: `/scanner?s=near_zone&${DV}`, params: { p_structure: "near_zone" } },
-  { label: "Near 52-week high", hint: "Trading near the 52-week high", href: `/scanner?near=high&${DV}`, params: { p_near: "high" } },
-  { label: "Wave 3 in progress", hint: "Preferred count is in wave 3", href: `/scanner?s=wave3&${DV}`, params: { p_structure: "wave3" } },
-  { label: "Correction complete", hint: "An A-B-C correction has completed", href: `/scanner?s=abc_done&${DV}`, params: { p_structure: "abc_done" } },
-  { label: "Near invalidation", hint: "Within 3% of the level that breaks the preferred count", href: `/scanner?s=near_invalidation&${DV}`, params: { p_structure: "near_invalidation" } },
-];
 
 export default async function MissionControl({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   const viewer = await getViewer().catch(() => null);
@@ -43,21 +30,14 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     : [];
   const welcome = (await searchParams).welcome === "1";
 
-  const [pulse, breadth, changes, watchChanges, gainers, losers, topSetups, record, active, watchPulse, ...tileRows] = await Promise.all([
-    getPulse(PULSE_SYMBOLS).catch(() => []),
-    getBreadth().catch(() => null),
-    getChanges({ minDollarVolume: LIQUID, limit: 40 }).catch(() => []),
+  const [{ ctx, ok }, watchChanges, watchPulse] = await Promise.all([
+    getMarketContext(),
     watched.length ? getChanges({ symbols: watched, limit: 20 }).catch(() => []) : Promise.resolve([]),
-    scan({ p_sort: "change", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
-    scan({ p_sort: "change_asc", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
-    setupScan({ p_sort: "confidence", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID }).catch(() => []),
-    getTrackRecord().catch(() => []),
-    scan({ p_sort: "dollar_volume", p_limit: 8 }).catch(() => []),
     watched.length ? getPulse(watched.slice(0, 40)).catch(() => []) : Promise.resolve([]),
-    ...TILES.map((t) => scan({ ...t.params, p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => [])),
   ]);
+  const { pulse, breadth, changes, setups: topSetups, record, active } = ctx;
   const railMode = watched.length ? "watchlist" : viewer ? "empty" : "popular";
-  const railRows = watched.length ? watchPulse : await getPulse(active.map((r) => r.symbol)).catch(() => []);
+  const railRows = watched.length ? watchPulse : ctx.popular;
 
   const spy = pulse.find((r) => r.symbol === "SPY") ?? null;
   const lastTs = spy?.last_ts ?? pulse[0]?.last_ts ?? null;
@@ -67,9 +47,9 @@ export default async function MissionControl({ searchParams }: { searchParams: P
   const watchSentences = watchChanges.map(changeSentence);
   const feed = whatChanged({
     pulse, breadth, market: marketChanges, watchlist: watchSentences,
-    gainer: gainers[0] ?? null, loser: losers[0] ?? null,
+    gainer: ctx.gainer, loser: ctx.loser,
   });
-  const tiles: Tile[] = TILES.map((t, i) => ({ label: t.label, hint: t.hint, href: t.href, n: tileRows[i]?.[0]?.total ?? 0 }));
+  const tiles: Tile[] = TILES.map((t, i) => ({ label: t.label, hint: t.hint, href: t.href, n: ctx.tileCounts[i] }));
   const m = marketState();
   const name = viewer?.firstName ? `, ${viewer.firstName}` : "";
 
@@ -100,6 +80,23 @@ export default async function MissionControl({ searchParams }: { searchParams: P
     { heading: "Setups to review", lines: setupLines.map((l) => `${l.symbol}: ${l.text}`) },
   ];
 
+  const spyR = spy ? returns(spy) : null;
+  const n = (v: number | null | undefined) => (v == null ? "—" : fmtInt(v));
+  const todayCells: TodayCell[] = [
+    { title: "Market", href: "/markets", cta: "Markets", lines: spyR ? [
+      <span key="s" className={(spyR.d1 ?? 0) >= 0 ? "text-pos" : "text-neg"}>S&amp;P 500 {fmtPct(spyR.d1, 2)}</span>,
+      `Regime: ${REGIME_LABEL[reg.id]}`,
+      breadth?.measured ? `${Math.round((breadth.uptrend / breadth.measured) * 100)}% of securities in uptrends` : "Breadth measuring",
+    ] : ["Market data unavailable"] },
+    { title: "Research", href: "/scanner", cta: "Scanner", lines: [
+      viewer ? `${watchSentences.length} watchlist development${watchSentences.length === 1 ? "" : "s"}` : "Sign in for watchlist developments",
+      `${n(ctx.tileCounts[0])} strong structures, ${n(ctx.tileCounts[1])} near a Fib zone`,
+      `${marketChanges.length} liquid names changed count`,
+    ] },
+    { title: "Portfolio", href: "/portfolio", cta: "Run Portfolio X-Ray", muted: true, lines: ["No portfolio connected", "Check holdings on demand with X-Ray; nothing is stored"] },
+    { title: "Clients and calendar", muted: true, lines: ["Not connected yet", "Meetings, clients, earnings and economic calendars need integrations Viridia doesn't have yet"] },
+  ];
+
   return (
     <DrawerProvider>
       <GlobeHero
@@ -107,6 +104,13 @@ export default async function MissionControl({ searchParams }: { searchParams: P
         subtitle={`Here's what changed through ${since}. ${m.label} Prices are end of day, as of ${fmtDate(lastTs)}.`}
         actions={<PrepareMyDay title={`Prepare my day · ${today}`} sections={day} className="btn sm border-[#F4D38A]/60 bg-[#F4D38A]/15 text-white hover:bg-[#F4D38A]/25" />}
       />
+
+      <TodayStrip cells={todayCells} />
+      {!ok && (
+        <p className="card px-4 py-3 text-[13px]" style={{ color: "var(--warn)" }} role="status">
+          Market data didn&apos;t load this time; the database is busy. Reload in a minute. Your watchlist and the tools below still work.
+        </p>
+      )}
 
       {welcome && <FirstRun signedIn={!!viewer} name={viewer?.firstName ?? null} suggestions={active.slice(0, 6).map((r) => ({ symbol: r.symbol, name: r.name }))} />}
 

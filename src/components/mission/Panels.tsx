@@ -95,7 +95,7 @@ export function WhatChangedFeed({ items, since }: { items: FeedItem[]; since: st
   );
 }
 
-export interface Tile { label: string; hint: string; n: number; href: string }
+export interface Tile { label: string; hint: string; n: number | null; href: string }
 
 /** Market Scanner tiles: live counts of each structure preset, each opening the scanner filtered. */
 export function ScannerTiles({ tiles }: { tiles: Tile[] }) {
@@ -216,6 +216,25 @@ export function NotConnected() {
         <li>Alerts: planned with accounts.</li>
         <li><Link href="/data-sources" className="text-brand hover:underline">See the roadmap</Link></li>
       </ul>
+    </section>
+  );
+}
+
+export interface TodayCell { title: string; lines: React.ReactNode[]; href?: string; cta?: string; muted?: boolean }
+
+/** The Today strip under the greeting: market, research, portfolio and clients at a glance. */
+export function TodayStrip({ cells }: { cells: TodayCell[] }) {
+  return (
+    <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line lg:grid-cols-4" aria-label="Today">
+      {cells.map((c) => (
+        <div key={c.title} className="flex flex-col gap-1 bg-panel px-4 py-3">
+          <div className="text-[11.5px] font-[600] uppercase tracking-[0.06em] text-fg-3">{c.title}</div>
+          <ul className={`flex flex-col gap-0.5 text-[13px] leading-snug ${c.muted ? "text-fg-3" : "text-fg-2"}`}>
+            {c.lines.map((l, i) => <li key={i} className={i === 0 && !c.muted ? "font-[560] text-fg" : ""}>{l}</li>)}
+          </ul>
+          {c.href && c.cta && <Link href={c.href} className="mt-auto pt-1 text-[12.5px] text-brand hover:underline">{c.cta} →</Link>}
+        </div>
+      ))}
     </section>
   );
 }

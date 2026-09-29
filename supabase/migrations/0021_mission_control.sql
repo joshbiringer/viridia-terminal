@@ -67,3 +67,8 @@ $$;
 
 grant execute on function public.market_pulse(text[]) to anon, authenticated;
 grant execute on function public.security_preview(text) to anon, authenticated;
+
+-- 2026-09-29: the backtest replay (15 requests every minute) was starving the database of connections
+-- (pg_cron "job startup timeout" across every job). Slowed to 6 requests every 3 minutes.
+select cron.alter_job((select jobid from cron.job where jobname = 'viridia-backtest'),
+  schedule => '*/3 * * * *', command => $$select public.backtest_tick('backtest-1.0.0', 6)$$);
