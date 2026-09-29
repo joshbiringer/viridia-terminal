@@ -596,6 +596,16 @@ Not yet available, and stated on the page: sector, factor and geographic exposur
   - Resume the backtest off-hours at a low rate: every 3 minutes, 6 requests.
   - Consider a larger Supabase compute size, which is a billing decision.
 
+### Incident follow-up (September 29, 13:40–14:30 UTC)
+
+- **State.** Even with the backtest paused, the database stayed throttled. The pulse query took 70 s (normally 0.3 s) and connections timed out. The market-data and analysis workers were failing with 500s and retrying.
+- **Action.**
+  - Paused `kestrel-market-data-worker`, `viridia-analysis-worker` and `viridia-snapshot-refresh`.
+  - Snapshot refresh moved from every 15 minutes to hourly (`10 * * * *`).
+  - A one-off job, `viridia-resume-workers`, re-enables all three at 20:30 UTC (4:30 p.m. ET) and then removes itself.
+  - Within about 30 minutes the pulse query was back to 0.4 s and Mission Control loaded again.
+- **Effect.** Prices on the site stay at Friday, September 25 until the workers resume. Monday's and Tuesday's bars are fetched after 20:30 UTC.
+
 ### Not built (no data source, or later)
 
 - Economic and earnings calendars, clients and meetings, alerts, unusual-volume and trend-change tiles, customizable layouts, and advisor versus asset-manager workspace presets.
