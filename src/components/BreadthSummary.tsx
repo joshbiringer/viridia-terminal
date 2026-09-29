@@ -39,7 +39,7 @@ export function BreadthSummary({ b }: { b: Breadth }) {
           <div className="flex flex-col justify-center gap-2">
             <div className="text-[15px] font-medium">Trend classification needs 200 sessions of history</div>
             <p className="text-[13.5px] text-fg-2">
-              Securities with less history aren't classified yet; the measures on the right use the history available.
+              Securities with less history aren&apos;t classified yet; the measures on the right use the history available.
             </p>
           </div>
         )}
