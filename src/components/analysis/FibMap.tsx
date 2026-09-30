@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { publishContext } from "@/lib/ask/page-context";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { DEGREE_LABEL } from "@/lib/analysis/pivots";
 import { FIB_METHOD, type ClientFib, type ConfluenceZone } from "@/lib/analysis/candidates";
@@ -20,7 +21,7 @@ export function FibMap({ fib, onSelect }: { fib: ClientFib | null; onSelect?: (z
   const zones = [...(fib?.zones ?? [])].sort((a, b) => b.mid - a.mid);
   const nearest = zones.length ? zones.reduce((a, z) => (Math.abs(z.distancePct) < Math.abs(a.distancePct) ? z : a), zones[0]) : null;
   const [sel, setSel] = useState<ConfluenceZone | null>(nearest);
-  const pick = (z: ConfluenceZone) => { const next = sel === z ? null : z; setSel(next); onSelect?.(next); };
+  const pick = (z: ConfluenceZone) => { const next = sel === z ? null : z; setSel(next); onSelect?.(next); publishContext({ zone: next ? { low: next.low, high: next.high } : null }); };
 
   if (!fib) return <Shell><p className="px-5 py-6 text-[13.5px] text-fg-3">Appears once daily bars are stored.</p></Shell>;
   if (!zones.length) return <Shell close={fib.close}><p className="px-5 py-6 text-[13.5px] text-fg-2">No price band within 35% of the close has two or more independent Fibonacci relationships.</p></Shell>;

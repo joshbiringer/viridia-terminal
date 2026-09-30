@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
+import { publishContext } from "@/lib/ask/page-context";
 import { useViewer } from "@/components/ViewerProvider";
 import {
   deletePortfolio, deleteSnapshot, getPortfolio, listPortfolios, listSnapshots, renamePortfolio, savePortfolio, saveSnapshot,
@@ -46,6 +47,9 @@ export function XRayApp() {
   const [compareId, setCompareId] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const pasteRef = useRef<HTMLTextAreaElement>(null);
+
+  // Ask Viridia treats the open saved portfolio as page context
+  useEffect(() => { publishContext({ portfolioId: current?.id ?? null }); }, [current?.id]);
 
   const run = async (input: string, opts: { targets?: Record<string, number> | null; custom?: string; compareId?: string } = {}) => {
     setBusy(true); setErrors([]);

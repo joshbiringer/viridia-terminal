@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { publishContext } from "@/lib/ask/page-context";
 import type { Degree } from "@/lib/analysis/pivots";
 import { useViewer } from "../ViewerProvider";
 
@@ -16,6 +17,8 @@ export function DegreeProvider({ auto, children }: { auto: Degree | null; childr
   const { prefs } = useViewer();
   const saved = prefs?.default_degree && prefs.default_degree !== "auto" ? (prefs.default_degree as Degree) : null;
   const [degree, setDegree] = useState<Degree>(saved ?? auto ?? "intermediate");
+  // Ask Viridia reads the selected degree as page context
+  useEffect(() => { publishContext({ degree }); }, [degree]);
   return <DegreeCtx.Provider value={{ degree, setDegree }}>{children}</DegreeCtx.Provider>;
 }
 

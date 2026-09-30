@@ -65,18 +65,18 @@ export function AskViridiaButton(props: Props) {
   return (
     <>
       <button className="btn pri" onClick={() => setOpen(true)}>
-        <ViridiaMark size={15} /> Ask Viridia
+        <ViridiaMark size={15} /> Explain this analysis
       </button>
       {open && <div className="fixed inset-0 z-50 bg-[rgba(9,45,34,0.14)]" onClick={() => setOpen(false)} />}
       <aside
         className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col border-l border-line bg-panel transition-transform duration-200 ${open ? "translate-x-0" : "translate-x-full"}`}
         style={{ boxShadow: open ? "var(--shadow-lg)" : undefined }}
-        aria-hidden={!open} aria-label="Ask Viridia" inert={!open}
+        aria-hidden={!open} aria-label="Explain this analysis" inert={!open}
       >
         <div className="flex items-center gap-3 border-b border-line px-5 py-4">
           <ViridiaMark size={20} className="text-brand" />
           <div className="flex-1">
-            <div className="text-[15px] font-semibold tracking-[-0.015em]">Ask Viridia</div>
+            <div className="text-[15px] font-semibold tracking-[-0.015em]">Explain this analysis</div>
             <div className="text-[12.5px] text-fg-3">About {props.symbol} · {DEGREE_LABEL[degree]} degree, daily</div>
           </div>
           <button className="btn ghost sm px-2" onClick={() => setOpen(false)} aria-label="Close">

@@ -14,7 +14,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://api.fontshare.com" />
         <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
         {/* Clash Display (Indian Type Foundry, free under the ITF Free Font License) via Fontshare */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>

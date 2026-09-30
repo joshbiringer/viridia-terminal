@@ -31,6 +31,9 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
   { group: "Workspace", items: [
     { label: "Watchlist", href: "/watchlist", icon: "watchlist", live: true, auth: true, keywords: "favorites saved" },
   ]},
+  { group: "Ask", items: [
+    { label: "Ask Viridia", href: "/ask", icon: "sparkle", live: true, keywords: "ai copilot question chat research explain compare screen" },
+  ]},
 ];
 
 export const SIDEBAR_FOOTER: NavItem[] = [
@@ -55,6 +58,7 @@ export const NAV_BLURB: Record<string, string> = {
   "/setups/track-record": "How each kind of setup has done",
   "/portfolio": "Exposure, risk, structure and tax",
   "/watchlist": "Your names and what changed",
+  "/ask": "Your research copilot",
   "/data-sources": "Sources, coverage and limitations",
   "/help": "Guides and keyboard shortcuts",
 };

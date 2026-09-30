@@ -1,6 +1,7 @@
 import { TopNav } from "@/components/TopNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CommandPalette } from "@/components/CommandPalette";
+import { AskDrawer } from "@/components/ask/AskDrawer";
 import { ViewerProvider } from "@/components/ViewerProvider";
 import { getPreferences, getViewer } from "@/lib/auth";
 
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SiteFooter cta={false} />
       </div>
       <CommandPalette />
+      <AskDrawer />
     </ViewerProvider>
   );
 }

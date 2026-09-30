@@ -103,7 +103,7 @@ export function CommandPalette() {
     const dark = typeof document !== "undefined" && document.documentElement.dataset.theme === "dark";
     const list: Command[] = [];
     if (symbol) {
-      list.push({ key: "ask", group: "Actions", icon: "sparkle", label: `Ask Viridia about ${symbol}`, keywords: "ai question explain", run: () => window.dispatchEvent(new Event("viridia:ask")) });
+      list.push({ key: "ask", group: "Actions", icon: "sparkle", label: `Ask Viridia about ${symbol}`, keywords: "ai question explain", run: () => window.dispatchEvent(new CustomEvent("viridia:ask-open", { detail: `What does Viridia see in ${symbol}?` })) });
       list.push(viewer
         ? { key: "watch", group: "Actions", icon: "watchlist", label: `Add ${symbol} to watchlist`, keywords: "watch save favorite", run: () => window.dispatchEvent(new Event("viridia:watch")) }
         : { key: "watch", group: "Actions", icon: "watchlist", label: `Sign in to watch ${symbol}`, keywords: "watch save favorite", run: nav(`/signin?next=${encodeURIComponent(path)}`) });
@@ -149,9 +149,8 @@ export function CommandPalette() {
     else if (r.kind === "browse") router.push(`/markets/stocks?q=${encodeURIComponent(r.q)}`);
     else if (r.kind === "scan") { pushRecent({ kind: "research", label: "Scanner query", sub: r.scan.parts.join(" · "), href: r.scan.href }); router.push(r.scan.href); }
     else if (r.kind === "ask") {
-      // on a security page the question goes to that security's Ask Viridia; elsewhere to Mission Control's
-      if (symbol) window.dispatchEvent(new CustomEvent("viridia:ask", { detail: r.text }));
-      else router.push(`/terminal?ask=${encodeURIComponent(r.text)}`);
+      // questions open the Ask Viridia panel, which knows the page they were asked from
+      window.dispatchEvent(new CustomEvent("viridia:ask-open", { detail: r.text }));
     }
     else if (r.kind === "recent") router.push(r.item.href);
     else r.cmd.run();

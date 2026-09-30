@@ -37,7 +37,8 @@ export function TopNav() {
     return () => mo.disconnect();
   }, []);
   // close menus on navigation, Escape and outside clicks
-  useEffect(() => { setOpen(null); setMobile(false); }, [path]);
+  const [navPath, setNavPath] = useState(path);
+  if (navPath !== path) { setNavPath(path); setOpen(null); setMobile(false); }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(null); setMobile(false); } };
     const onDown = (e: MouseEvent) => { if (!bar.current?.contains(e.target as Node)) setOpen(null); };
