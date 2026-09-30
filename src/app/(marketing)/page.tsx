@@ -59,14 +59,14 @@ export default async function Landing() {
   try { live = await scan({ p_sort: "dollar_volume", p_limit: 8 }); } catch { live = []; }
 
   return (
-    <div className="bg-bg">
+    <div className="overflow-x-clip bg-bg">
       <TrackEvent event="landing_view" />
       {/* ------------------------------------------------ header over the hero */}
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-[1600px] items-center gap-8 px-5 py-7 sm:px-8 lg:px-12 lg:py-9">
           <Link href="/" aria-label="Viridia home"><ViridiaLockup light /></Link>
-          <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
-            {NAV.map(([l, h]) => <Link key={l} href={h} className="text-[15px] font-[600] text-white/80 transition-colors hover:text-white">{l}</Link>)}
+          <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
+            {NAV.map(([l, h]) => <Link key={l} href={h} className="whitespace-nowrap text-[15px] font-[600] text-white/80 transition-colors hover:text-white">{l}</Link>)}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <Link href="/signin" className="btn light sm hidden sm:inline-flex">Sign in</Link>
