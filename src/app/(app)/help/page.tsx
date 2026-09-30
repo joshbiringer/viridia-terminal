@@ -10,7 +10,6 @@ const SHORTCUTS: [string[], string][] = [
   [["↑", "↓"], "Move through results"],
   [["↵"], "Open the selected result or run the command"],
   [["Esc"], "Close the search, a menu or a panel"],
-  [["["], "Collapse or expand the sidebar"],
 ];
 
 const TOPICS: [string, string, string][] = [

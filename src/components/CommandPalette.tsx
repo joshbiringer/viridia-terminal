@@ -57,7 +57,6 @@ export function CommandPalette() {
       const typing = /input|textarea|select/i.test(t?.tagName ?? "") || t?.isContentEditable;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); if (open) hide(); else show(); }
       else if (e.key === "/" && !typing && !open) { e.preventDefault(); show(); }
-      else if (e.key === "[" && !typing && !open && !e.metaKey && !e.ctrlKey) window.dispatchEvent(new Event("viridia:toggle-sidebar"));
       else if (e.key === "Escape" && open) hide();
     };
     window.addEventListener("keydown", onKey);
@@ -113,7 +112,6 @@ export function CommandPalette() {
     }
     list.push({ key: "theme", group: "Actions", icon: dark ? "sun" : "moon", label: dark ? "Switch to light theme" : "Switch to dark theme", keywords: "theme appearance dark light mode",
       run: () => { const next = dark ? "light" : "dark"; applyTheme(next); window.dispatchEvent(new CustomEvent("viridia:theme-changed", { detail: next })); } });
-    list.push({ key: "sidebar", group: "Actions", icon: "chevronLeft", label: "Toggle sidebar", hint: "[", keywords: "collapse expand navigation", run: () => window.dispatchEvent(new Event("viridia:toggle-sidebar")) });
     if (viewer) list.push({ key: "signout", group: "Actions", icon: "logout", label: "Sign out", keywords: "log out logout", run: async () => { await browserClient().auth.signOut(); router.push("/"); router.refresh(); } });
     else list.push({ key: "signup", group: "Actions", icon: "account", label: "Create an account", keywords: "sign up register join", run: nav("/signup") },
                    { key: "signin", group: "Actions", icon: "account", label: "Sign in", keywords: "log in login", run: nav("/signin") });

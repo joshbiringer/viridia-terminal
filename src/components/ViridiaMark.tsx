@@ -16,13 +16,13 @@ export function ViridiaMark({ size = 22, className = "", title }: { size?: numbe
   );
 }
 
-export function ViridiaLockup({ compact = false }: { compact?: boolean }) {
+export function ViridiaLockup({ compact = false, light = false }: { compact?: boolean; light?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2.5 text-fg">
-      <ViridiaMark size={compact ? 20 : 22} className="text-brand" />
+    <span className={`inline-flex items-center gap-2.5 ${light ? "text-white" : "text-fg"}`}>
+      <ViridiaMark size={compact ? 20 : 24} className={light ? "text-emerald" : "text-brand"} />
       <span className="leading-none">
-        <span className="block text-[15px] font-[650] tracking-[0.14em]">VIRIDIA</span>
-        {!compact && <span className="mt-[3px] block text-[9.5px] font-medium tracking-[0.32em] text-fg-3">TERMINAL</span>}
+        <span className="block text-[15px] font-[700] tracking-[0.14em]">VIRIDIA</span>
+        {!compact && <span className={`mt-[4px] block font-mono text-[9px] tracking-[0.32em] ${light ? "text-white/55" : "text-fg-3"}`}>TERMINAL</span>}
       </span>
     </span>
   );

@@ -29,7 +29,7 @@ export default async function MissionControl({ searchParams }: { searchParams: P
         title={m.title}
         subtitle={ok ? `Here's what requires attention. ${state.label} Prices are end of day, as of ${fmtDate(m.lastTs)}.` : state.label}
         actions={
-          <Link href="/brief" className="btn border-[#F4D38A]/70 bg-[#F4D38A] font-[620] text-[#10231c] hover:bg-[#F4D38A]/90">
+          <Link href="/brief" className="btn white lg">
             <Icon name="sparkle" className="h-[14px] w-[14px]" /> Prepare my day
           </Link>
         }

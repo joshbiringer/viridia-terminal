@@ -53,7 +53,7 @@ function Section({ id, title, note, children }: { id: string; title: string; not
   return (
     <section id={id} className="flex scroll-mt-[112px] flex-col gap-4" aria-labelledby={`${id}-h`}>
       <div className="flex items-baseline gap-3 border-b border-line pb-1.5">
-        <h2 id={`${id}-h`} className="text-[11.5px] font-[650] uppercase tracking-[0.08em] text-fg-3">{title}</h2>
+        <h2 id={`${id}-h`} className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{title}</h2>
         {note && <span className="text-[12px] text-fg-3">{note}</span>}
       </div>
       {children}
@@ -132,7 +132,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
         <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
           <div className="min-w-0">
             <div className="flex items-baseline gap-3">
-              <h1 className="text-[34px] font-[650] leading-none tracking-[-0.035em]">{sec.symbol}</h1>
+              <h1 className="text-[clamp(40px,4vw,56px)] font-[400] leading-none tracking-[-0.02em]">{sec.symbol}</h1>
               {!sec.is_active && <span className="chip neg">Delisted {fmtDate(sec.delisted_on)}</span>}
             </div>
             <p className="mt-2 text-[16px] text-fg-2">{sec.name}</p>
@@ -238,7 +238,7 @@ function RecentChanges({ events }: { events: StructureEvent[] }) {
             <li key={i} className="flex items-baseline gap-3 px-5 py-2 text-[13px]">
               <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full" style={{ background: tone[eventTone(e)] }} aria-hidden />
               <span className="num w-20 shrink-0 text-fg-3">{fmtDate(e.day)}</span>
-              <span className="w-[150px] shrink-0 text-[11.5px] font-[560] uppercase tracking-[0.03em] text-fg-3">{EVENT_LABEL[e.type]}</span>
+              <span className="w-[150px] shrink-0 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{EVENT_LABEL[e.type]}</span>
               <span className="min-w-0 flex-1 text-fg-2">{eventSentence(e)}</span>
             </li>
           ))}

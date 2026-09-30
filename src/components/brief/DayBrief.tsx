@@ -46,7 +46,7 @@ export function DayBrief({ title, sections }: { title: string; sections: DaySect
   return (
     <article className="card" aria-label={title}>
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3">
-        <h1 className="text-[17px] font-[650] tracking-[-0.015em]">{title}</h1>
+        <h1 className="text-[24px] font-[400] tracking-[-0.02em]">{title}</h1>
         <span className="ml-auto flex gap-1.5">
           <button className="btn sm" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
           <button className="btn sm" onClick={print}>Print</button>
@@ -55,7 +55,7 @@ export function DayBrief({ title, sections }: { title: string; sections: DaySect
       <div className="divide-y divide-line">
         {all.map((s) => (
           <section key={s.heading} className="grid gap-1 px-5 py-3 md:grid-cols-[180px_minmax(0,1fr)] md:gap-4">
-            <h2 className="pt-0.5 text-[11.5px] font-[600] uppercase tracking-[0.06em] text-fg-3">{s.heading}</h2>
+            <h2 className="pt-0.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{s.heading}</h2>
             {s.lines.length ? (
               <ul className="flex flex-col gap-1 text-[13.5px] leading-snug text-fg-2">
                 {s.lines.map((l, i) => <li key={i}>{l}</li>)}

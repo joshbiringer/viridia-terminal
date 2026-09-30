@@ -192,14 +192,14 @@ export function GlobeHero({ title, subtitle, actions }: { title: string; subtitl
   const statuses = useMemo(() => (now ? Object.fromEntries(HUBS.map((h) => [h.id, hubStatus(h, now)])) : null), [now]);
 
   return (
-    <section ref={wrapRef} className="globe-hero relative isolate overflow-hidden rounded-[var(--r-lg)] text-white" aria-label="Mission Control">
+    <section ref={wrapRef} className="globe-hero relative isolate overflow-hidden rounded-[18px] text-white" aria-label="Mission Control">
       <div className="globe-stars pointer-events-none absolute inset-0 -z-10" aria-hidden />
-      <div className="relative grid gap-3 px-5 pb-[78px] pt-5 sm:px-6 md:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="relative z-10 flex min-w-0 flex-col gap-3">
+      <div className="relative grid gap-5 px-6 pb-[92px] pt-8 sm:px-10 sm:pt-10 md:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="relative z-10 flex min-w-0 flex-col gap-5">
           <div>
-            <p className="text-[11.5px] font-[600] uppercase tracking-[0.14em] text-[#7FE0B0]">Mission Control</p>
-            <h1 className="mt-1 text-[24px] font-[650] leading-tight tracking-[-0.025em] sm:text-[27px]">{title}</h1>
-            <p className="mt-1 max-w-[620px] text-[13.5px] leading-relaxed text-white/70">{subtitle}</p>
+            <p className="f-eyebrow text-[#7FE0B0]">Mission Control</p>
+            <h1 className="mt-4 text-[clamp(2.1rem,4vw,56px)] font-[400] leading-[1] tracking-[-0.02em]">{title}</h1>
+            <p className="mt-4 max-w-[640px] text-[16px] font-[300] leading-relaxed text-white/75">{subtitle}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px]" aria-live="polite">
@@ -223,7 +223,7 @@ export function GlobeHero({ title, subtitle, actions }: { title: string; subtitl
                 <button
                   key={h.id} onClick={(e) => pick(h.id, e.timeStamp)} aria-pressed={on}
                   title={s ? `${h.exchange}: ${STATE_LABEL[s.state]}, ${s.localTime} local. ${s.next}. Regular hours; non-U.S. holidays aren't shown.` : h.exchange}
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12px] transition-colors ${on ? "border-[#F4D38A]/70 bg-white/10 text-white" : "border-white/15 text-white/70 hover:border-white/30 hover:text-white"}`}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors ${on ? "border-[#F4D38A]/70 bg-white/10 text-white" : "border-white/15 text-white/70 hover:border-white/30 hover:text-white"}`}
                 >
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: s ? STATE_COLOR[s.state] : "#7C8F88" }} />
                   {h.city}
@@ -235,7 +235,7 @@ export function GlobeHero({ title, subtitle, actions }: { title: string; subtitl
           {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </div>
 
-        <div className="pointer-events-none absolute right-[-70px] top-[-20px] w-[240px] opacity-30 sm:opacity-50 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[220px] md:opacity-100">
+        <div className="pointer-events-none absolute right-[-70px] top-[-20px] w-[240px] opacity-30 sm:opacity-50 md:pointer-events-auto md:static md:ml-auto md:w-full md:max-w-[240px] md:opacity-100">
           <canvas ref={canvasRef} className="aspect-square w-full" aria-hidden />
         </div>
       </div>

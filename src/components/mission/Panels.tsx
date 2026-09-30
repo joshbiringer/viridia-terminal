@@ -44,7 +44,7 @@ export function MarketRegime({ r, b }: { r: Regime; b: Breadth | null }) {
         <div className="text-[16px] font-[650] tracking-[-0.015em]" style={{ color: r.id.includes("up") ? "var(--pos)" : r.id.includes("down") ? "var(--neg)" : undefined }}>
           {REGIME_LABEL[r.id]}
         </div>
-        <div className="flex h-7 overflow-hidden rounded-[var(--r-sm)] text-[11px] font-[600] uppercase tracking-[0.05em] text-white" role="img"
+        <div className="flex h-7 overflow-hidden rounded-[var(--r-sm)] font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-white" role="img"
           aria-label={seg.map(([l, v]) => `${l} ${Math.round(v * 100)}%`).join(", ")}>
           {seg.map(([l, v, c]) => v > 0 && (
             <span key={l} className="flex min-w-0 items-center justify-center overflow-hidden whitespace-nowrap px-1" style={{ width: `${v * 100}%`, background: c }} title={`${l} ${Math.round(v * 100)}%`}>
@@ -83,14 +83,14 @@ export function WhatChangedFeed({ changes, context, since, changeDay }: { change
   return (
     <section id="changes" className="card flex scroll-mt-20 flex-col" aria-labelledby="changed-t">
       <CardHead id="changed-t" title="What changed" sub={`Through ${since}`} />
-      <h3 className="border-b border-line bg-hover/40 px-4 py-1.5 text-[11px] font-[650] uppercase tracking-[0.07em] text-fg-3">
+      <h3 className="border-b border-line bg-hover/40 px-4 py-1.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">
         Viridia changes{changeDay ? <span className="ml-2 font-normal normal-case tracking-normal">liquid names, session of {changeDay}</span> : null}
       </h3>
       {changes.length ? (
         <ol className="divide-y divide-line">
           {changes.map((g) => (
             <li key={g.id} className="grid grid-cols-[96px_44px_minmax(0,1fr)] gap-2 px-4 py-1.5">
-              <span className="pt-px text-[11.5px] font-[560] uppercase tracking-[0.04em] text-fg-3">{g.label}</span>
+              <span className="pt-px font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{g.label}</span>
               <span className="num pt-px text-right text-[12.5px] font-[620]">{fmtInt(g.n)}</span>
               <span className="flex min-w-0 flex-col gap-0.5 text-[12.5px] leading-snug text-fg-2">
                 {g.examples.map((e) => (
@@ -104,12 +104,12 @@ export function WhatChangedFeed({ changes, context, since, changeDay }: { change
           ))}
         </ol>
       ) : <p className="px-4 py-2.5 text-[12.5px] text-fg-3">Viridia compares each session&apos;s analysis with the one before; changes appear once two sessions have been analysed.</p>}
-      <h3 className="border-y border-line bg-hover/40 px-4 py-1.5 text-[11px] font-[650] uppercase tracking-[0.07em] text-fg-3">Market context</h3>
+      <h3 className="border-y border-line bg-hover/40 px-4 py-1.5 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">Market context</h3>
       {context.length ? (
         <ol className="flex-1 divide-y divide-line">
           {context.map((it, i) => (
             <li key={i} className="grid grid-cols-[96px_minmax(0,1fr)] gap-2 px-4 py-1.5">
-              <span className="pt-px text-[11.5px] font-[560] uppercase tracking-[0.04em] text-fg-3">{FEED_LABEL[it.kind]}</span>
+              <span className="pt-px font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{FEED_LABEL[it.kind]}</span>
               <p className="min-w-0 text-[12.5px] leading-snug text-fg-2">
                 {it.symbol && it.kind === "move" && <TickerButton symbol={it.symbol} className="tk mr-1.5 text-fg hover:text-brand" />}
                 {it.text}
@@ -136,7 +136,7 @@ export function SignalCards({ counts }: { counts: SignalCount[] }) {
           return (
             <li key={c.id} className="bg-panel">
               <Link href={c.href} className="flex h-full flex-col gap-1 px-3.5 py-2.5 transition-colors hover:bg-hover" title={c.hint}>
-                <span className="text-[11.5px] font-[600] uppercase tracking-[0.05em] text-fg-2">{c.label}</span>
+                <span className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-2">{c.label}</span>
                 <span className="num text-[20px] font-[650] leading-none tracking-[-0.02em]">{s ? fmtInt(s.n_today) : "—"}</span>
                 <span className="grid grid-cols-2 gap-1 text-[11px] text-fg-3">
                   <span>New <b className="num font-[600] text-fg-2">{s?.new_today != null ? fmtInt(s.new_today) : "—"}</b></span>
@@ -158,7 +158,7 @@ export function AttentionSummary({ items }: { items: Attention[] }) {
     <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-3 xl:grid-flow-col xl:auto-cols-fr xl:grid-cols-none" aria-label="What requires attention">
       {items.map((it) => (
         <Link key={it.id} href={it.href} className="flex flex-col gap-0.5 bg-panel px-4 py-2.5 transition-colors hover:bg-hover">
-          <span className="text-[11px] font-[600] uppercase tracking-[0.06em] text-fg-3">{it.label}</span>
+          <span className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{it.label}</span>
           <span className={`num text-[17px] font-[650] tracking-[-0.015em] ${it.tone === "pos" ? "text-pos" : it.tone === "neg" ? "text-neg" : ""}`}>{it.value}</span>
           <span className="text-[12px] leading-snug text-fg-2">{it.detail}</span>
         </Link>

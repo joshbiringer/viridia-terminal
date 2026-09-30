@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&family=Space+Mono:wght@400;700&display=swap" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body>

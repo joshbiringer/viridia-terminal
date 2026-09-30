@@ -8,7 +8,7 @@ import { useViewer } from "./ViewerProvider";
 import { browserClient } from "@/lib/supabase/client";
 
 /** Avatar button and menu for a signed-in user; sign-in and sign-up links otherwise. */
-export function AccountMenu() {
+export function AccountMenu({ onDark = false }: { onDark?: boolean }) {
   const { viewer } = useViewer();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -28,8 +28,8 @@ export function AccountMenu() {
   if (!viewer) {
     return (
       <div className="flex flex-none items-center gap-1.5">
-        <Link href="/signin" className="btn ghost sm hidden sm:inline-flex">Sign in</Link>
-        <Link href="/signup" className="btn pri sm">Create account</Link>
+        <Link href="/signin" className={`btn sm hidden sm:inline-flex ${onDark ? "light" : "ghost"}`}>Sign in</Link>
+        <Link href="/signup" className={`btn sm ${onDark ? "white" : "pri"}`}><span className="xl:hidden">Sign up</span><span className="hidden xl:inline">Create account</span></Link>
       </div>
     );
   }
@@ -45,12 +45,12 @@ export function AccountMenu() {
     <div ref={ref} className="relative flex-none">
       <button
         onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-panel-2 text-[12px] font-semibold text-brand ring-1 ring-line transition-shadow hover:ring-line-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className={`flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-semibold transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${onDark ? "bg-white/10 text-white ring-1 ring-white/25 hover:ring-white/50" : "bg-panel-2 text-brand ring-1 ring-line hover:ring-line-2"}`}
       >
         {viewer.initials}
       </button>
       {open && (
-        <div role="menu" className="menu absolute right-0 top-[calc(100%+8px)] z-50 w-[260px]">
+        <div role="menu" className="menu absolute right-0 top-[calc(100%+8px)] z-50 w-[260px] text-fg">
           <div className="px-2.5 pb-2 pt-1.5">
             <div className="truncate text-[13.5px] font-medium">{viewer.displayName}</div>
             <div className="truncate text-[12.5px] text-fg-3">{viewer.email}</div>

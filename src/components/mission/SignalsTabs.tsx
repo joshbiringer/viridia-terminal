@@ -64,7 +64,7 @@ function Changes({ events }: { events: StructureEvent[] }) {
         <li key={`${e.symbol}-${e.type}-${i}`} className="flex items-baseline gap-3 px-4 py-1.5 text-[13px]">
           <span className="mt-[5px] h-1.5 w-1.5 shrink-0 self-start rounded-full" style={{ background: TONE[eventTone(e)] }} aria-hidden />
           <TickerButton symbol={e.symbol} className="tk w-14 shrink-0 hover:text-brand" />
-          <span className="w-[150px] shrink-0 text-[11.5px] font-[560] uppercase tracking-[0.03em] text-fg-3">{EVENT_LABEL[e.type]}</span>
+          <span className="w-[150px] shrink-0 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{EVENT_LABEL[e.type]}</span>
           <span className="min-w-0 flex-1 truncate text-fg-2" title={eventSentence(e)}>{eventSentence(e)}</span>
           <span className={`num w-16 shrink-0 text-right text-[12.5px] ${(e.change_pct ?? 0) >= 0 ? "text-pos" : "text-neg"}`}>{fmtPct(e.change_pct)}</span>
         </li>

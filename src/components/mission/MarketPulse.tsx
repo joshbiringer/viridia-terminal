@@ -34,7 +34,7 @@ export function MarketPulse({ rows, asOf }: { rows: PulseRow[]; asOf: string }) 
         {PULSE_GROUPS.map((g) => (
           <div key={g.id} className="bg-panel px-2 py-2">
             <div className="flex items-baseline gap-2 px-2 pb-1 pt-0.5">
-              <span className="text-[11.5px] font-[600] uppercase tracking-[0.06em] text-fg-3">{g.label}</span>
+              <span className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{g.label}</span>
               <span className="truncate text-[11px] text-fg-3/80" title={g.note}>{g.id === "rates" ? "ETF prices, not yields" : ""}</span>
             </div>
             <ul>

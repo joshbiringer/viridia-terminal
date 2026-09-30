@@ -16,7 +16,7 @@ export function Block({ title, sub, action, children, id }: { title: string; sub
   return (
     <section className="border-t border-line first:border-t-0" aria-labelledby={id}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pb-2 pt-4">
-        <h3 id={id} className="text-[11.5px] font-[650] uppercase tracking-[0.07em] text-fg-2">{title}</h3>
+        <h3 id={id} className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-2">{title}</h3>
         {sub && <span className="text-[12px] text-fg-3">{sub}</span>}
         {action && <span className="ml-auto">{action}</span>}
       </div>
@@ -91,7 +91,7 @@ export function OverviewTab({ ws, bench, setBench, changes, since, go }: {
             <Block title="What changed" sub={since ? `Since the snapshot of ${since}` : undefined}>
               {changes.length ? (
                 <ul className="flex flex-col gap-1 text-[13px] text-fg-2">
-                  {changes.map((c, i) => <li key={i} className="flex gap-2"><span className="w-[74px] shrink-0 text-[11px] font-[600] uppercase tracking-[0.05em] text-fg-3">{c.kind}</span><span className={c.tone === "neg" ? "text-neg" : c.tone === "pos" ? "text-pos" : ""} style={c.tone === "warn" ? { color: "var(--warn)" } : undefined}>{c.text}</span></li>)}
+                  {changes.map((c, i) => <li key={i} className="flex gap-2"><span className="w-[74px] shrink-0 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{c.kind}</span><span className={c.tone === "neg" ? "text-neg" : c.tone === "pos" ? "text-pos" : ""} style={c.tone === "warn" ? { color: "var(--warn)" } : undefined}>{c.text}</span></li>)}
                 </ul>
               ) : <p className="text-[13px] text-fg-3">Nothing material has changed.</p>}
             </Block>
@@ -229,7 +229,7 @@ export function RiskTab({ ws }: { ws: Workspace }) {
                 <Fragment key={s.id}>
                   <tr>
                     <td className="max-w-[320px]"><span className="font-[560] text-fg">{s.label}</span></td>
-                    <td><span className="rounded-[4px] border border-line px-1.5 py-px text-[11px] font-[600] uppercase tracking-[0.04em] text-fg-2">{s.kind === "historical" ? "Historical replay" : "Modeled"}</span></td>
+                    <td><span className="rounded-[4px] border border-line px-1.5 py-px font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-2">{s.kind === "historical" ? "Historical replay" : "Modeled"}</span></td>
                     <td className={`r num font-[600] ${s.portfolio == null ? "" : s.portfolio < 0 ? "text-neg" : "text-pos"}`}>{pctS(s.portfolio)}</td>
                     <td className="r num text-fg-2">{pctS(s.benchmark)}</td>
                     <td className="r num">{s.portfolio != null && s.benchmark != null ? `${pctS(s.portfolio - s.benchmark)}` : "—"}</td>

@@ -40,3 +40,30 @@ export const SIDEBAR_FOOTER: NavItem[] = [
 ];
 
 export const ALL_NAV: NavItem[] = [...SIDEBAR.flatMap((g) => g.items), ...SIDEBAR_FOOTER];
+
+/** One line under each item in the header's dropdown menus. */
+export const NAV_BLURB: Record<string, string> = {
+  "/terminal": "What changed, signals and your day",
+  "/research": "Search any covered company",
+  "/analysis/fibonacci": "Confluence zones across the market",
+  "/analysis/rulebook": "The Elliott Wave rules Viridia enforces",
+  "/markets": "Breadth, regime and activity",
+  "/markets/stocks": "Every covered U.S. stock",
+  "/markets/etfs": "Every covered ETF",
+  "/scanner": "Screen by structure, wave and Fibonacci",
+  "/setups": "Structural scenarios that pass every check",
+  "/setups/track-record": "How each kind of setup has done",
+  "/portfolio": "Exposure, risk, structure and tax",
+  "/watchlist": "Your names and what changed",
+  "/data-sources": "Sources, coverage and limitations",
+  "/help": "Guides and keyboard shortcuts",
+};
+
+/**
+ * Header navigation: single sections are direct links, the rest open a dropdown. Built from the same
+ * SIDEBAR list the command palette searches, so the two never disagree.
+ */
+export const HEADER_NAV: { label: string; items: NavItem[] }[] = [
+  ...SIDEBAR.map((g) => ({ label: g.items.length === 1 ? (g.group === "Portfolio" ? "Portfolio" : g.items[0].label) : g.group ?? g.items[0].label, items: g.items })),
+  { label: "Resources", items: SIDEBAR_FOOTER.filter((i) => i.href !== "/account") },
+];
