@@ -355,6 +355,11 @@ async function structure(b: Builder, tools: Tools, sym: string, aud: Audience, d
   ]);
   if (!s) { b.unavailable(`structure for ${sym}`, "Viridia couldn't load this security right now."); return sym; }
   const zoneQ = /\b(this|the) (zone|level|area)\b|\bwhy is this important\b|\bfib(onacci)?\b|\bzone/i.test(text);
+  if (/\binvalidat|\bwrong\b|\bbreak/i.test(text) && s.daily?.hold == null) {
+    const stop = s.setup && !(s.setup_check?.flags?.length) ? s.setup.stop.price : null;
+    b.add({ type: "text", role: "analysis", cite: [b.cite("viridia_engine", `${sym} structure`, "", day(st?.analysis_ts ?? s.last_ts))],
+      text: `${s.daily?.pattern ? `The preferred count (${pattern(s.daily.pattern)}) looks complete, so the engine doesn't set an invalidation level for it.` : "No preferred count is assigned, so there is no invalidation level."}${stop != null ? ` The structural scenario that follows from it is invalidated at ${px(stop)} (${s.close ? pc(stop / s.close - 1) : "—"} from the close).` : ""}` });
+  }
   structureBlocks(b, s, st, aud, ctx.zone ?? null, ctx.degree ?? null);
   if (zoneQ && ctx.zone) b.add({ type: "text", role: "analysis", text: `The selected zone ${px(ctx.zone.low)}–${px(ctx.zone.high)} is where independent Fibonacci measurements of ${sym}'s waves overlap. Zones like this are areas where the current count expects a reaction or completion; they are areas of interest, not predicted turning points.`, cite: [b.cite("viridia_engine", `${sym} structure`, "")] });
   eventsBlock(b, sym, ev ?? []);
