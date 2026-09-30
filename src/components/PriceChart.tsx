@@ -89,7 +89,7 @@ export function PriceChart({ symbol, zones = [], counts = null }: { symbol: stri
     const p = palette();
     const chart = createChart(box.current, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: p.panel }, textColor: p.text, fontFamily: "Manrope, system-ui, sans-serif", fontSize: 11.5, attributionLogo: false },
+      layout: { background: { type: ColorType.Solid, color: p.panel }, textColor: p.text, fontFamily: "\"Clash Display\", system-ui, sans-serif", fontSize: 11.5, attributionLogo: false },
       grid: { vertLines: { color: p.grid }, horzLines: { color: p.grid } },
       rightPriceScale: { borderColor: p.border, scaleMargins: { top: 0.08, bottom: 0.24 } },
       timeScale: { borderColor: p.border, rightOffset: 4 },

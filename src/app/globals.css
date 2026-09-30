@@ -4,8 +4,8 @@
    Viridia design tokens
    Light-first. Green is an accent reserved for brand, Elliott Wave elements
    and positive values; violet for Fibonacci, amber for alternate counts.
-   Design language: Manrope for reading, Space Mono for labels, eyebrows and
-   buttons (uppercase, wide tracking), light large headings with the brand
+   Design language: Clash Display throughout; labels, eyebrows and buttons
+   are uppercase with wide tracking, light large headings with the brand
    gradient, soft white cards on a pale surface, dark near-black bands.
    ===================================================================== */
 :root {
@@ -65,8 +65,11 @@
   --t-fast: 120ms;
   --t-base: 180ms;
 
-  --font-sans-stack: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono-stack: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans-stack: "Clash Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* labels, eyebrows and buttons: Clash Display too, set uppercase and widely tracked */
+  --font-mono-stack: "Clash Display", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* pasted data and code keep a true monospace */
+  --font-code-stack: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color-scheme: light;
 }
 
@@ -138,6 +141,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 a { color: inherit; text-decoration: none; }
+textarea.font-mono, code, pre, samp { font-family: var(--font-code-stack); }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
 ::selection { background: var(--emerald-soft); }
 .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.005em; }
