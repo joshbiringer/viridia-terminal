@@ -844,3 +844,21 @@ The brief asked the product to show the sophistication the engine already has. O
 - **Ask Viridia:** deterministic answers built only from workspace figures (`src/lib/portfolio/ask.ts`).
 - **Snapshots:** "What changed" diffs value, holdings, weights, trend and count changes, near-invalidation, beta, volatility, independent exposures, sectors and factors.
 - **Tests:** 106 unit tests, including linear algebra, the workspace, Ask Viridia, snapshots, and server rendering of every tab.
+
+## Ask Viridia research copilot
+
+- **Where:** `/ask` has three columns: saved conversations grouped by research workspace, the conversation, and sources with research context. A floating "Ask Viridia" panel is on every page and knows the page's security, selected degree, selected Fibonacci zone and open portfolio. The command bar sends questions to it.
+- **Pipeline** (`src/lib/ask`):
+  1. The router (`router.ts`) sorts each question into one of 17 intents and resolves which securities it's about: typed, "this" on the page, "the top three" from the last answer, or the workspace's securities.
+  2. Data tools (`tools.ts`) fetch only the slices the question needs.
+  3. The engine (`engine.ts`) builds typed evidence blocks with numbered citations, an evidence state, follow-up questions and actions.
+  4. A trace records the tools used, sources, data dates, timing and model usage. It is stored with saved messages and logged, never shown.
+- **Answer blocks:** security, structure (what it means, what would strengthen it, what would weaken it, what to monitor), Fibonacci zones, comparison table, interpreted screen with filters it couldn't apply, portfolio, market, events, definition, calculation, and not-available notices.
+- **Explanation modes:** Professional, Client, Beginner and Technical, plus an "Explain to client" button on each answer. Research modes are Quick, Research and Deep.
+- **Commands:** /research, /compare, /screen, /structure, /portfolio, /explain.
+- **Reference library:** 40 concepts, each with four explanations. Annual tax limits are deliberately left out.
+- **Data Viridia doesn't have:** fundamentals, valuation, earnings, filings, news, analyst estimates, sector membership, yields and economic data. Each answer states which of these it's missing; nothing is estimated.
+- **Optional model** (`llm.ts`): off unless `ANTHROPIC_API_KEY` is set (model from `ASK_VIRIDIA_MODEL`, default claude-sonnet-5). It only writes the short interpretation paragraph. The paragraph is discarded if it contains a number that isn't in the evidence.
+- **Storage** (migration 0036): `ask_conversations` (owner-only, at most 200 per account), plus the `ask_structure` and `resolve_symbols` RPCs.
+- **Tests:** 13 cases covering the directive's query suite (education, market, company, structure, comparison, screener, portfolio, ambiguous, contextual, missing data), plus the number validator.
+- **Latency on the live site:** 90 ms to 2.1 s per question.
