@@ -156,7 +156,7 @@ function AnswerView({ a, compact, onAsk, onWatch, onCite, activeCite, onClient }
 }) {
   const [showSources, setShowSources] = useState(false);
   const actions = a.blocks.find((b) => b.type === "actions");
-  const cite = (id: number) => { if (onCite && !compact) onCite(a, id); else { setShowSources(true); requestAnimationFrame(() => document.getElementById(`cite-${id}`)?.scrollIntoView({ block: "nearest" })); } };
+  const cite = (id: number) => { if (onCite && !compact && window.matchMedia("(min-width: 1280px)").matches) onCite(a, id); else { setShowSources(true); requestAnimationFrame(() => document.getElementById(`cite-${id}`)?.scrollIntoView({ block: "nearest" })); } };
   return (
     <article className="flex gap-3">
       <span className="mt-1 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--near-black)]"><ViridiaMark size={15} className="text-emerald" /></span>
@@ -174,13 +174,13 @@ function AnswerView({ a, compact, onAsk, onWatch, onCite, activeCite, onClient }
             <div className="flex flex-wrap gap-2">{a.followups.map((f) => <button key={f} onClick={() => onAsk(f)} className="rounded-full border border-line px-3 py-1 text-[13px] text-fg-2 transition-colors hover:border-brand hover:text-brand">{f}</button>)}</div>
           </div>
         )}
-        {a.citations.length > 0 && (compact || !onCite) && (
-          <div>
+        {a.citations.length > 0 && (
+          <div className={!compact && onCite ? "xl:hidden" : ""}>
             <button className="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3 hover:text-fg" onClick={() => setShowSources((v) => !v)}>{showSources ? "Hide" : "Show"} sources ({a.citations.length})</button>
             {showSources && <div className="mt-2"><CitationList citations={a.citations} active={activeCite?.answer === a ? activeCite.id : null} /></div>}
           </div>
         )}
-        {!compact && onCite && a.citations.length > 0 && <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3">{a.citations.length} source{a.citations.length === 1 ? "" : "s"} · shown in the panel</p>}
+        {!compact && onCite && a.citations.length > 0 && <p className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3 xl:block">{a.citations.length} source{a.citations.length === 1 ? "" : "s"} · shown in the panel</p>}
       </div>
     </article>
   );
