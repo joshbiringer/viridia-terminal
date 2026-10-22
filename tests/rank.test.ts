@@ -82,6 +82,34 @@ describe("Pattern Confidence", () => {
     expect(running!.rank!.factors.find((x) => x.id === "flat.not_running")?.pass).toBe(false);
   });
 
+  describe("Elliott Wave Principle evidence (rank-1.2.0)", () => {
+    const f = (c: ReturnType<typeof impulseId>, id: string) => c.rank!.factors.find((x) => x.id === id)?.pass;
+
+    it("expects an extended fifth when waves 1 and 3 are about equal", () => {
+      const ext = impulseId(path([140, 100, 130, 115, 146, 135, 190, 170]));   // w1 30, w3 31, w5 55
+      const flat5 = impulseId(path([140, 100, 130, 115, 146, 135, 165, 150])); // w5 30: no extension
+      expect(f(ext, "ewp.w5_extension_expected")).toBe(true);
+      expect(f(flat5, "ewp.w5_extension_expected")).toBe(false);
+      expect(f(impulseId(path(WAY)), "ewp.w5_extension_expected")).toBeUndefined(); // wave 3 extended: not measured
+    });
+
+    it("reads heavy fifth-wave volume as an extended fifth", () => {
+      const c = impulseId(path([140, 100, 130, 115, 146, 135, 190, 170], [2e6, 1e6, 0.8e6, 1.5e6, 1e6, 2e6, 1e6]));
+      expect(f(c, "ewp.w5_volume_extension")).toBe(true);
+    });
+
+    it("credits wave 4 splitting the impulse into the Golden Section", () => {
+      const golden = impulseId(path([140, 100, 130, 115, 175, 161.8, 200, 180])); // 200 − 161.8 = 38.2% of 100
+      const not = impulseId(path([140, 100, 130, 115, 175, 150, 200, 180]));
+      expect(f(golden, "ewp.w4_golden_section")).toBe(true);
+      expect(f(not, "ewp.w4_golden_section")).toBe(false);
+    });
+
+    it("credits wave 4 equal to wave 2", () => {
+      expect(f(impulseId(path([140, 100, 130, 115, 175, 160, 200, 180])), "ewp.w4_vs_w2")).toBe(true);
+    });
+  });
+
   it("round-trips factors through compact storage", () => {
     const c = impulseId(path(WAY));
     expect(decodeFactors(encodeFactors(c.rank!.factors))).toEqual(c.rank!.factors);

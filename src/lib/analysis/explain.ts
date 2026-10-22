@@ -240,16 +240,16 @@ function setup(ctx: ExplainContext): Answer {
 
 /** Wave personality, from the sources (see viridia-wave-knowledge.md, section 3). */
 const PERSONALITY: Record<string, { text: string; source: string }> = {
-  "1": { text: "Wave 1 usually starts while the news for that degree is at its worst. Most people don't believe the move and treat it as a rally to sell into.", source: "Article, citing Elliott Wave Principle" },
-  "2": { text: "Wave 2 often retraces deeply, because the crowd expects the old trend to resume. It unfolds in a corrective three-wave shape, and it can never go past the start of wave 1.", source: "Article; Essentials (rule)" },
-  "3": { text: "Wave 3 is usually the strongest and broadest wave: the trend becomes unmistakable and fundamentals improve. It gives the most valuable clues to the count, and it can never be the shortest of waves 1, 3 and 5.", source: "Article; Essentials (rule)" },
-  "4": { text: "Wave 4 often moves more sideways than against the trend, and it alternates with wave 2: if one was sharp, the other tends to be sideways. In an impulse it can't enter wave 1's price territory.", source: "Article; Essentials" },
-  "5": { text: "Wave 5 is almost never as dynamic as wave 3. It tends to come on lighter volume and narrower breadth, while optimism looks best, which is why the sources advise reducing risk late in a fifth wave rather than chasing it.", source: "Article, citing Elliott Wave Principle" },
-  A: { text: "Wave A is the first leg against the trend. In a zigzag it unfolds in five waves; in a flat, in three, which is why a flat's B wave recovers most or all of it.", source: "Essentials; EWI, Elliott Wave Theory" },
-  B: { text: "Wave B retraces wave A. In a zigzag it stays well short of A's start; in a flat it returns to about A's start or beyond it.", source: "Essentials" },
-  C: { text: "Wave C is the final leg of the correction and unfolds in five waves. In a zigzag it often equals wave A; in a regular flat it ends slightly beyond A's end, in an expanded flat substantially beyond.", source: "Essentials" },
-  D: { text: "Wave D is the fourth leg of a triangle. In a contracting triangle it stays short of the end of wave B.", source: "Essentials" },
-  E: { text: "Wave E is the last leg of a triangle, after which a thrust in the direction of the larger trend normally follows.", source: "Essentials" },
+  "1": { text: "Wave 1 usually starts while the news for that degree is at its worst, and most people treat it as a rally to sell into. About half of first waves are part of a basing process and get heavily corrected; the rest rise from large bases or extreme compression and are dynamic.", source: "Frost & Prechter, Elliott Wave Principle; Article" },
+  "2": { text: "Wave 2 often retraces so much of wave 1 that most of the gain disappears, while fear says the old trend is back. Low volume and volatility late in wave 2 signal that selling is drying up. It unfolds in three waves and can never go past the start of wave 1.", source: "Frost & Prechter, Elliott Wave Principle; Essentials (rule)" },
+  "3": { text: "Wave 3 is usually the strongest and broadest wave, with the most volume and price movement; the third of a third is the most powerful point, with breakouts and gaps. It gives the most valuable clues to the count, and it can never be the shortest of waves 1, 3 and 5.", source: "Frost & Prechter, Elliott Wave Principle; Essentials (rule)" },
+  "4": { text: "Wave 4 more often trends sideways, building a base for wave 5, and it alternates with wave 2: if one was sharp, the other tends to be sideways. It tends to end in the area of the previous fourth wave of lesser degree, and in an impulse it can't enter wave 1's price territory.", source: "Frost & Prechter, Elliott Wave Principle; Essentials" },
+  "5": { text: "Wave 5 is less dynamic than wave 3 in breadth and usually in speed, and comes on lighter volume unless it extends. Optimism runs highest just as breadth narrows. The market has no history of peaking at maximum acceleration, which is why the sources advise reducing risk late in a fifth wave rather than chasing it.", source: "Frost & Prechter, Elliott Wave Principle; Article" },
+  A: { text: "During wave A most people think the decline is just a pullback before the next leg of the trend. Its structure tells you what comes next: a five-wave A means a zigzag, so B should stay well short of A's start; a three-wave A means a flat or triangle, so B can recover most or all of it.", source: "Frost & Prechter, Elliott Wave Principle" },
+  B: { text: "B waves are the sources' \u201cphonies\u201d: bull traps with narrow participation and weak internals that are almost always fully retraced by wave C. If it feels like something is wrong with the market, it is often a B wave. In a zigzag B stays short of A's start; in a flat it returns to about A's start or beyond.", source: "Frost & Prechter, Elliott Wave Principle; Essentials" },
+  C: { text: "Wave C has most of the properties of a third wave: persistent, broad and usually destructive, as the hopes held during A and B give way. It unfolds in five waves. In a zigzag it often equals wave A (or 61.8% or 161.8% of it); in an expanded flat it is often 161.8% of A.", source: "Frost & Prechter, Elliott Wave Principle" },
+  D: { text: "Wave D is the fourth leg of a triangle and often comes with rising volume, but like a B wave it is a corrective advance and not to be trusted. In a contracting triangle it stays short of the end of wave B.", source: "Frost & Prechter, Elliott Wave Principle; Essentials" },
+  E: { text: "Wave E is the last leg of a triangle. It often makes a false break through the triangle's boundary on supportive news, just before the thrust in the direction of the larger trend, which typically travels about the width of the triangle's widest part.", source: "Frost & Prechter, Elliott Wave Principle" },
 };
 
 function wave(ctx: ExplainContext): Answer {
@@ -260,10 +260,10 @@ function wave(ctx: ExplainContext): Answer {
     return {
       title: "After a finished pattern",
       blocks: [p(motive
-        ? "The preferred count is a finished five-wave move. What follows is a correction of it in three waves (or a combination), which the sources say tends to end near the previous fourth wave of lesser degree."
+        ? "The preferred count is a finished five-wave move. What follows is a correction of it in three waves (or a combination), which the sources say tends to end near the previous fourth wave of lesser degree. If wave 5 was extended, expect a sharp reversal toward the low of the extension's own second wave; a three-wave bounce after the turn, rather than five, confirms the trend has changed."
         : "The preferred count is a finished correction, so the larger trend would normally resume with a new motive wave, starting with the wave 1 behaviour below."),
         ...(motive ? [] : [p(PERSONALITY["1"].text)])],
-      sources: ["Prechter, Essentials", "Article"],
+      sources: ["Prechter, Essentials", "Frost & Prechter, Elliott Wave Principle", "Article"],
     };
   }
   const k = pref.next.label.toUpperCase();

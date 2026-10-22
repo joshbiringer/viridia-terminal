@@ -22,7 +22,7 @@ import type { Candidate } from "./candidates.ts";
 import type { PivotBar } from "./pivots.ts";
 import { RULEBOOK } from "./rules.ts";
 
-export const RANK_VERSION = "rank-1.1.0";
+export const RANK_VERSION = "rank-1.2.0";
 
 /** Wave-personality checks measured by this module. */
 export const PERSONALITY = {
@@ -48,12 +48,37 @@ export const PERSONALITY = {
   },
   // rank-1.1.0 (appended: FACTOR_IDS positions are part of the stored encoding)
   "fib.alternate_ratio": {
-    text: "Alternate waves are related by a Fibonacci ratio within 5% (wave 5 to wave 1, C to A, or triangle legs at 61.8%), the more reliable kind of relationship",
+    text: "Alternate waves are related by a Fibonacci ratio within 5% (wave 5 to wave 1, C to A, or alternate triangle legs at 61.8%, or 161.8% in expanding triangles), the more reliable kind of relationship",
     source: "Essentials",
   },
   "flat.not_running": {
     text: "The flat is a regular or expanded flat; running flats are a rare variation",
     source: "Essentials",
+  },
+  // rank-1.2.0: Frost & Prechter, Elliott Wave Principle (appended, same encoding rule as above)
+  "ewp.w5_extension_expected": {
+    text: "When waves 1 and 3 are about equal, wave 5 is the extended wave",
+    source: "EWP",
+  },
+  "ewp.w5_volume_extension": {
+    text: "A fifth wave on volume at least as heavy as wave 3's is an extended fifth",
+    source: "EWP",
+  },
+  "ewp.w4_golden_section": {
+    text: "Wave 4 divides the impulse into the Golden Section: the rest of the move is 38.2% of the whole, or 61.8% when wave 5 extends",
+    source: "EWP",
+  },
+  "ewp.w4_vs_w2": {
+    text: "Wave 4 is equal to wave 2 in price, or related to it by 61.8% or 161.8%",
+    source: "EWP",
+  },
+  "ewp.expanded_flat_b": {
+    text: "In an expanded flat, wave B is about 123.6% or 138.2% of wave A",
+    source: "EWP",
+  },
+  "ewp.sideways_w4": {
+    text: "Sideways fourth waves retrace about 38.2% of wave 3; sharp second waves about 50% or 61.8% of wave 1",
+    source: "EWP",
   },
 } as const;
 export type PersonalityId = keyof typeof PERSONALITY;
@@ -120,9 +145,12 @@ function alternateRatio(c: Candidate): boolean | null {
       return nearRatio(len(2, 3) / len(0, 1), [1, 1.618]);
     case "triangle": {
       if (p.length < 4) return null;
-      const ca = nearRatio(len(2, 3) / len(0, 1), [0.618]);
-      const db = p.length >= 5 ? nearRatio(len(3, 4) / len(1, 2), [0.618]) : false;
-      return ca || db;
+      // EWP: alternate legs relate by 0.618 in contracting triangles and by 1.618 in expanding ones
+      const k = c.subtype === "expanding" ? [1.618] : [0.618];
+      const ca = nearRatio(len(2, 3) / len(0, 1), k);
+      const db = p.length >= 5 ? nearRatio(len(3, 4) / len(1, 2), k) : false;
+      const ec = p.length >= 6 ? nearRatio(len(4, 5) / len(2, 3), k) : false;
+      return ca || db || ec;
     }
     default:
       return null;
@@ -137,6 +165,10 @@ function personality(c: Candidate, bars: PivotBar[] | undefined): Factor[] {
   const alt = alternateRatio(c);
   if (alt != null) out.push({ id: "fib.alternate_ratio", pass: alt });
   if (c.pattern === "flat" && c.subtype) out.push({ id: "flat.not_running", pass: c.subtype !== "running" });
+  if (c.pattern === "flat" && c.subtype === "expanded" && p.length >= 3) {
+    out.push({ id: "ewp.expanded_flat_b", pass: nearRatio(Math.abs(p[2].price - p[1].price) / Math.abs(p[1].price - p[0].price), [1.236, 1.382], 0.04) });
+  }
+  out.push(...ewpImpulse(c, bars));
 
   // Start at an extreme: nothing in the look-back window (the count's own span, at least 10 bars)
   // went beyond the starting point.
@@ -173,6 +205,48 @@ function personality(c: Candidate, bars: PivotBar[] | undefined): Factor[] {
     const r2 = w2.len / w(1).len, r4 = w4.len / w(3).len;
     // the shallower correction (by retracement) should take at least as long as the deeper one
     out.push({ id: "personality.w4_time", pass: r2 >= r4 ? w4.bars >= w2.bars : w2.bars >= w4.bars });
+  }
+  return out;
+}
+
+/** Impulse evidence from Frost & Prechter, Elliott Wave Principle (lessons 4, 13, 20 and 21). */
+function ewpImpulse(c: Candidate, bars: PivotBar[] | undefined): Factor[] {
+  if (c.pattern !== "impulse") return [];
+  const out: Factor[] = [];
+  const p = c.points;
+  const len = (k: number) => Math.abs(p[k].price - p[k - 1].price);
+
+  if (p.length >= 5) {
+    // L21: wave 4 spans a range equal or Fibonacci-related to wave 2
+    out.push({ id: "ewp.w4_vs_w2", pass: nearRatio(len(4) / len(2), [0.618, 1, 1.618], 0.06) });
+    // L20: sharp corrections retrace 50–61.8%, sideways ones 38.2%; alternation means one of each
+    const r2 = len(2) / len(1), r4 = len(4) / len(3);
+    const sharp2 = nearRatio(r2, [0.5, 0.618], 0.08), side4 = nearRatio(r4, [0.382], 0.1);
+    const side2 = nearRatio(r2, [0.382], 0.1), sharp4 = nearRatio(r4, [0.5, 0.618], 0.08);
+    out.push({ id: "ewp.sideways_w4", pass: (sharp2 && side4) || (side2 && sharp4) });
+  }
+  if (p.length < 6) return out;
+
+  const l1 = len(1), l3 = len(3), l5 = len(5);
+  const w5ext = l5 >= 1.382 * Math.max(l1, l3);
+  const w1ext = l1 >= 1.382 * Math.max(l3, l5);
+  // L4: if waves 1 and 3 are about equal, expect wave 5 to extend
+  const r13 = l3 / l1;
+  if (r13 >= 0.85 && r13 <= 1.18) out.push({ id: "ewp.w5_extension_expected", pass: w5ext });
+
+  // L21: unless wave 1 extended, a point within wave 4 (its start or end) splits the impulse so the
+  // remainder is .382 of the whole (.618 when wave 5 extends)
+  if (!w1ext) {
+    const total = Math.abs(p[5].price - p[0].price);
+    const want = w5ext ? 0.618 : 0.382;
+    const ok = [p[3].price, p[4].price].some((x) => nearRatio(Math.abs(p[5].price - x) / total, [want], 0.07));
+    out.push({ id: "ewp.w4_golden_section", pass: ok });
+  }
+
+  // L13: below Primary degree, wave 5 volume at or above wave 3's means wave 5 is extended
+  if (bars?.length) {
+    const v3 = avgVolume(bars, p[2].index, p[3].index), v5 = avgVolume(bars, p[4].index, p[5].index);
+    if (v3 != null && v5 != null && v5 >= v3) out.push({ id: "ewp.w5_volume_extension", pass: w5ext });
   }
   return out;
 }

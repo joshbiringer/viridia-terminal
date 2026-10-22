@@ -316,8 +316,11 @@ kbd { font: 400 10.5px var(--font-mono-stack); padding: 1px 6px; border: 1px sol
     radial-gradient(1px 1px at 5% 48%, rgba(255,255,255,.3), transparent 60%),
     radial-gradient(1px 1px at 64% 22%, rgba(255,255,255,.3), transparent 60%);
 }
-.skyline-in { animation: skyline-rise 900ms var(--ease) both; }
-.skyline-out { animation: skyline-fade 700ms var(--ease) both; }
-@keyframes skyline-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-@keyframes skyline-fade { from { opacity: 1; } to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .skyline-in, .skyline-out { animation: none; } }
+.globe-hero { background: radial-gradient(80% 90% at 70% 40%, #071a2a 0%, #02060a 70%); }
+/* keeps the headline readable over the Earth: dark on the left (top on phones), clear where the globe flies */
+.globe-scrim { background: linear-gradient(180deg, rgba(2,6,10,.82) 0%, rgba(2,6,10,.45) 45%, rgba(2,6,10,.2) 75%, rgba(2,6,10,.65) 100%); }
+@media (min-width: 768px) {
+  .globe-scrim { background:
+    linear-gradient(90deg, rgba(2,6,10,.9) 0%, rgba(2,6,10,.62) 30%, rgba(2,6,10,0) 56%),
+    linear-gradient(0deg, rgba(2,6,10,.55) 0%, rgba(2,6,10,0) 22%); }
+}

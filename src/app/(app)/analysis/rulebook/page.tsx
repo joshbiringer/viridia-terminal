@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { RULEBOOK, RULES_VERSION, type Category, type Pattern } from "@engine/rules";
+import { PERSONALITY, RANK_VERSION } from "@engine/rank";
 import { EXAMPLE, EXAMPLE_VALIDATION } from "@/lib/illustration";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -18,6 +19,7 @@ const SOURCE: Record<string, string> = {
   EWF: "Elliott Wave Forecast, Elliott Wave Theory",
   EWP: "Frost & Prechter, Elliott Wave Principle",
   Viridia: "Viridia engine",
+  Article: "EWI, \u201cBuying High; Selling Low\u201d (citing Elliott Wave Principle)",
 };
 
 const GROUPS: { title: string; blurb: string; match: (id: string, applies: Pattern[]) => boolean }[] = [
@@ -40,7 +42,7 @@ export default function RulebookPage() {
     <>
       <PageHeader
         title="Rulebook"
-        meta={<span className="num">{RULES_VERSION}</span>}
+        meta={<span className="num">{RULES_VERSION} · {RANK_VERSION}</span>}
         description="Every wave count Viridia shows is checked against these rules by deterministic code. Rules eliminate counts; guidelines and Fibonacci tendencies only add or subtract evidence. No language model can relabel a wave or excuse a broken rule."
       />
 
@@ -74,6 +76,23 @@ export default function RulebookPage() {
               </section>
             );
           })}
+          <section className="card">
+            <div className="card-h"><div>
+              <h2 className="card-t">Ranking evidence</h2>
+              <p className="card-s mt-0.5">Wave personality and Fibonacci relationships measured on top of the rulebook. They raise or lower Pattern Confidence and never eliminate a count.</p>
+            </div></div>
+            <ul className="divide-y divide-[var(--border)]">
+              {Object.entries(PERSONALITY).map(([id, r]) => (
+                <li key={id} className="flex flex-col gap-1.5 px-5 py-3.5 sm:flex-row sm:items-start sm:gap-4">
+                  <span className={`chip ${id.startsWith("personality.") ? "acc" : "fib"} w-fit shrink-0 sm:mt-0.5 sm:w-[84px] sm:justify-center`}>{id.startsWith("personality.") ? "Personality" : "Evidence"}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] leading-snug">{r.text}</p>
+                    <p className="mt-1 text-[12px] text-fg-3">{SOURCE[r.source] ?? r.source} · <code className="text-[11.5px]">{id}</code></p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
 
         <aside className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">

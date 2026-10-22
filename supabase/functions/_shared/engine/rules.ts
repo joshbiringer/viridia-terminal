@@ -13,12 +13,14 @@
  *          "EWF" = Elliott Wave Forecast, Elliott Wave Theory (guidelines and Fibonacci ratios).
  *          "EWP" = Frost & Prechter, Elliott Wave Principle (rules not spelled out in Essentials).
  *
+ * rules-1.1.0: zigzag C may also be 161.8% of A (EWP lesson 21).
+ *
  * Counts may be incomplete: pass the confirmed endpoints so far (at least two). Rules that need a
  * later endpoint report "pending", and the result lists the invalidation levels that apply to the
  * wave in progress.
  */
 
-export const RULES_VERSION = "rules-1.0.0";
+export const RULES_VERSION = "rules-1.1.0";
 
 export type Direction = "up" | "down";
 export type Category = "rule" | "guideline" | "fibonacci" | "heuristic";
@@ -133,7 +135,7 @@ const DEFS = {
   "zigzag.b_lt_100": { category: "rule", source: "Essentials", appliesTo: ["zigzag"], text: "Wave B ends short of the start of wave A (a zigzag is a sharp correction)" },
   "zigzag.c_beyond_a": { category: "guideline", source: "Essentials", appliesTo: ["zigzag"], text: "Wave C travels beyond the end of wave A (a failure is a truncation)" },
   "zigzag.b_depth": { category: "fibonacci", source: "EWF", appliesTo: ["zigzag"], text: "Wave B retraces 38.2% to 85.4% of wave A" },
-  "zigzag.c_vs_a": { category: "fibonacci", source: "EWF", appliesTo: ["zigzag"], text: "Wave C equals 61.8%, 100% or 123.6% of wave A" },
+  "zigzag.c_vs_a": { category: "fibonacci", source: "EWP", appliesTo: ["zigzag"], text: "Wave C equals wave A, or is 61.8%, 123.6% or 161.8% of it" },
   "zigzag.not_flat": { category: "heuristic", source: "Viridia", appliesTo: ["zigzag"], text: "Wave B retraces under 90% of wave A (deeper B waves fit a flat better)" },
   // flat
   "flat.b_ge_90": { category: "rule", source: "EWP", appliesTo: ["flat"], text: "Wave B retraces at least 90% of wave A" },
@@ -460,7 +462,7 @@ export function validateZigzag(p: WavePoint[], opts: ValidateOptions = {}): Vali
     const t = beyond(p[3].price, p[1].price, dir), r = len(p, 3) / len(p, 1);
     b.add("zigzag.c_beyond_a", t ? "pass" : "fail", t ? "Wave C ended beyond wave A." : "Wave C ended short of wave A (truncated).");
     b.fibs.push(fib("c/a", "Wave C as a multiple of wave A", r));
-    const near = [0.618, 1, 1.236].some((f) => Math.abs(r - f) <= 0.05 * f);
+    const near = [0.618, 1, 1.236, 1.618].some((f) => Math.abs(r - f) <= 0.05 * f);
     b.add("zigzag.c_vs_a", near ? "pass" : "fail", `Wave C measured ${pc(r)} of wave A.`, { ratio: r3(r) });
   }
   const k = p.length - 1;

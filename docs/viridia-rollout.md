@@ -862,3 +862,16 @@ The brief asked the product to show the sophistication the engine already has. O
 - **Storage** (migration 0036): `ask_conversations` (owner-only, at most 200 per account), plus the `ask_structure` and `resolve_symbols` RPCs.
 - **Tests:** 13 cases covering the directive's query suite (education, market, company, structure, comparison, screener, portfolio, ambiguous, contextual, missing data), plus the number validator.
 - **Latency on the live site:** 90 ms to 2.1 s per question.
+
+## Mission Control globe and Elliott Wave Principle update (2026-10-22)
+
+- **Globe hero, rebuilt in WebGL** (`src/components/brief/globe/scene.ts`, three.js, loaded after first paint):
+  - Earth uses NASA Blue Marble (day) and Black Marble city lights (night), both public domain, in `public/textures`.
+  - It is lit by the sun's real position right now (`src/lib/sun.ts`, NOAA formulas, with tests), so the day/night line, sunrise glow and city lights match the clock.
+  - The atmosphere is a ray-marched scattering shell. The sun is a billboard plus screen-space light shafts (volumetric scattering against an occlusion buffer of Earth and buildings).
+  - The camera flies New York → San Francisco → Tokyo → Hong Kong → Frankfurt → London. At each city an original, seeded skyline rises out of the globe. Windows light up when it's night there.
+  - The flyover pauses off screen and in background tabs, and shows one still frame for reduced-motion readers. On wide screens the subject sits right of center so the headline stays clear.
+  - The city picker and the 2-D skyline band are gone. The status line follows the city in view.
+- **Engine: rules-1.1.0 + rank-1.2.0.** Frost & Prechter, *Elliott Wave Principle* added as a primary source. Six new ranking evidence checks (`ewp.*`), triangle alternate ratios (e:c, and 1.618 for expanding), and zigzag C = 161.8% × A. All are evidence only; no new eliminating rules. The new checks are listed under "Ranking evidence" on `/analysis/rulebook`. Details: `docs/viridia-wave-knowledge.md`, section 7.
+- **Ask Viridia:** wave personalities for 1–5 and A–E rewritten from EWP lesson 14.
+- **Version bump:** `ANALYSIS_VERSION` changed, so cached worker results are bypassed until the analysis worker is redeployed with the new engine bundle.
