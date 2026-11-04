@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+// Self-hosted type (no third-party font requests): Geist for the interface and data,
+// Instrument Serif for headlines (both SIL Open Font License).
+import "@fontsource-variable/geist";
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource/instrument-serif/400-italic.css";
 import "./globals.css";
 import { THEME_BOOT } from "@/lib/theme";
 
@@ -11,10 +16,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://api.fontshare.com" />
-        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
-        {/* Clash Display (Indian Type Foundry, free under the ITF Free Font License) via Fontshare */}
-        <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body>

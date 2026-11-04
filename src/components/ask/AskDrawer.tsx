@@ -55,8 +55,8 @@ export function AskDrawer() {
   return (
     <>
       {!open && (
-        <button onClick={() => setOpen(true)} className="fixed bottom-5 right-5 z-40 inline-flex h-12 items-center gap-2.5 rounded-full bg-[var(--near-black)] pl-4 pr-5 text-white transition-transform hover:-translate-y-0.5" style={{ boxShadow: "var(--shadow-lg)" }} aria-label="Ask Viridia">
-          <ViridiaMark size={18} className="text-emerald" /><span className="font-mono text-[11px] uppercase tracking-[0.16em]">Ask Viridia</span>
+        <button onClick={() => setOpen(true)} className="fixed bottom-5 right-5 z-40 inline-flex h-12 items-center gap-2.5 rounded-full bg-ink pl-4 pr-5 text-panel transition-transform hover:-translate-y-0.5" style={{ boxShadow: "var(--shadow-lg)" }} aria-label="Ask Viridia">
+          <ViridiaMark size={18} className="text-[#7FA6FF]" /><span className="text-[14px] font-medium">Ask Viridia</span>
         </button>
       )}
       {open && (
@@ -64,8 +64,8 @@ export function AskDrawer() {
           <aside className="flex h-full w-full flex-col bg-panel sm:w-[520px] sm:border-l sm:border-line" style={{ boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()} aria-label="Ask Viridia" role="dialog" aria-modal="true">
             <div className="dark-band flex items-center gap-2.5 px-4 py-3">
               <ViridiaMark size={18} className="text-emerald" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.16em]">Ask Viridia</span>
-              <Link href="/ask" className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-white/70 hover:text-white" onClick={() => setOpen(false)}>Full view</Link>
+              <span className="text-[14px] font-semibold">Ask Viridia</span>
+              <Link href="/ask" className="ml-auto font-mono text-[12px] text-white/70 hover:text-white font-medium" onClick={() => setOpen(false)}>Full view</Link>
               <button className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-white/80 hover:bg-white/10" onClick={() => setOpen(false)} aria-label="Close"><Icon name="x" /></button>
             </div>
             <div className="min-h-0 flex-1"><AskChat session={session} context={ctx} contextLabel={contextLabel(ctx)} compact /></div>

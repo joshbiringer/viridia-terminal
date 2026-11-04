@@ -29,7 +29,7 @@ export function EvidenceBadge({ ev }: { ev: Answer["evidence"] }) {
   return (
     <span className="relative inline-flex">
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open}
-        className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-2 hover:border-line-2">
+        className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 font-mono text-[12px] text-fg-2 hover:border-line-2 font-medium">
         <i className="h-1.5 w-1.5 rounded-full" style={{ background: EV_COLOR[ev.state] }} />{EVIDENCE_LABEL[ev.state]}
       </button>
       {open && (
@@ -68,7 +68,7 @@ export function BlockView({ b, onCite, onAsk }: { b: Block; onCite?: OnCite; onA
     case "calculation":
       return (
         <details className="rounded-[10px] border border-line px-4 py-2.5">
-          <summary className="cursor-pointer font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-2">Show calculation · {b.title}</summary>
+          <summary className="cursor-pointer font-mono text-[12px] text-fg-2 font-medium">Show calculation · {b.title}</summary>
           <dl className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 text-[13px]">
             {b.inputs.map((i) => <div key={i.label + i.value} className="contents"><dt className="text-fg-3">{i.label}</dt><dd className="num text-right">{i.value}</dd></div>)}
           </dl>
@@ -106,7 +106,7 @@ export function BlockView({ b, onCite, onAsk }: { b: Block; onCite?: OnCite; onA
           <dl className="divide-y divide-line">
             {b.rows.map((r) => (
               <div key={r.label} className="grid grid-cols-[150px_minmax(0,1fr)] gap-3 px-4 py-2 text-[13.5px]">
-                <dt className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-3">{r.label}</dt>
+                <dt className="font-mono text-[12px] text-fg-3 font-medium">{r.label}</dt>
                 <dd><span className="font-[500]">{r.value}</span>{r.note && <span className="text-fg-3"> · {r.note}</span>}</dd>
               </div>
             ))}
@@ -131,7 +131,7 @@ export function BlockView({ b, onCite, onAsk }: { b: Block; onCite?: OnCite; onA
                 <div className="flex items-baseline gap-3">
                   <span className="num text-[16px] font-[500] text-fib">${z.low.toFixed(2)} – ${z.high.toFixed(2)}</span>
                   <span className="num text-[12.5px] text-fg-3">{z.dist >= 0 ? "+" : "−"}{Math.abs(z.dist * 100).toFixed(1)}% from close</span>
-                  {z.count > 0 && <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3">{z.count} relationships · strength {z.strength.toFixed(1)}</span>}
+                  {z.count > 0 && <span className="ml-auto font-mono text-[12px] text-fg-3 font-medium">{z.count} relationships · strength {z.strength.toFixed(1)}</span>}
                 </div>
                 <ul className="mt-1 text-[12.5px] text-fg-2">{z.levels.map((l) => <li key={l}>{l}</li>)}</ul>
               </li>
@@ -147,7 +147,7 @@ export function BlockView({ b, onCite, onAsk }: { b: Block; onCite?: OnCite; onA
               <thead><tr><th /> {b.symbols.map((s) => <th key={s} className="r"><Link href={`/terminal/${s}`} className="hover:text-brand">{s}</Link></th>)}</tr></thead>
               {b.sections.map((sec) => (
                 <tbody key={sec.title}>
-                  <tr><td colSpan={b.symbols.length + 1} className="bg-hover/50 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-3">{sec.title}</td></tr>
+                  <tr><td colSpan={b.symbols.length + 1} className="bg-hover/50 font-mono text-[12px] text-fg-3 font-medium">{sec.title}</td></tr>
                   {sec.rows.map((r) => <tr key={r.label}><td className="text-fg-3">{r.label}</td>{r.values.map((v, i) => <td key={i} className="r num">{v}</td>)}</tr>)}
                 </tbody>
               ))}
@@ -216,7 +216,7 @@ export function BlockView({ b, onCite, onAsk }: { b: Block; onCite?: OnCite; onA
     case "unavailable":
       return (
         <div className="flex gap-3 rounded-[10px] px-4 py-3" style={{ background: "var(--warn-bg)" }}>
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: "var(--warn)" }}>Not available</span>
+          <span className="font-mono text-[12px] font-medium" style={{ color: "var(--warn)" }}>Not available</span>
           <p className="text-[13px] leading-snug text-fg-2"><b className="font-[600] text-fg">{b.what[0].toUpperCase() + b.what.slice(1)}.</b> {b.why}</p>
         </div>
       );
@@ -246,7 +246,7 @@ export function CitationList({ citations, active, onCite }: { citations: Citatio
             <span className="rounded-[3px] bg-[var(--accent-bg)] px-1 font-mono text-[9.5px] text-brand">{c.id}</span>
             <span className="font-[600] text-fg">{c.title}</span>
           </button>
-          <p className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-fg-3">{({ market_data: "Market data provider", viridia_engine: "Viridia structure engine", viridia_scanner: "Viridia scanner", viridia_events: "Viridia change detection", viridia_portfolio: "Viridia portfolio calculation", viridia_regime: "Viridia market regime", glossary: "Viridia reference", user_data: "Your data" })[c.kind]}{c.asOf ? ` · ${c.asOf}` : ""}</p>
+          <p className="mt-0.5 font-mono text-[11.5px] text-fg-3 font-medium">{({ market_data: "Market data provider", viridia_engine: "Viridia structure engine", viridia_scanner: "Viridia scanner", viridia_events: "Viridia change detection", viridia_portfolio: "Viridia portfolio calculation", viridia_regime: "Viridia market regime", glossary: "Viridia reference", user_data: "Your data" })[c.kind]}{c.asOf ? ` · ${c.asOf}` : ""}</p>
           {c.detail && <p className="mt-1 leading-snug text-fg-2">{c.detail}</p>}
           {c.href && <Link href={c.href} className="mt-1 inline-block text-brand hover:underline">Open source →</Link>}
         </li>

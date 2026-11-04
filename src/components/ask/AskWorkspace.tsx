@@ -79,7 +79,7 @@ export function AskWorkspace({ initialQ }: { initialQ: string | null }) {
                     ) : (
                       <button className="w-full truncate px-2 py-1.5 text-left text-[13px]" onClick={() => { setConv(c); setCite(null); }} title={c.title}>{c.title}</button>
                     )}
-                    <div className="hidden gap-2 px-2 pb-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-3 group-hover:flex">
+                    <div className="hidden gap-2 px-2 pb-1.5 font-mono text-[11.5px] text-fg-3 group-hover:flex font-medium">
                       <button className="hover:text-brand" onClick={() => setEditing(c.id)}>Rename</button>
                       <button className="hover:text-brand" onClick={() => { const w = window.prompt("Add to research workspace (name, or empty to remove):", c.workspace ?? ""); if (w !== null) void patch(c, { workspace: w.trim() || null }); }}>Workspace</button>
                       <button className="hover:text-brand" onClick={() => void patch(c, { archived: !c.archived })}>{c.archived ? "Restore" : "Archive"}</button>
@@ -91,7 +91,7 @@ export function AskWorkspace({ initialQ }: { initialQ: string | null }) {
             </div>
           ))}
         </div>
-        {viewer && <button className="border-t border-line px-4 py-2 text-left font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3 hover:text-fg" onClick={() => setArchived((v) => !v)}>{archived ? "Back to conversations" : "Show archived"}</button>}
+        {viewer && <button className="border-t border-line px-4 py-2 text-left font-mono text-[12px] text-fg-3 hover:text-fg font-medium" onClick={() => setArchived((v) => !v)}>{archived ? "Back to conversations" : "Show archived"}</button>}
       </aside>
 
       <section className="min-h-0 min-w-0">

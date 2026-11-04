@@ -14,6 +14,8 @@
     "bundle:worker": "npx --yes esbuild@0.25 supabase/functions/analysis-worker/index.ts --bundle --format=esm --platform=neutral --target=es2022 --external:npm:* --outfile=supabase/functions/analysis-worker/dist/index.js"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource/instrument-serif": "^5.2.8",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.1",
     "lightweight-charts": "^5.2.1",

@@ -240,7 +240,7 @@ export default async function Landing() {
           <h2 className="mb-10 max-w-xl text-center text-[26px] font-[400] leading-snug text-brand md:text-[30px]">Where rule-checked structure meets institutional research.</h2>
           <div className="flex w-full flex-wrap justify-center gap-4">
             {["Every U.S. listing", "Rules never bent", "No look-ahead replays", "Free during beta"].map((b) => (
-              <div key={b} className="flex w-[calc(50%-0.5rem)] items-center justify-center rounded-[12px] bg-panel px-6 py-5 text-center sm:w-60"><p className="font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-fg-2">{b}</p></div>
+              <div key={b} className="flex w-[calc(50%-0.5rem)] items-center justify-center rounded-[12px] bg-panel px-6 py-5 text-center sm:w-60"><p className="font-mono text-[13.5px] font-bold text-fg-2">{b}</p></div>
             ))}
           </div>
           <p className="mt-10 max-w-[620px] text-center text-[15px] font-[300] leading-relaxed text-fg-2">Every security, wave count, setup, Mission Control and Portfolio X-Ray are open now. A free account adds watchlists, saved portfolios and preferences. Paid plans come later, and you&apos;ll choose one before anything is charged.</p>

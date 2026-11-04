@@ -84,7 +84,7 @@ export function AskChat({ session, context, contextLabel, compact = false, onCit
                   onClient={() => { const qn = [...turns.slice(0, i)].reverse().find((x) => x.role === "user"); if (qn && qn.role === "user") ask(qn.q, "client"); }} />)}
             {pending && (
               <div className="flex flex-col gap-4">
-                {pending.status && <p className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-3"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />{pending.status}</p>}
+                {pending.status && <p className="flex items-center gap-2 font-mono text-[12px] text-fg-3 font-medium"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />{pending.status}</p>}
                 {pending.blocks.map((b, j) => <BlockView key={j} b={b} />)}
                 {pending.text && <p className="rounded-[10px] border border-dashed border-line-2 px-4 py-3 text-[14.5px] leading-relaxed">{pending.text}</p>}
               </div>
@@ -114,12 +114,12 @@ export function AskChat({ session, context, contextLabel, compact = false, onCit
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {contextLabel && (
                 <button type="button" onClick={() => setUseCtx((v) => !v)} aria-pressed={useCtx} title="Use what this page is showing as context"
-                  className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] ${useCtx ? "border-brand bg-[var(--accent-bg)] text-brand" : "border-line text-fg-3 line-through"}`}>
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[12px] font-medium ${useCtx ? "border-brand bg-[var(--accent-bg)] text-brand" : "border-line text-fg-3 line-through"}`}>
                   <Icon name="target" className="h-[12px] w-[12px]" />{contextLabel}
                 </button>
               )}
-              <label className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3">Explain as
-                <select value={audience} onChange={(e) => setAudience(e.target.value as Audience)} className="rounded-[6px] border border-line bg-panel px-1.5 py-1 font-mono text-[10.5px] uppercase text-fg">
+              <label className="inline-flex items-center gap-1.5 font-mono text-[12px] text-fg-3 font-medium">Explain as
+                <select value={audience} onChange={(e) => setAudience(e.target.value as Audience)} className="rounded-[6px] border border-line bg-panel px-1.5 py-1 font-mono text-[12px] text-fg font-medium">
                   {(Object.keys(AUDIENCE_LABEL) as Audience[]).map((a) => <option key={a} value={a}>{AUDIENCE_LABEL[a]}</option>)}
                 </select>
               </label>
@@ -144,7 +144,7 @@ function Question({ q, audience }: { q: string; audience: Audience }) {
       <span className="mt-1 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-hover font-mono text-[10px] text-fg-2">YOU</span>
       <div>
         <p className="text-[17px] font-[500] leading-snug">{q}</p>
-        {audience !== "professional" && <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3">Explained as {AUDIENCE_LABEL[audience]}</p>}
+        {audience !== "professional" && <p className="mt-0.5 font-mono text-[12px] text-fg-3 font-medium">Explained as {AUDIENCE_LABEL[audience]}</p>}
       </div>
     </div>
   );
@@ -164,7 +164,7 @@ function AnswerView({ a, compact, onAsk, onWatch, onCite, activeCite, onClient }
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-[13px] font-[600] text-fg-2">{a.title}</h2>
           <EvidenceBadge ev={a.evidence} />
-          {a.intent !== "WATCHLIST_ACTION" && <button className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-brand hover:underline" onClick={onClient}>Explain to client</button>}
+          {a.intent !== "WATCHLIST_ACTION" && <button className="ml-auto font-mono text-[12px] text-brand hover:underline font-medium" onClick={onClient}>Explain to client</button>}
         </div>
         {a.blocks.filter((b) => b.type !== "actions").map((b, i) => <BlockView key={i} b={b} onCite={cite} onAsk={onAsk} />)}
         {actions && actions.type === "actions" && <Actions items={actions.items} onAsk={onAsk} onWatch={onWatch} />}
@@ -176,11 +176,11 @@ function AnswerView({ a, compact, onAsk, onWatch, onCite, activeCite, onClient }
         )}
         {a.citations.length > 0 && (
           <div className={!compact && onCite ? "xl:hidden" : ""}>
-            <button className="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3 hover:text-fg" onClick={() => setShowSources((v) => !v)}>{showSources ? "Hide" : "Show"} sources ({a.citations.length})</button>
+            <button className="font-mono text-[12px] text-fg-3 hover:text-fg font-medium" onClick={() => setShowSources((v) => !v)}>{showSources ? "Hide" : "Show"} sources ({a.citations.length})</button>
             {showSources && <div className="mt-2"><CitationList citations={a.citations} active={activeCite?.answer === a ? activeCite.id : null} /></div>}
           </div>
         )}
-        {!compact && onCite && a.citations.length > 0 && <p className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3 xl:block">{a.citations.length} source{a.citations.length === 1 ? "" : "s"} · shown in the panel</p>}
+        {!compact && onCite && a.citations.length > 0 && <p className="hidden font-mono text-[12px] text-fg-3 xl:block font-medium">{a.citations.length} source{a.citations.length === 1 ? "" : "s"} · shown in the panel</p>}
       </div>
     </article>
   );

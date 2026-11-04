@@ -7,5 +7,5 @@ import { HEADER_NAV } from "@/lib/nav";
 export function PageEyebrow() {
   const path = usePathname();
   const g = HEADER_NAV.find((x) => x.items.some((it) => path === it.href || path.startsWith(it.href + "/")));
-  return g ? <p className="f-eyebrow mb-3 text-brand">{g.items.length === 1 ? g.items[0].label : g.label}</p> : null;
+  return g ? <p className="pill-badge mb-3">{g.items.length === 1 ? g.items[0].label : g.label}</p> : null;
 }

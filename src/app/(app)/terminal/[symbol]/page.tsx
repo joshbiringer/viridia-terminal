@@ -53,7 +53,7 @@ function Section({ id, title, note, children }: { id: string; title: string; not
   return (
     <section id={id} className="flex scroll-mt-[112px] flex-col gap-4" aria-labelledby={`${id}-h`}>
       <div className="flex items-baseline gap-3 border-b border-line pb-1.5">
-        <h2 id={`${id}-h`} className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{title}</h2>
+        <h2 id={`${id}-h`} className="font-mono text-[12px] text-fg-3 font-medium">{title}</h2>
         {note && <span className="text-[12px] text-fg-3">{note}</span>}
       </div>
       {children}
@@ -238,7 +238,7 @@ function RecentChanges({ events }: { events: StructureEvent[] }) {
             <li key={i} className="flex items-baseline gap-3 px-5 py-2 text-[13px]">
               <span className="h-1.5 w-1.5 shrink-0 self-center rounded-full" style={{ background: tone[eventTone(e)] }} aria-hidden />
               <span className="num w-20 shrink-0 text-fg-3">{fmtDate(e.day)}</span>
-              <span className="w-[150px] shrink-0 font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-3">{EVENT_LABEL[e.type]}</span>
+              <span className="w-[150px] shrink-0 font-mono text-[12px] text-fg-3 font-medium">{EVENT_LABEL[e.type]}</span>
               <span className="min-w-0 flex-1 text-fg-2">{eventSentence(e)}</span>
             </li>
           ))}

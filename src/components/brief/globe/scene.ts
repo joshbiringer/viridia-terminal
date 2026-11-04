@@ -1,7 +1,8 @@
 /**
- * The Mission Control globe: a WebGL Earth lit by the real sun, with a camera that flies from market
- * hub to market hub. At each stop the city's skyline rises out of the globe, holds while the camera
- * drifts past, and sinks back as the camera climbs out toward the next city.
+ * The Mission Control globe: a WebGL Earth lit by the real sun, seen side-on as a horizon against
+ * the sky. The camera glides along the curve of the planet from market hub to market hub; as each
+ * city reaches the crest its skyline rises in silhouette, holds, and sinks as the next one arrives.
+ * The canvas is transparent: the sky behind it is CSS, tinted by GlobeHero for the time of day.
  *
  * Imagery: NASA Blue Marble (day) and NASA Black Marble city lights (night), both public domain.
  * Buildings are original, generic shapes generated from a seed, not models of real skylines.
@@ -28,8 +29,10 @@ export interface GlobeHandle {
 
 // Tour order follows the trading day around the world.
 const TOUR: HubId[] = ["ny", "sf", "tokyo", "hongkong", "frankfurt", "london"];
-const TRAVEL_S = 5.2; // seconds between cities
-const DWELL_S = 7.5; // seconds over each city
+const TRAVEL_S = 7; // seconds gliding between cities
+const DWELL_S = 6; // seconds with a city on the crest
+const CAM_DIST = 2.75; // camera distance from Earth's center (radius 1)
+const CAM_ELEV = 0.66; // radians: how far above the local horizontal the camera sits
 const ATMOS_R = 1.06;
 const SUN_DIST = 60;
 
@@ -83,7 +86,8 @@ void main() {
   // City lights: the night map's warm, bright pixels, with its blue base removed.
   float lum = dot(nt, vec3(0.6, 0.35, 0.05)) - nt.b * 0.45;
   vec3 lights = smoothstep(0.035, 0.32, lum) * vec3(1.0, 0.68, 0.36) * 1.7;
-  vec3 nightCol = lights + day * 0.006;
+  // a soft navy "earthshine" so the night side reads as ocean and land, not a hole in the sky
+  vec3 nightCol = lights + day * 0.02 + vec3(0.018, 0.03, 0.06);
 
   vec3 col = mix(nightCol, dayCol, lit);
   col = 1.0 - exp(-col * 1.6);
@@ -137,7 +141,7 @@ void main() {
   float mie = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.08;
   vec3 col = sum * (vec3(0.22, 0.48, 1.0) * ray * 34.0 + vec3(1.0, 0.86, 0.68) * mie * 34.0);
   col = 1.0 - exp(-col);
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, max(col.r, max(col.g, col.b)));
 }`;
 
 const BLDG_VS = /* glsl */ `
@@ -223,7 +227,8 @@ void main() {
              * exp(-r * 3.0) * 0.55;
   vec3 col = vec3(1.0, 0.97, 0.9) * core * 3.0 + vec3(1.0, 0.82, 0.55) * (glow + rays);
   float edge = smoothstep(1.0, 0.7, r);
-  gl_FragColor = vec4(col * edge, 1.0);
+  vec3 c = col * edge;
+  gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0));
 }`;
 
 const QUAD_VS = /* glsl */ `
@@ -248,8 +253,8 @@ void main() {
     sum += texture2D(occ, cuv).r * decay;
     decay *= 0.965;
   }
-  vec3 col = vec3(1.0, 0.8, 0.55) * sum * (strength / float(N)) * 2.4;
-  gl_FragColor = vec4(col, 1.0);
+  vec3 col = vec3(1.0, 0.86, 0.66) * sum * (strength / float(N)) * 2.0;
+  gl_FragColor = vec4(col, clamp(max(col.r, max(col.g, col.b)), 0.0, 1.0));
 }`;
 
 /* ---------------------------------------------------------------------------------------- skylines */
@@ -311,7 +316,7 @@ function buildSkyline(id: HubId, seed: number): Skyline {
   ];
   const noise = (x: number, z: number) => Math.sin(x * 160 + seed) * Math.cos(z * 140 - seed * 0.3) * 0.5 + Math.sin((x + z) * 90) * 0.5;
   let tries = 0;
-  while (boxes.length + tapers.length < 240 && tries++ < 9000) {
+  while (boxes.length + tapers.length < 150 && tries++ < 9000) {
     const c = r() < 0.78 ? centers[0] : centers[1];
     // gaussian-ish spread along the district's axis
     const g1 = (r() + r() + r() - 1.5) * 1.4, g2 = (r() + r() + r() - 1.5) * 1.4;
@@ -324,7 +329,7 @@ function buildSkyline(id: HubId, seed: number): Skyline {
     const dl = Math.hypot(lx / c.sx, lz / c.sz);
     const core = c.peak * Math.exp(-dl * dl * 0.9);
     const tall = r() < 0.08 * core ? 1.5 : 1;
-    const h = (0.0022 + (0.003 + 0.03 * core) * (0.3 + r() * 0.9)) * tall;
+    const h = (0.002 + (0.0025 + 0.026 * core) * (0.3 + r() * 0.9)) * tall;
     const b = { x, z, w, d, h, rot: axis + (r() < 0.8 ? 0 : r() * Math.PI), delay: Math.min(1, dl * 0.32) * 0.6 + r() * 0.12 };
     (r() < 0.08 && h > 0.014 ? tapers : boxes).push(b);
     placed.push({ x, z, s });
@@ -336,31 +341,25 @@ function buildSkyline(id: HubId, seed: number): Skyline {
 
 interface Shot { eye: THREE.Vector3; target: THREE.Vector3; up: THREE.Vector3 }
 
-/** Low, oblique view over a city, looking across it toward the sun's side of the sky. */
-function hubShot(P: THREE.Vector3, sun: THREE.Vector3): Shot {
-  const north = new THREE.Vector3(0, 1, 0).addScaledVector(P, -P.y).normalize();
-  const s = sun.clone().addScaledVector(P, -sun.dot(P));
-  if (s.lengthSq() < 0.0025) s.copy(north); else s.normalize();
-  // swing 35° off the sun line so the light rakes across the skyline instead of straight at us
-  const side = new THREE.Vector3().crossVectors(P, s);
-  const look = s.multiplyScalar(Math.cos(0.61)).addScaledVector(side, Math.sin(0.61)).normalize();
-  return {
-    eye: P.clone().multiplyScalar(1.105).addScaledVector(look, -0.3),
-    target: P.clone().multiplyScalar(1.022).addScaledVector(look, 0.05),
-    up: P.clone(),
-  };
+/**
+ * The crest shot: the camera sits south of the focus point and above it, looking north across it, so
+ * the focus point lies just inside the planet's limb with sky above it. Everything is continuous in
+ * the focus point, so gliding it along a great circle never jumps.
+ */
+function crestShot(F: THREE.Vector3, out: Shot) {
+  const north = new THREE.Vector3(0, 1, 0).addScaledVector(F, -F.y);
+  const south = north.lengthSq() < 1e-6 ? new THREE.Vector3(0, 0, 1) : north.normalize().negate();
+  const eyeDir = F.clone().multiplyScalar(Math.sin(CAM_ELEV)).addScaledVector(south, Math.cos(CAM_ELEV)).normalize();
+  out.eye.copy(eyeDir).multiplyScalar(CAM_DIST);
+  // aim below the crest so the planet fills the lower part of the frame and the city sits high
+  out.target.copy(F).multiplyScalar(0.7);
+  out.up.copy(F);
 }
 
-function blendShot(a: Shot, b: Shot, t: number, out: Shot) {
-  const bump = Math.pow(Math.sin(Math.PI * t), 1.15);
-  const da = a.eye.clone().normalize(), db = b.eye.clone().normalize();
-  const ang = da.angleTo(db);
-  const dir = ang < 1e-4 ? da : da.multiplyScalar(Math.sin((1 - t) * ang)).addScaledVector(db, Math.sin(t * ang)).divideScalar(Math.sin(ang));
-  const dist = THREE.MathUtils.lerp(a.eye.length(), b.eye.length(), t) + bump * 2.7;
-  out.eye.copy(dir.normalize()).multiplyScalar(dist);
-  out.target.lerpVectors(a.target, b.target, t).multiplyScalar(1 - bump * 0.92);
-  // level the horizon to north-up in the wide shot between cities
-  out.up.lerpVectors(a.up, b.up, t).normalize().lerp(new THREE.Vector3(0, 1, 0), Math.min(1, bump * 1.2)).normalize();
+function slerpUnit(a: THREE.Vector3, b: THREE.Vector3, t: number, out: THREE.Vector3) {
+  const ang = a.angleTo(b);
+  if (ang < 1e-5) return out.copy(a);
+  return out.copy(a).multiplyScalar(Math.sin((1 - t) * ang)).addScaledVector(b, Math.sin(t * ang)).divideScalar(Math.sin(ang)).normalize();
 }
 
 /* -------------------------------------------------------------------------------------------- main */
@@ -407,21 +406,6 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
   }));
   atmos.renderOrder = 2;
   scene.add(atmos);
-
-  // Stars
-  {
-    const r = rng(7), n = 1800, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      const u = r() * 2 - 1, th = r() * Math.PI * 2, s = Math.sqrt(1 - u * u);
-      pos.set([s * Math.cos(th) * 300, u * 300, s * Math.sin(th) * 300], i * 3);
-      const b = 0.25 + Math.pow(r(), 3) * 0.75, warm = r();
-      col.set([b, b * (0.9 + warm * 0.1), b * (0.8 + (1 - warm) * 0.2)], i * 3);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
-    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.3, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false })));
-  }
 
   // Sun glow (billboard) and the bright disc used only in the occlusion pass
   const sunGlow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
@@ -495,7 +479,8 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
         const hk = k <= 0 ? 0.0001 : easeBack(k);
         off.makeTranslation(b.x, 0, b.z);
         rot.makeRotationY(b.rot);
-        scl.makeScale(b.w, Math.max(0.0001, b.h * hk), b.d);
+        // drawn larger than true scale so the skyline reads on the horizon from orbit
+        scl.makeScale(b.w * 1.4, Math.max(0.0001, b.h * hk * 2.1), b.d * 1.4);
         tmp.copy(c.basis).multiply(off).multiply(rot).multiply(scl);
         mesh.setMatrixAt(i, tmp);
       });
@@ -523,11 +508,13 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
     W = canvas.clientWidth || 1; H = canvas.clientHeight || 1;
     renderer.setPixelRatio(dpr);
     renderer.setSize(W, H, false);
-    const shift = W >= 768 ? 0.66 : 0.5;
-    const fullW = W * (shift / 0.5);
-    camera.aspect = fullW / H;
-    camera.fov = W >= 768 ? 40 : 52;
-    camera.setViewOffset(fullW, H, 0, 0, W, H);
+    // wide: subject right of center; narrow: subject low, below the headline and button
+    const wide = W >= 768;
+    const fullW = W * ((wide ? 0.64 : 0.5) / 0.5);
+    const fullH = H * ((wide ? 0.5 : 0.8) / 0.5);
+    camera.aspect = fullW / fullH;
+    camera.fov = wide ? 31 : 52;
+    camera.setViewOffset(fullW, fullH, 0, 0, W, H);
     camera.updateProjectionMatrix();
     occRT.setSize(Math.max(2, Math.round(W * dpr / 3)), Math.max(2, Math.round(H * dpr / 3)));
   }
@@ -539,6 +526,7 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
   let phase: "dwell" | "travel" = "dwell";
   let phaseT = opts.still ? 0.35 : 0.0;
   const shot: Shot = { eye: new THREE.Vector3(), target: new THREE.Vector3(), up: new THREE.Vector3() };
+  const focus = new THREE.Vector3();
   const cityOf = (id: HubId) => cities.find((c) => c.id === id)!;
   opts.onFocus?.(TOUR[leg]);
   if (opts.still) cityOf(startId).grow = 1;
@@ -556,20 +544,13 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
       }
     }
     const cur = cityOf(TOUR[leg]), next = cityOf(TOUR[(leg + 1) % TOUR.length]);
-    const drifted = (P: THREE.Vector3, amount: number) => {
-      const s = hubShot(P, sunDir);
-      const tangent = new THREE.Vector3().subVectors(s.target, s.eye).cross(P).normalize();
-      s.eye.addScaledVector(tangent, amount);
-      s.target.addScaledVector(tangent, amount * 0.4);
-      return s;
-    };
-    if (phase === "dwell") {
-      // slow drift across the skyline while we hold over the city
-      const s = drifted(cur.P, (phaseT - 0.5) * 0.09);
-      shot.eye.copy(s.eye); shot.target.copy(s.target); shot.up.copy(s.up);
-    } else {
-      blendShot(drifted(cur.P, 0.045), drifted(next.P, -0.045), smooth(phaseT), shot);
-    }
+    // One continuous parameter per leg: a slow creep while the city holds on the crest (the first
+    // DRIFT of the way), then an eased glide for the rest. It ends exactly on the next city, where
+    // the next leg starts, so there is never a cut.
+    const DRIFT = 0.04;
+    const u = phase === "dwell" ? DRIFT * phaseT : DRIFT + (1 - DRIFT) * smooth(phaseT);
+    slerpUnit(cur.P, next.P, u, focus);
+    crestShot(focus, shot);
     camera.position.copy(shot.eye);
     camera.up.copy(shot.up);
     camera.lookAt(shot.target);
@@ -577,8 +558,9 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
     // skylines rise while we're over a city and sink as we climb away
     for (const c of cities) {
       let goal = 0;
-      if (c === cur && phase === "dwell") goal = phaseT < 0.88 || opts.still ? 1 : 0;
-      if (phase === "travel" && c === next && phaseT > 0.72) goal = 1;
+      if (c === cur && phase === "dwell") goal = 1;
+      if (phase === "travel" && c === cur && phaseT < 0.25) goal = 1;
+      if (phase === "travel" && c === next && phaseT > 0.62) goal = 1;
       const rate = goal > c.grow ? 0.55 : 1.4;
       c.grow = opts.still ? goal : c.grow + Math.sign(goal - c.grow) * Math.min(Math.abs(goal - c.grow), dt * rate);
       placeCity(c);
@@ -595,7 +577,7 @@ export async function createGlobe(canvas: HTMLCanvasElement, opts: GlobeOptions 
     const facing = clip.w > 0 ? 1 : 0;
     raysMat.uniforms.sunUv.value.set((clip.x / clip.w) * 0.5 + 0.5, (clip.y / clip.w) * 0.5 + 0.5);
     const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd);
-    raysMat.uniforms.strength.value = facing * smooth(clamp01((fwd.dot(sunDir) + 0.2) / 0.9)) * 0.85;
+    raysMat.uniforms.strength.value = facing * smooth(clamp01((fwd.dot(sunDir) + 0.2) / 0.9)) * 0.55;
 
     render();
   }

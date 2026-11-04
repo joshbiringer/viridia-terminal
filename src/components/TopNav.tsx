@@ -14,9 +14,9 @@ const isActive = (path: string, href: string) =>
   href === "/terminal" || href === "/markets" || href === "/setups" ? path === href || (href === "/terminal" && path === "/brief") : path === href || path.startsWith(href + "/");
 
 /**
- * The header: a dark band with the brand on the left, sections across (single sections are links,
- * the rest open a dropdown), and search, theme and account on the right. On small screens the
- * sections fold into one full-width menu.
+ * The header: a light, translucent bar with the brand on the left, the sections in a frosted pill
+ * in the middle (single sections are links, the rest open a dropdown; the active one is an ink pill),
+ * and search, theme and account on the right. On small screens the sections fold into one menu.
  */
 export function TopNav() {
   const path = usePathname();
@@ -52,15 +52,15 @@ export function TopNav() {
   const leave = () => { closeTimer.current = setTimeout(() => setOpen(null), 160); };
 
   return (
-    <header ref={bar} className="dark-band sticky top-0 z-40 border-b border-white/10">
-      <div className="mx-auto flex h-[68px] max-w-[1600px] items-center gap-2 px-4 sm:px-6 lg:gap-6 lg:px-8">
-        <Link href="/terminal" className="flex-none" aria-label="Viridia home"><ViridiaLockup light /></Link>
+    <header ref={bar} className="sticky top-0 z-40 border-b border-[var(--border)] bg-[color-mix(in_oklab,var(--bg)_78%,transparent)] backdrop-blur-xl">
+      <div className="mx-auto flex h-[68px] max-w-[1600px] items-center gap-2 px-4 sm:px-6 lg:gap-4 lg:px-8">
+        <Link href="/terminal" className="flex-none" aria-label="Viridia home"><ViridiaLockup /></Link>
 
-        <nav className="ml-2 hidden h-full items-stretch lg:flex xl:ml-4" aria-label="Sections">
+        <nav className="glass mx-auto hidden h-11 items-center gap-0.5 rounded-full px-1.5 shadow-[var(--shadow-sm)] lg:flex" aria-label="Sections">
           {HEADER_NAV.map((g) => {
             const active = g.items.some((it) => isActive(path, it.href));
-            const cls = `relative inline-flex h-full items-center gap-1 whitespace-nowrap px-2.5 text-[14px] font-[600] xl:px-3 xl:text-[14.5px] tracking-[-0.005em] transition-colors duration-300 ${active ? "text-white" : "text-white/70 hover:text-white"}`;
-            const underline = <span aria-hidden className={`absolute inset-x-2.5 bottom-0 h-[2px] origin-left bg-emerald transition-transform duration-500 ease-[var(--ease-premium)] ${active ? "scale-x-100" : "scale-x-0"}`} />;
+            const cls = `relative inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[13.5px] font-[500] tracking-[-0.01em] transition-colors duration-200 xl:px-3.5 ${active ? "bg-ink text-panel shadow-[var(--shadow-sm)]" : "text-fg-2 hover:bg-hover hover:text-fg"}`;
+            const underline = null;
             if (g.items.length === 1) return <Link key={g.label} href={hrefOf(g.items[0])} className={cls} aria-current={active ? "page" : undefined}>{g.label}{underline}</Link>;
             const isOpen = open === g.label;
             return (
@@ -71,17 +71,17 @@ export function TopNav() {
                   {underline}
                 </button>
                 {isOpen && (
-                  <div className="absolute left-0 top-full z-50 pt-2">
-                    <div className="w-[340px] overflow-hidden rounded-[14px] bg-panel p-2 text-fg" style={{ boxShadow: "var(--shadow-lg)", animation: "pop var(--t-base) var(--ease)" }}>
+                  <div className="absolute left-0 top-full z-50 pt-3">
+                    <div className="w-[340px] overflow-hidden rounded-[20px] border border-line bg-panel p-2 text-fg" style={{ boxShadow: "var(--shadow-lg)", animation: "pop var(--t-base) var(--ease)" }}>
                       <p className="f-label px-3 pb-1 pt-2 text-fg-3">{g.label}</p>
                       <ul>
                         {g.items.map((it) => (
                           <li key={it.href} className="f-row last:border-b-0">
-                            <Link href={hrefOf(it)} className="group flex items-center gap-3 rounded-[8px] px-3 py-2.5 transition-colors hover:bg-hover" aria-current={isActive(path, it.href) ? "page" : undefined}>
+                            <Link href={hrefOf(it)} className="group flex items-center gap-3 rounded-[12px] px-3 py-2.5 transition-colors hover:bg-hover" aria-current={isActive(path, it.href) ? "page" : undefined}>
                               <Icon name={it.icon} className="h-[17px] w-[17px] flex-none text-brand" />
                               <span className="min-w-0 flex-1">
-                                <span className={`block text-[14.5px] ${isActive(path, it.href) ? "font-[700]" : "font-[500]"}`}>{it.label}</span>
-                                {NAV_BLURB[it.href] && <span className="block truncate text-[12.5px] font-[300] text-fg-2">{NAV_BLURB[it.href]}</span>}
+                                <span className={`block text-[14px] ${isActive(path, it.href) ? "font-[650]" : "font-[500]"}`}>{it.label}</span>
+                                {NAV_BLURB[it.href] && <span className="block truncate text-[12.5px] text-fg-3">{NAV_BLURB[it.href]}</span>}
                               </span>
                               <span className="f-arrow h-7 w-7"><Icon name="chevronRight" className="h-[13px] w-[13px]" /></span>
                             </Link>
@@ -96,21 +96,21 @@ export function TopNav() {
           })}
         </nav>
 
-        <div className="ml-auto flex flex-none items-center gap-1.5">
+        <div className="ml-auto flex flex-none items-center gap-1.5 lg:ml-0">
           <button
-            className="hidden h-9 min-w-0 items-center gap-2.5 rounded-[var(--r-md)] border border-white/15 bg-white/[0.06] px-3 text-left text-[13px] text-white/70 transition-colors duration-300 hover:border-white/35 hover:text-white md:flex 2xl:w-[280px]"
+            className="hidden h-10 min-w-0 items-center gap-2.5 rounded-full border border-line bg-panel px-3.5 text-left text-[13px] text-fg-3 shadow-[var(--shadow-sm)] transition-colors duration-200 hover:border-line-2 hover:text-fg md:flex 2xl:w-[240px]"
             onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
             aria-label="Search securities or ask Viridia" aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
           >
             <Icon name="search" />
             <span className="hidden min-w-0 flex-1 truncate 2xl:inline">Search or ask Viridia…</span>
-            <kbd className="border-white/20 bg-transparent text-white/60">{mac ? "⌘K" : "Ctrl K"}</kbd>
+            <kbd>{mac ? "⌘K" : "Ctrl K"}</kbd>
           </button>
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--r-md)] text-white/75 transition-colors hover:bg-white/10 hover:text-white md:hidden" aria-label="Search" onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}>
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg-2 transition-colors hover:bg-hover hover:text-fg md:hidden" aria-label="Search" onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}>
             <Icon name="search" className="h-[18px] w-[18px]" />
           </button>
           <button
-            className="hidden h-9 w-9 items-center justify-center rounded-[var(--r-md)] text-white/75 transition-colors hover:bg-white/10 hover:text-white sm:inline-flex"
+            className="hidden h-10 w-10 items-center justify-center rounded-full text-fg-2 transition-colors hover:bg-hover hover:text-fg sm:inline-flex"
             aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light theme" : "Dark theme"}
             onClick={() => {
               const next = dark ? "light" : "dark";
@@ -120,22 +120,22 @@ export function TopNav() {
           >
             <Icon name={dark ? "sun" : "moon"} className="h-[17px] w-[17px]" />
           </button>
-          <AccountMenu onDark />
-          <button className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--r-md)] text-white transition-colors hover:bg-white/10 lg:hidden" aria-label={mobile ? "Close menu" : "Open menu"} aria-expanded={mobile} onClick={() => setMobile((v) => !v)}>
+          <AccountMenu />
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg transition-colors hover:bg-hover lg:hidden" aria-label={mobile ? "Close menu" : "Open menu"} aria-expanded={mobile} onClick={() => setMobile((v) => !v)}>
             <Icon name={mobile ? "x" : "menu"} className="h-[20px] w-[20px]" />
           </button>
         </div>
       </div>
 
       {mobile && (
-        <nav className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-white/10 px-4 pb-8 pt-2 sm:px-6 lg:hidden" aria-label="Sections">
+        <nav className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-line bg-bg px-4 pb-8 pt-2 sm:px-6 lg:hidden" aria-label="Sections">
           {HEADER_NAV.map((g) => (
-            <div key={g.label} className="border-b border-white/10 py-3">
-              <p className="f-label pb-1 text-white/45">{g.label}</p>
+            <div key={g.label} className="border-b border-line py-3">
+              <p className="f-label pb-1">{g.label}</p>
               {g.items.map((it) => (
-                <Link key={it.href} href={hrefOf(it)} className={`flex items-center gap-3 py-2 text-[18px] font-[300] ${isActive(path, it.href) ? "text-white" : "text-white/75"}`}>
+                <Link key={it.href} href={hrefOf(it)} className={`flex items-center gap-3 py-2 text-[17px] font-[500] tracking-[-0.015em] ${isActive(path, it.href) ? "text-fg" : "text-fg-2"}`}>
                   <span className="flex-1">{it.label}</span>
-                  <Icon name="chevronRight" className="h-[14px] w-[14px] text-white/45" />
+                  <Icon name="chevronRight" className="h-[14px] w-[14px] text-fg-3" />
                 </Link>
               ))}
             </div>

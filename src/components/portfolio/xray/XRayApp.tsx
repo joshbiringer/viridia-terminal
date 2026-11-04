@@ -156,7 +156,7 @@ export function XRayApp() {
         <section className="card overflow-hidden">
           <div className="grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
             <div className="flex flex-col gap-4 px-6 py-7 lg:border-r lg:border-line">
-              <p className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-brand">Portfolio X-Ray</p>
+              <p className="font-mono text-[12px] text-brand font-medium">Portfolio X-Ray</p>
               <h1 className="f-heading gradient-text max-w-[680px]">See what your portfolio is really exposed to.</h1>
               <p className="max-w-[620px] text-[14.5px] leading-relaxed text-fg-2">Analyze concentration, factor exposure, correlations, downside risk, tax positioning, and Viridia market structure across every holding.</p>
               <div className="flex flex-wrap gap-2">
@@ -169,7 +169,7 @@ export function XRayApp() {
               {errorBox}
             </div>
             <div className="flex flex-col bg-panel-2/60 px-6 py-7">
-              <h2 className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-2">What the X-Ray measures</h2>
+              <h2 className="font-mono text-[12px] text-fg-2 font-medium">What the X-Ray measures</h2>
               <dl className="mt-3 grid grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-2 text-[13px]">
                 {[
                   ["Overview", "Value, returns, volatility, beta, drawdown, Sharpe, allocation, sectors, benchmark comparison"],
@@ -182,7 +182,7 @@ export function XRayApp() {
               </dl>
               {viewer && saved.length > 0 && (
                 <div className="mt-5 border-t border-line pt-4">
-                  <h2 className="font-mono text-[10.5px] font-normal uppercase tracking-[0.16em] text-fg-2">Saved portfolios</h2>
+                  <h2 className="font-mono text-[12px] text-fg-2 font-medium">Saved portfolios</h2>
                   <ul className="mt-2 flex flex-col divide-y divide-line">
                     {saved.map((p) => (
                       <li key={p.id} className="flex items-center gap-2 py-1.5">
