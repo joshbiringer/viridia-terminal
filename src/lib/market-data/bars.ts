@@ -38,6 +38,8 @@ export interface BarsResponse {
   history: HistoryStatus | null;
   bars: BarRow[];
   pivots?: import("@/lib/analysis/pivots").ClientPivots | null;
+  /** Waves, Fibonacci, RSI, MACD, divergences and confluence computed from these same bars. */
+  technical?: import("@/lib/analysis/technical").TechnicalPayload | null;
   /** Provenance: who supplied the bars, when this response was built, and bars dropped as malformed. */
   meta?: { source: string; served_at: string; last_bar: string | null; dropped: number };
 }

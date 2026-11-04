@@ -274,6 +274,67 @@ These are EWP's most specific "where does the next move end" guidelines. They fe
    - **Proposed:** accept either subdivision for leading diagonals, and expect a deep wave 2 after one.
 3. **Triangle types.** EWP lists symmetrical, ascending, descending and expanding triangles. Essentials names them contracting, barrier and expanding, plus running. These are naming differences, not rule differences. Viridia uses contracting and expanding, so no change is needed.
 
+## 10. Momentum and confluence layer (momentum-1.0.0, confluence-1.0.0, live 2026-11-04)
+
+Specs: "Unified Elliott Wave, Fibonacci & Momentum Analysis Engine" and "RSI, MACD & Divergence Analysis Engine" (Josh, 2026-11-04). Release 1 scope: engine, synced chart and confluence. Timeframes 1H and up. Spec weights.
+
+**Calculations** (`engine/momentum.ts`)
+- RSI(14): Wilder RMA. Matches the published StockCharts example to within 0.05.
+- MACD(12,26,9): EMAs seeded with a simple mean. Exactly 7 × slope on a straight line, as theory requires.
+- ATR(14): Wilder.
+- Values are null until there is enough history; nothing is estimated.
+
+**Swing pivots**
+- 5 bars on each side of a pivot.
+- A pivot is confirmed only at the close of the 5th bar after it.
+
+**Divergences**
+- Regular and hidden, bullish and bearish.
+- Checked on RSI, the MACD line and (as a secondary check) the MACD histogram, each independently.
+- Pivots must be 5–60 bars apart.
+- The indicator extreme is taken within ±3 bars of each price pivot.
+- Minimum move sizes:
+  - Price: 0.25 ATR.
+  - RSI: 1.5 points.
+  - MACD: 0.03 ATR.
+- The second swing must be the extreme between the two pivots.
+- Each divergence carries its pivot timestamps and its confirmation timestamp. Confirmation is never backdated to the pivot.
+- "Developing" divergences use a swing that is still forming at the right edge of the chart.
+
+**Crossovers**
+- MACD crossing its signal line or zero.
+- RSI crossing 30, 50 or 70.
+- An event on an intraday bar that hasn't closed yet is marked "developing".
+
+**Non-repainting.** Re-running the engine on any earlier slice of the data reproduces exactly the confirmed events known at that point (tested).
+
+**Confluence** (`engine/confluence.ts`)
+- Five layers, each scored −1…+1:
+  - Wave structure: 30%.
+  - Fibonacci zones and retracement bands: 20%.
+  - RSI: 15%.
+  - MACD: 15%.
+  - Price action (swing structure, 50/200 or 20/50 MA trend, break of structure, volume): 20%.
+- These combine into an alignment index from −100 to +100.
+- Classes: strong or moderate bullish/bearish (±50 and ±20 cut-offs), or neutral/mixed.
+- **Redundancy:**
+  - When RSI and MACD flag the same divergence, the second one counts at half weight.
+  - When the two layers agree overall, the weaker one counts at 75%.
+- **Scenarios**, tested against the preferred and alternate counts:
+  - A: wave 3 setup.
+  - B: wave 5 exhaustion.
+  - C: ABC completion.
+  - Each has a condition checklist, a Fibonacci zone, confirmation and invalidation levels taken from the count's pivots, and targets that are still ahead of price.
+- **Commentary** (`lib/analysis/technical-text.ts`): seven sections, written only from these outputs.
+
+**Not yet validated.** The weights are product assumptions. Backtest divergence and crossover events out of sample before claiming any edge.
+
+**Next round**
+- Alerts and stored signal history (the deterministic replay already gives honest history).
+- A multi-timeframe synthesis table and nested-degree expand/collapse.
+- 5- and 15-minute data.
+- Run momentum in the analysis worker for the scanner.
+
 ## 9. Change log
 
 - **2026-09-25:** Created. Phase 6 Fibonacci engine built from sections 1–2. Article material recorded for Phase 7.
@@ -286,3 +347,4 @@ These are EWP's most specific "where does the next move end" guidelines. They fe
   - New: triangle and diagonal placement, correction-depth targets, and the individual-stocks caveat.
   - New: candidate engine changes (section 7) and three source conflicts (section 8).
   - Same day: shipped rules-1.1.0 and rank-1.2.0 (section 7, "Live").
+- **2026-11-04:** Momentum and confluence layer live on the security page chart (section 10).

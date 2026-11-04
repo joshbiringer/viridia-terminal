@@ -875,3 +875,27 @@ The brief asked the product to show the sophistication the engine already has. O
 - **Engine: rules-1.1.0 + rank-1.2.0.** Frost & Prechter, *Elliott Wave Principle* added as a primary source. Six new ranking evidence checks (`ewp.*`), triangle alternate ratios (e:c, and 1.618 for expanding), and zigzag C = 161.8% × A. All are evidence only; no new eliminating rules. The new checks are listed under "Ranking evidence" on `/analysis/rulebook`. Details: `docs/viridia-wave-knowledge.md`, section 7.
 - **Ask Viridia:** wave personalities for 1–5 and A–E rewritten from EWP lesson 14.
 - **Version bump:** `ANALYSIS_VERSION` changed. analysis-worker v10 (deployed 2026-11-04) runs the new engine; its first run stored 225 analyses in 103 s with no errors. Parity: AAPL weekly stored by the worker matches the app's live computation (31 counts, same preferred and alternate scores, same target, 5 zones). The rest of the ~8,300 rows recompute in the background at about 225 per run.
+
+## Unified technical engine: RSI, MACD, divergences, confluence (2026-11-04)
+
+- **Engine:** `momentum.ts` (RSI, MACD, ATR, swing pivots, divergences, crossovers, states) and `confluence.ts` (price action, five-layer alignment index, scenarios A/B/C). Both live in `_shared/engine` so the worker can run them later.
+- **API:** `/api/bars/[symbol]` now returns `technical`: indicator series aligned to the bars, divergences, crossovers, wave counts and confluence for every degree, and Fibonacci zones, all from the same bars. Failures are isolated, so the chart still loads.
+- **Chart:**
+  - RSI and MACD panes share one time scale and crosshair with price.
+  - Divergence lines are drawn on the price and indicator pivots (solid for regular, dashed for hidden, dotted for developing).
+  - Crossover markers.
+  - Toggles: RSI, MACD, divergences, hidden, crossovers, confirmed only, preferred/alternate count.
+  - Wave counts and Fibonacci zones now appear on every timeframe, not just daily.
+- **Confluence panel** under the chart has four tabs:
+  - Summary: layer scores and wave scenarios. "Show on chart" draws a scenario's levels.
+  - Evidence: supporting and conflicting.
+  - Divergences: history, with hover to highlight on the chart.
+  - Commentary: seven sections.
+- **Tests:** 32 new, 160 total.
+  - RSI matches the published StockCharts reference.
+  - MACD matches the exact straight-line identity and an independent EMA.
+  - All four divergence types, crossovers, pivot confirmation delay and non-repainting replay.
+  - Short histories.
+  - Scenarios A/B/C and redundancy.
+  - Speed: 1,500 hourly bars well under 1.5 s.
+- **Not in this release:** alerts and stored signal history, the multi-timeframe synthesis table, 5- and 15-minute data, and scanner columns for confluence.

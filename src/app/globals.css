@@ -238,6 +238,7 @@ a:hover .f-arrow, .f-card:hover .f-arrow, button:hover .f-arrow { background: va
 .field:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--accent-bg); }
 .seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--hover); border-radius: var(--r-md); }
 .seg > * { height: 28px; padding: 0 11px; border-radius: var(--r-sm); font-family: var(--font-mono-stack); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 400; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; transition: background-color .15s, color .15s; }
+.seg > * { flex-shrink: 0; white-space: nowrap; }
 .seg > *:hover:not(:disabled) { color: var(--text); }
 .seg > [aria-selected="true"], .seg > [aria-pressed="true"], .seg > [aria-checked="true"] { background: var(--panel); color: var(--text); box-shadow: var(--shadow-sm); }
 .seg > *:disabled { opacity: .45; cursor: not-allowed; }

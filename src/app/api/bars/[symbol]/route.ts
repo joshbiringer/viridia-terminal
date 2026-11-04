@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/supabase";
 import { pivotsForClient } from "@/lib/analysis/pivots";
+import { technicalFor } from "@/lib/analysis/technical";
 import { TIMEFRAMES, isChartTimeframe, nativeFor, validBar, type BarRow, type BarsResponse, type HistoryStatus } from "@/lib/market-data/bars";
 
 export const maxDuration = 20;
@@ -16,6 +17,20 @@ function within<T>(p: PromiseLike<T>, ms: number): Promise<T | null> {
  * so the client can show progress and poll. It also returns adaptive pivots for the same bars.
  * Malformed bars are dropped (and counted in meta) rather than drawn.
  */
+/** The technical layer is additive: if it fails, the chart still gets its bars. */
+function safeTechnical(rows: BarRow[], tf: BarsResponse["timeframe"], symbol: string) {
+  const t0 = Date.now();
+  try {
+    const t = technicalFor(rows, tf);
+    const ms = Date.now() - t0;
+    if (ms > 1500) console.warn(JSON.stringify({ at: "api/bars technical", symbol, tf, ms }));
+    return t;
+  } catch (e) {
+    console.error(JSON.stringify({ at: "api/bars technical", symbol, tf, error: (e as Error).message }));
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ symbol: string }> }) {
   const symbol = decodeURIComponent((await params).symbol).toUpperCase().slice(0, 24);
   const tf = req.nextUrl.searchParams.get("tf") ?? "1d";
@@ -42,6 +57,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ symb
       bars: rows,
       // Pivots are computed from exactly these bars with the shared engine (same code as the cache worker).
       pivots: rows.length ? pivotsForClient(rows, tf) : null,
+      // Unified technical layer (waves, Fibonacci, RSI, MACD, divergences, price action, confluence) from the same bars.
+      technical: safeTechnical(rows, tf, symbol),
       meta: { source: "Massive (end of day, split-adjusted)", served_at: new Date().toISOString(), last_bar: rows.at(-1)?.ts ?? null, dropped: all.length - rows.length },
     };
     // a queued history fetch must not be cached; otherwise a short shared cache spares the database
