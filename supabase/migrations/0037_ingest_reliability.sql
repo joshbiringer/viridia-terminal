@@ -119,3 +119,8 @@ grant execute on function public.data_status() to anon, authenticated;
 -- The market snapshot refreshes only once a new session has loaded; check every 15 minutes rather
 -- than hourly so scans and setups follow a fresh session within minutes (a no-op check costs ~10 ms).
 select cron.alter_job((select jobid from cron.job where jobname = 'viridia-snapshot-refresh'), schedule => '*/15 * * * *');
+
+-- Temporary, Nov 5 2026: slower workers while the database's disk I/O budget recovers from the
+-- catch-up load. Restore to '*/2 * * * *' (analysis) and '* * * * *' (market data) once healthy.
+select cron.alter_job((select jobid from cron.job where jobname = 'viridia-analysis-worker'), schedule => '*/10 * * * *');
+select cron.alter_job((select jobid from cron.job where jobname = 'kestrel-market-data-worker'), schedule => '*/5 * * * *');
