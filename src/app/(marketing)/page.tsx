@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { withTimeout } from "@/lib/timeout";
 import type { Metadata } from "next";
 import { ViridiaLockup, ViridiaMark } from "@/components/ViridiaMark";
 import { HeroTerminalMock } from "@/components/marketing/HeroTerminalMock";
@@ -56,7 +57,8 @@ const MODULES: Module[] = [
 
 export default async function Landing() {
   let live: ScanRow[] = [];
-  try { live = await scan({ p_sort: "dollar_volume", p_limit: 8 }); } catch { live = []; }
+  // bounded so a slow database can never stall the build or a revalidation
+  try { live = await withTimeout(scan({ p_sort: "dollar_volume", p_limit: 8 }), 5_000, "home scan"); } catch { live = []; }
 
   return (
     <div className="overflow-x-clip bg-bg">
