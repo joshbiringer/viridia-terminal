@@ -1,16 +1,17 @@
 -- Nightly ingest reliability.
 --
 -- What went wrong (sessions of Nov 2–4 2026 never loaded):
---  1. The worker calls ingest_grouped_daily() through PostgREST as service_role, which inherited the
---     authenticator's 8s statement_timeout. Upserting ~12,600 whole-market rows sometimes takes longer,
---     so the call was cancelled and retried until it ran out of attempts.
+--  1. ingest_grouped_daily() hit the 8s statement_timeout under contention and was retried until it
+--     ran out of attempts.
 --  2. The Massive (Polygon) free plan refuses a day's grouped bars until after midnight Eastern
 --     ("Attempted to request today's data before end of day"). The planner queued the session at
 --     18:30 ET, so every evening job used up its six attempts on 403s.
 --  3. A failed session was locked out for a full day before being planned again.
 
-alter role service_role set statement_timeout = '120s';
-notify pgrst, 'reload config';
+-- (A role-wide service_role timeout of 120s was tried here and reverted the same day: it let the
+-- analysis worker's heavy batches hold connections for minutes and saturated the database. The
+-- nightly load finishes in 1–2 s on an idle database; the timeouts came from contention, which the
+-- 00:30 ET schedule and 2-hour re-plan below address.)
 
 -- A session is eligible once the provider has closed its day: 00:30 ET the following morning.
 create or replace function public.latest_eligible_session()
