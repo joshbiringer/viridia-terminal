@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/supabase";
+import { withTimeout } from "@/lib/timeout";
 import { getBreadth, scan, type Breadth, type ScanRow } from "@/lib/market-data/snapshot";
 import { getPulse } from "@/lib/market-data/pulse";
 import { getEventCounts, getStructureEvents } from "./events-server";
@@ -81,9 +82,10 @@ let lastGood: MarketContext | null = null;
 
 export async function getMarketContext(): Promise<{ ctx: MarketContext; ok: boolean }> {
   try {
-    lastGood = await load();
+    lastGood = await withTimeout(load(), 9_000, "market context");
     return { ctx: lastGood, ok: true };
   } catch {
+    // prices keep their own session labels, so a held context never reads as newer than it is
     return lastGood ? { ctx: lastGood, ok: true } : { ctx: EMPTY, ok: false };
   }
 }

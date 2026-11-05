@@ -7,6 +7,7 @@ import { greeting } from "@/lib/market-hours";
 import { fmtInt } from "@/lib/format";
 import { fmtPrice } from "@/lib/market-data/bars";
 import { db } from "@/lib/supabase";
+import { withTimeout } from "@/lib/timeout";
 import { getViewer, type Viewer } from "@/lib/auth";
 import { authClient } from "@/lib/supabase/server";
 import { getStructureEvents } from "./events-server";
@@ -42,13 +43,13 @@ export interface MissionData {
 }
 
 export async function loadMission(): Promise<MissionData> {
-  const viewer = await getViewer().catch(() => null);
+  const viewer = await withTimeout(getViewer(), 4_000, "viewer").catch(() => null);
   const sb = viewer ? await authClient() : null;
   const [{ ctx, ok }, watchRes, savedRes, dataStatus] = await Promise.all([
     getMarketContext(),
-    sb ? sb.rpc("my_watchlist") : Promise.resolve({ data: [] }),
-    sb ? sb.from("portfolios").select("id, name, holdings_text, updated_at, reviewed_at").order("updated_at", { ascending: false }).limit(5) : Promise.resolve({ data: [] }),
-    getDataStatus().catch(() => null),
+    sb ? withTimeout(sb.rpc("my_watchlist"), 5_000).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+    sb ? withTimeout(sb.from("portfolios").select("id, name, holdings_text, updated_at, reviewed_at").order("updated_at", { ascending: false }).limit(5), 5_000).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+    withTimeout(getDataStatus(), 3_000).catch(() => null),
   ]);
   const watch = dedupe((watchRes.data ?? []) as WatchRow[]);
   const savedRows = (savedRes.data ?? []) as (SavedSummary & { holdings_text: string })[];
@@ -59,8 +60,8 @@ export async function loadMission(): Promise<MissionData> {
   const holdings = latest ? parseHoldings(latest.holdings_text ?? "").holdings : [];
   const symbols = [...new Set([...watch.map((w) => w.symbol), ...holdings.map((h) => h.symbol)])];
   const [ownEvents, pfCtx] = await Promise.all([
-    symbols.length ? getStructureEvents({ symbols, days: 1, limit: 200 }).catch(() => [] as StructureEvent[]) : Promise.resolve([] as StructureEvent[]),
-    holdings.length ? db().rpc("portfolio_context", { p_symbols: holdings.map((h) => h.symbol) }).then((r) => (r.data ?? []) as Context[], () => [] as Context[]) : Promise.resolve([] as Context[]),
+    symbols.length ? withTimeout(getStructureEvents({ symbols, days: 1, limit: 200 }), 5_000).catch(() => [] as StructureEvent[]) : Promise.resolve([] as StructureEvent[]),
+    holdings.length ? withTimeout(db().rpc("portfolio_context", { p_symbols: holdings.map((h) => h.symbol) }), 5_000).then((r) => (r.data ?? []) as Context[], () => [] as Context[]) : Promise.resolve([] as Context[]),
   ]);
   const portfolio = latest && holdings.length ? { id: latest.id, name: latest.name, intel: portfolioIntel(holdings, pfCtx, ownEvents) } : null;
 
