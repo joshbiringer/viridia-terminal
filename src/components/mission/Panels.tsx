@@ -33,7 +33,7 @@ export function CardHead({ title, sub, action, id }: { title: string; sub?: Reac
 }
 
 /** Market regime: one uptrend | mixed | downtrend bar sized by share, four participation stats and the reading in words. */
-export function MarketRegime({ r, b }: { r: Regime; b: Breadth | null }) {
+export function MarketRegime({ r, b, context = [] }: { r: Regime; b: Breadth | null; context?: FeedItem[] }) {
   const seg = [["Uptrend", r.up, "var(--pos-chart)"], ["Mixed", r.mixed, "var(--neutral)"], ["Downtrend", r.down, "var(--neg)"]] as const;
   const total = b ? b.advancers + b.decliners : 0;
   return (
@@ -59,6 +59,21 @@ export function MarketRegime({ r, b }: { r: Regime; b: Breadth | null }) {
           <Stat k="Adv / Dec" v={total ? `${fmtInt(b!.advancers)} / ${fmtInt(b!.decliners)}` : "—"} />
         </dl>
         <p className="text-[13px] leading-relaxed text-fg-2">{r.sentence.split(":").slice(1).join(":").trim()}</p>
+        {context.length > 0 && (
+          <details className="group border-t border-line pt-2">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] font-medium text-fg-2 hover:text-fg [&::-webkit-details-marker]:hidden">
+              <Icon name="chevronRight" className="h-[12px] w-[12px] transition-transform group-open:rotate-90" />Market context <span className="font-normal text-fg-3">{context.length}</span>
+            </summary>
+            <ol className="mt-1.5 flex flex-col gap-1">
+              {context.map((it, i) => (
+                <li key={i} className="grid grid-cols-[84px_minmax(0,1fr)] gap-2 text-[12.5px] leading-snug">
+                  <span className="text-fg-3">{FEED_LABEL[it.kind]}</span>
+                  <span className="text-fg-2">{it.symbol && it.kind === "move" && <TickerButton symbol={it.symbol} className="tk mr-1.5 text-fg hover:text-brand" />}{it.text}</span>
+                </li>
+              ))}
+            </ol>
+          </details>
+        )}
         <p className="mt-auto text-[11.5px] text-fg-3" title={REGIME_METHOD}>How it&apos;s measured: price versus the 50- and 200-day averages; advancers and decliners at the last close.</p>
       </div>
     </section>
@@ -75,22 +90,37 @@ function Stat({ k, v }: { k: string; v: string }) {
 }
 
 /**
- * What Changed: Viridia's own changes first (structure, wave count, new Fib zones, Fib-zone entries,
- * invalidations, timeframe alignment), each with how many liquid names and a couple of examples;
- * then market context (equities, Treasury proxies, macro, breadth, movers).
+ * Recent Elliott Wave and Fibonacci structural changes on liquid names: the signal counts with what
+ * is new this session, then each kind of change (structure, wave count, new Fib zones, Fib-zone
+ * entries, invalidations, timeframe alignment) with how many names and a few examples.
  */
-export function WhatChangedFeed({ changes, context, since, changeDay }: { changes: ChangeGroup[]; context: FeedItem[]; since: string; changeDay: string | null }) {
+export function StructuralChanges({ changes, changeDay, counts }: { changes: ChangeGroup[]; changeDay: string | null; counts: SignalCount[] }) {
   return (
     <section id="changes" className="card flex scroll-mt-20 flex-col" aria-labelledby="changed-t">
-      <CardHead id="changed-t" title="What changed" sub={`Through ${since}`} />
-      <h3 className="border-b border-line bg-hover/40 px-4 py-1.5 font-mono text-[12px] text-fg-3 font-medium">
-        Viridia changes{changeDay ? <span className="ml-2 font-normal normal-case tracking-normal">liquid names, session of {changeDay}</span> : null}
-      </h3>
+      <CardHead id="changed-t" title="Structural changes" sub={`Elliott Wave and Fibonacci · liquid names${changeDay ? ` · session of ${changeDay}` : ""}`}
+        action={<Link href="/scanner?view=structure" className="btn ghost sm">Scanner</Link>} />
+      <ul className="grid grid-cols-3 gap-px border-b border-line bg-line sm:grid-cols-6" aria-label="Signal counts">
+        {SIGNAL_CARDS.map((c) => {
+          const n = counts.find((x) => x.signal === c.id);
+          const d = n && n.n_prior != null ? n.n_today - n.n_prior : null;
+          return (
+            <li key={c.id} className="bg-panel">
+              <Link href={c.href} className="flex h-full flex-col px-3 py-2 transition-colors hover:bg-hover" title={c.hint}>
+                <span className="truncate text-[11.5px] text-fg-3">{c.label}</span>
+                <span className="flex items-baseline gap-1.5">
+                  <span className="num text-[16px] font-[640] tracking-[-0.02em]">{n ? fmtInt(n.n_today) : "—"}</span>
+                  {d != null && d !== 0 && <span className={`num text-[11px] ${d > 0 ? "text-pos" : "text-neg"}`}>{d > 0 ? `+${fmtInt(d)}` : `−${fmtInt(-d)}`}</span>}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
       {changes.length ? (
         <ol className="divide-y divide-line">
           {changes.map((g) => (
-            <li key={g.id} className="grid grid-cols-[96px_44px_minmax(0,1fr)] gap-2 px-4 py-1.5">
-              <span className="pt-px font-mono text-[12px] text-fg-3 font-medium">{g.label}</span>
+            <li key={g.id} className="grid grid-cols-[minmax(0,104px)_40px_minmax(0,1fr)] gap-2 px-4 py-2">
+              <span className="pt-px text-[12px] font-medium text-fg-3">{g.label}</span>
               <span className="num pt-px text-right text-[12.5px] font-[620]">{fmtInt(g.n)}</span>
               <span className="flex min-w-0 flex-col gap-0.5 text-[12.5px] leading-snug text-fg-2">
                 {g.examples.map((e) => (
@@ -103,51 +133,7 @@ export function WhatChangedFeed({ changes, context, since, changeDay }: { change
             </li>
           ))}
         </ol>
-      ) : <p className="px-4 py-2.5 text-[12.5px] text-fg-3">Viridia compares each session&apos;s analysis with the one before; changes appear once two sessions have been analysed.</p>}
-      <h3 className="border-y border-line bg-hover/40 px-4 py-1.5 font-mono text-[12px] text-fg-3 font-medium">Market context</h3>
-      {context.length ? (
-        <ol className="flex-1 divide-y divide-line">
-          {context.map((it, i) => (
-            <li key={i} className="grid grid-cols-[96px_minmax(0,1fr)] gap-2 px-4 py-1.5">
-              <span className="pt-px font-mono text-[12px] text-fg-3 font-medium">{FEED_LABEL[it.kind]}</span>
-              <p className="min-w-0 text-[12.5px] leading-snug text-fg-2">
-                {it.symbol && it.kind === "move" && <TickerButton symbol={it.symbol} className="tk mr-1.5 text-fg hover:text-brand" />}
-                {it.text}
-              </p>
-            </li>
-          ))}
-        </ol>
-      ) : <p className="px-4 py-2.5 text-[12.5px] text-fg-3">Market data didn&apos;t load.</p>}
-    </section>
-  );
-}
-
-/** Viridia Signals: each structural signal's count, how many are new this session and the change on the prior session; each opens the scanner filtered. */
-export function SignalCards({ counts }: { counts: SignalCount[] }) {
-  const day = counts[0]?.day ?? null;
-  const prior = counts[0]?.prior_day ?? null;
-  return (
-    <section className="card" aria-labelledby="sig-t">
-      <CardHead id="sig-t" title="Viridia signals" sub={`Securities trading $25M+ a day${day ? ` · session of ${day}` : ""}`} action={<Link href="/scanner" className="btn ghost sm">Open scanner</Link>} />
-      <ul className="grid grid-cols-2 gap-px bg-line sm:grid-cols-3 xl:grid-cols-6">
-        {SIGNAL_CARDS.map((c) => {
-          const s = counts.find((x) => x.signal === c.id);
-          const d = s && s.n_prior != null ? s.n_today - s.n_prior : null;
-          return (
-            <li key={c.id} className="bg-panel">
-              <Link href={c.href} className="flex h-full flex-col gap-1 px-3.5 py-2.5 transition-colors hover:bg-hover" title={c.hint}>
-                <span className="font-mono text-[12px] text-fg-2 font-medium">{c.label}</span>
-                <span className="num text-[20px] font-[650] leading-none tracking-[-0.02em]">{s ? fmtInt(s.n_today) : "—"}</span>
-                <span className="grid grid-cols-2 gap-1 text-[11px] text-fg-3">
-                  <span>New <b className="num font-[600] text-fg-2">{s?.new_today != null ? fmtInt(s.new_today) : "—"}</b></span>
-                  <span>Δ prior <b className={`num font-[600] ${d == null || d === 0 ? "text-fg-2" : d > 0 ? "text-pos" : "text-neg"}`}>{d == null ? "—" : d > 0 ? `+${fmtInt(d)}` : d < 0 ? `−${fmtInt(-d)}` : "0"}</b></span>
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      {!prior && counts.length > 0 && <div className="src"><span>New today and change versus the prior session fill in once a second session has been analysed.</span></div>}
+      ) : <p className="px-4 py-3 text-[12.5px] text-fg-3">Viridia compares each session&apos;s analysis with the one before; changes appear once two sessions have been analysed.</p>}
     </section>
   );
 }
@@ -155,7 +141,7 @@ export function SignalCards({ counts }: { counts: SignalCount[] }) {
 /** The attention summary under the greeting: each line is a count that links to where it is explained. */
 export function AttentionSummary({ items }: { items: Attention[] }) {
   return (
-    <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-3 xl:grid-flow-col xl:auto-cols-fr xl:grid-cols-none" aria-label="What requires attention">
+    <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line max-md:[&>*:last-child:nth-child(odd)]:col-span-2 md:grid-cols-3 xl:grid-flow-col xl:auto-cols-fr xl:grid-cols-none" aria-label="What requires attention">
       {items.map((it) => (
         <Link key={it.id} href={it.href} className="flex flex-col gap-0.5 bg-panel px-4 py-2.5 transition-colors hover:bg-hover">
           <span className="font-mono text-[12px] text-fg-3 font-medium">{it.label}</span>
@@ -168,9 +154,9 @@ export function AttentionSummary({ items }: { items: Attention[] }) {
 }
 
 /** Top setups, compact rows; tickers open the drawer. */
-export function SetupsPanel({ rows, record }: { rows: SetupRow[]; record: KindRecord[] }) {
+export function SetupsPanel({ rows, record, bare = false }: { rows: SetupRow[]; record: KindRecord[]; bare?: boolean }) {
   return (
-    <section className="card" aria-labelledby="setups-t">
+    <section className={bare ? "" : "card"} aria-labelledby="setups-t">
       <CardHead id="setups-t" title="Setups to review" sub="Best replayed record first; 1.5 : 1 or better, invalidation within 20%, $25M+ a day; kinds with a negative record left out"
         action={<><Link href="/setups/track-record" className="btn ghost sm">Track record</Link><Link href="/setups" className="btn ghost sm">All setups</Link></>} />
       {rows.length ? (

@@ -66,3 +66,14 @@ export function hubStatus(h: Hub, now = new Date()): HubStatus {
   if (later) return { state: "closed", localTime, next: `Opens in ${dur(later[0] - minutes)}` };
   return { state: "closed", localTime, next: weekday === "Fri" ? `Opens Monday ${clock(first)}` : `Closed at ${clock(last)}` };
 }
+
+/**
+ * How far through its trading day an exchange is: 0 at the first open, 1 at the last close, with
+ * any midday break counted as part of the day. Null on weekends and holidays.
+ */
+export function sessionProgress(h: Hub, now = new Date()): number | null {
+  const { date, minutes, weekday } = local(now, h.tz);
+  if (weekday === "Sat" || weekday === "Sun" || h.holidays?.has(date)) return null;
+  const first = h.sessions[0][0], last = h.sessions[h.sessions.length - 1][1];
+  return Math.min(1, Math.max(0, (minutes - first) / (last - first)));
+}

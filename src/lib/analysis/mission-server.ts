@@ -6,7 +6,8 @@ import { getEventCounts, getStructureEvents } from "./events-server";
 import { CHANGE_GROUPS, type EventType, type StructureEvent } from "./events";
 import { setupScan, type SetupRow } from "./setup-scan";
 import { getTrackRecord, type KindRecord } from "./track-record";
-import { PULSE_SYMBOLS, type PulseRow } from "./mission";
+import { ALL_PULSE_SYMBOLS, type PulseRow } from "./mission";
+import type { DataStatusRow } from "@/lib/data-freshness";
 
 export const LIQUID = 25_000_000; // $25M average daily dollar volume
 const DV = `dv=${LIQUID}`;
@@ -28,12 +29,14 @@ export interface SignalsData { wave: ScanRow[]; fib: FibRow[]; invalidation: Sca
 
 export interface MarketContext {
   pulse: PulseRow[]; breadth: Breadth | null; events: StructureEvent[]; eventCounts: { day: string; type: EventType; n: number }[]; gainer: ScanRow | null; loser: ScanRow | null;
-  setups: SetupRow[]; record: KindRecord[]; active: ScanRow[]; popular: PulseRow[]; signalCounts: SignalCount[]; signals: SignalsData;
+  setups: SetupRow[]; record: KindRecord[];
+  /** The best setups on each side, fetched separately so one side's ranking never crowds out the other. */
+  bullish: SetupRow[]; bearish: SetupRow[]; active: ScanRow[]; popular: PulseRow[]; signalCounts: SignalCount[]; signals: SignalsData;
   /** A few of the heaviest liquid events of each What Changed group, so every group has examples. */
   changeEvents: StructureEvent[];
 }
 
-const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts: [], gainer: null, loser: null, setups: [], record: [], active: [], popular: [], signalCounts: [], signals: { wave: [], fib: [], invalidation: [], aligned: [] }, changeEvents: [] };
+const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts: [], gainer: null, loser: null, setups: [], record: [], bullish: [], bearish: [], active: [], popular: [], signalCounts: [], signals: { wave: [], fib: [], invalidation: [], aligned: [] }, changeEvents: [] };
 
 /**
  * Everything on Mission Control that is the same for every reader. Prices are end of day, so it is
@@ -42,13 +45,13 @@ const EMPTY: MarketContext = { pulse: [], breadth: null, events: [], eventCounts
  */
 const load = unstable_cache(async (): Promise<MarketContext> => {
   const [pulse, breadth, events, eventCounts, gainers, losers, setups, record, active, signalCounts] = await Promise.all([
-    getPulse(PULSE_SYMBOLS),
+    getPulse(ALL_PULSE_SYMBOLS),
     getBreadth(),
     getStructureEvents({ minDollarVolume: LIQUID, days: 1, limit: 120 }).catch(() => []),
     getEventCounts(LIQUID).catch(() => []),
     scan({ p_sort: "change", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
     scan({ p_sort: "change_asc", p_limit: 1, p_min_dollar_volume: LIQUID }).catch(() => []),
-    setupScan({ p_sort: "quality", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true, p_max_risk: 0.2 }).catch(() => []),
+    setupScan({ p_sort: "quality", p_limit: 10, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true, p_max_risk: 0.2 }).catch(() => []),
     getTrackRecord().catch(() => []),
     scan({ p_sort: "dollar_volume", p_limit: 8 }).catch(() => []),
     db().rpc("signal_counts", { p_min_dollar_volume: LIQUID }).then((r) => ((r.data ?? []) as SignalCount[]).map((x) => ({
@@ -56,8 +59,11 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
     })), () => [] as SignalCount[]),
   ]);
   if (!pulse.length) throw new Error("market pulse unavailable");
-  const [popular, wave, fib, invalidation, aligned, ...grouped] = await Promise.all([
+  const SIDE = { p_sort: "quality", p_limit: 6, p_min_rr: 1.5, p_min_dollar_volume: LIQUID, p_exclude_negative: true, p_max_risk: 0.2 } as const;
+  const [popular, bullish, bearish, wave, fib, invalidation, aligned, ...grouped] = await Promise.all([
     getPulse(active.map((r) => r.symbol)).catch(() => []),
+    setupScan({ ...SIDE, p_side: "buy" }).catch(() => [] as SetupRow[]),
+    setupScan({ ...SIDE, p_side: "sell" }).catch(() => [] as SetupRow[]),
     scan({ p_structure: "wave3", p_sort: "confidence", p_limit: 10, p_min_dollar_volume: LIQUID }).catch(() => []),
     db().rpc("fib_zone_scan", { p_max_distance: 0.03, p_min_count: 3, p_min_dollar_volume: LIQUID, p_limit: 10 }).then((r) => (r.data ?? []) as FibRow[], () => []),
     scan({ p_structure: "near_invalidation", p_sort: "confidence", p_limit: 10, p_min_dollar_volume: LIQUID }).catch(() => []),
@@ -65,10 +71,10 @@ const load = unstable_cache(async (): Promise<MarketContext> => {
     ...CHANGE_GROUPS.map((g) => getStructureEvents({ types: g.types, minDollarVolume: LIQUID, days: 1, limit: 4 }).catch(() => [] as StructureEvent[])),
   ]);
   return {
-    pulse, breadth, events, eventCounts, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, active, popular,
+    pulse, breadth, events, eventCounts, gainer: gainers[0] ?? null, loser: losers[0] ?? null, setups, record, bullish, bearish, active, popular,
     signalCounts, signals: { wave, fib, invalidation, aligned }, changeEvents: (grouped as StructureEvent[][]).flat(),
   };
-}, ["mission-market-v7"], { revalidate: 300 });
+}, ["mission-market-v9"], { revalidate: 300 });
 
 // last good context held by this server instance, shown (with its own as-of date) if a reload fails
 let lastGood: MarketContext | null = null;
@@ -81,3 +87,10 @@ export async function getMarketContext(): Promise<{ ctx: MarketContext; ok: bool
     return lastGood ? { ctx: lastGood, ok: true } : { ctx: EMPTY, ok: false };
   }
 }
+
+/** Ingest diagnostics for the data status popover: coverage, when the last session loaded, sessions that failed. */
+export const getDataStatus = unstable_cache(async (): Promise<DataStatusRow | null> => {
+  const { data, error } = await db().rpc("data_status");
+  if (error || !data) return null;
+  return data as DataStatusRow;
+}, ["data-status-v1"], { revalidate: 120 });

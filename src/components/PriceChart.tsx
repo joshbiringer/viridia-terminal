@@ -17,6 +17,7 @@ import type { ClientCandidates, ConfluenceZone } from "@/lib/analysis/candidates
 import type { TechnicalPayload } from "@/lib/analysis/technical";
 import { DIVERGENCE_LABEL, type Divergence } from "@engine/momentum";
 import { ConfluencePanel } from "./analysis/ConfluencePanel";
+import { useResearch } from "./analysis/ResearchContext";
 import { useViewer } from "./ViewerProvider";
 import { useDegree } from "./analysis/DegreeContext";
 
@@ -31,7 +32,7 @@ function alpha(hex: string, a: number) {
   return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${a})`;
 }
 function palette() {
-  return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2"), wave: css("--brand") || "#176B4D", warn: css("--warn") || "#B7791F" };
+  return { fib: css("--fib") || "#5B4FC4", panel: css("--panel"), text: css("--text-3"), grid: css("--hover"), border: css("--border"), pos: css("--pos-chart"), neg: css("--neg"), pivot: css("--neutral") || "#64748B", ink: css("--text-2"), wave: css("--wave") || "#2F6BF2", warn: css("--warn") || "#B7791F" };
 }
 
 
@@ -97,7 +98,12 @@ export function PriceChart({ symbol, zones: storedZones = [], counts = null }: {
   const [showHidden, setShowHidden] = useState(false);
   const [showCross, setShowCross] = useState(true);
   const [confirmedOnly, setConfirmedOnly] = useState(false);
-  const [countMode, setCountMode] = useState<"preferred" | "alternate">("preferred");
+  // count mode and the technical payload are shared with the levels rail when the page provides it
+  const research = useResearch();
+  const publishTech = research?.setTech;
+  const [localMode, setLocalMode] = useState<"preferred" | "alternate">("preferred");
+  const countMode = research?.countMode ?? localMode;
+  const setCountMode = research?.setCountMode ?? setLocalMode;
   // selections belong to one symbol, timeframe and degree; they clear themselves when any changes
   const [scenarioSel, setScenarioSel] = useState<{ scope: string; key: string | null }>({ scope: "", key: null });
   const [divSel, setDivSel] = useState<{ scope: string; key: string | null }>({ scope: "", key: null });
@@ -200,7 +206,7 @@ export function PriceChart({ symbol, zones: storedZones = [], counts = null }: {
       }
       const body = r.data;
       setStaleSince(r.stale ? r.savedAt : null);
-      setBars(body.bars); setPivots(body.pivots ?? null); setTech(body.technical ?? null); setHistory(body.history); setLoading(false);
+      setBars(body.bars); setPivots(body.pivots ?? null); setTech(body.technical ?? null); publishTech?.(body.technical ?? null); setHistory(body.history); setLoading(false);
       const lastTs = body.bars.at(-1)?.ts;
       setOldBar(!isIntraday(tf) && !!lastTs && Date.now() - Date.parse(lastTs) > 6 * 864e5);
       if (!r.stale && body.history?.status === "queued" && Date.now() - started < 8 * 60_000) {
@@ -212,7 +218,7 @@ export function PriceChart({ symbol, zones: storedZones = [], counts = null }: {
     };
     load();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [symbol, tf, router, attempt]);
+  }, [symbol, tf, router, attempt, publishTech]);
 
   // Push data into the chart.
   useEffect(() => {

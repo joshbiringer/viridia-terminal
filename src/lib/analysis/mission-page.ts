@@ -13,7 +13,8 @@ import { getStructureEvents } from "./events-server";
 import { eventSentence, isImproving, viridiaChanges, type ChangeGroup, type EventType, type StructureEvent } from "./events";
 import { entryText } from "./setups";
 import { SETUP_LABEL } from "./candidates";
-import { SIGNAL_CARDS, getMarketContext, type MarketContext } from "./mission-server";
+import { SIGNAL_CARDS, getDataStatus, getMarketContext, type MarketContext } from "./mission-server";
+import { freshness, type DataStatusRow, type Freshness } from "@/lib/data-freshness";
 import { PULSE_GROUPS, REGIME_LABEL, closeLabel, fmtPct, regime, returns, waveShort, whatChanged, type DaySection, type FeedItem, type Regime } from "./mission";
 import { parseHoldings, type Context } from "@/lib/portfolio/xray";
 import { portfolioIntel, type PortfolioIntel } from "@/lib/portfolio/intel";
@@ -37,15 +38,17 @@ export interface MissionData {
   improving: { symbol: string; text: string }[];
   watchLines: { symbol: string; text: string }[] | null;
   setupLines: { symbol: string; text: string }[];
+  freshness: Freshness; dataStatus: DataStatusRow | null;
 }
 
 export async function loadMission(): Promise<MissionData> {
   const viewer = await getViewer().catch(() => null);
   const sb = viewer ? await authClient() : null;
-  const [{ ctx, ok }, watchRes, savedRes] = await Promise.all([
+  const [{ ctx, ok }, watchRes, savedRes, dataStatus] = await Promise.all([
     getMarketContext(),
     sb ? sb.rpc("my_watchlist") : Promise.resolve({ data: [] }),
     sb ? sb.from("portfolios").select("id, name, holdings_text, updated_at, reviewed_at").order("updated_at", { ascending: false }).limit(5) : Promise.resolve({ data: [] }),
+    getDataStatus().catch(() => null),
   ]);
   const watch = dedupe((watchRes.data ?? []) as WatchRow[]);
   const savedRows = (savedRes.data ?? []) as (SavedSummary & { holdings_text: string })[];
@@ -75,7 +78,7 @@ export async function loadMission(): Promise<MissionData> {
   const watchEvents = watch.filter((w) => w.event_type && w.event_day && lastTs && w.event_day >= lastTs.slice(0, 10));
   const watchLines = viewer ? watchEvents.map((w) => ({ symbol: w.symbol, text: eventSentence({ type: w.event_type!, detail: w.event_detail ?? {} }) })) : null;
   const improving = ctx.changeEvents.filter((e) => isImproving(e)).slice(0, 8).map((e) => ({ symbol: e.symbol, text: eventSentence(e) }));
-  const setupLines = ctx.setups.map((r) => ({
+  const setupLines = ctx.setups.slice(0, 8).map((r) => ({
     symbol: r.symbol,
     text: `${r.side === "buy" ? "Bullish" : "Bearish"} · ${SETUP_LABEL[r.kind] ?? r.kind}${r.status === "waiting" ? " (waiting)" : ""} · reference ${r.setup ? entryText(r.setup) : "—"}, invalidation ${r.setup ? fmtPrice(r.setup.stop.price) : "—"}, structural target ${r.setup ? fmtPrice(r.setup.target.price) : "—"} · ${r.rr.toFixed(1)} : 1`,
   }));
@@ -127,6 +130,8 @@ export async function loadMission(): Promise<MissionData> {
     viewer, ok, ctx, lastTs, since, reg, title: `${greeting().replace(/\.$/, "")}${name}.`,
     changes, changeDay, context, watch, saved, portfolio, attention,
     day, improving, watchLines, setupLines,
+    // label the prices by the session they actually belong to, not by what the database has since loaded
+    freshness: freshness(lastTs ? { last_session: lastTs.slice(0, 10) } : null), dataStatus,
   };
 }
 

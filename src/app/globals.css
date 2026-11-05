@@ -1,75 +1,74 @@
 @import "tailwindcss";
 
 /* =====================================================================
-   Viridia design tokens (2026-11 redesign)
-   Light and airy: a cool off-white canvas, white floating cards with soft
-   shadows, ink-black pill buttons and one calm sky-blue accent. Green and red
-   are reserved for gains and losses, violet for Fibonacci, amber for
-   alternate counts.
-   Type: Instrument Serif for headlines (with italic accents), Geist for the
-   interface and numbers. Sentence case everywhere; uppercase only for tiny
-   labels.
+   Viridia design tokens (2026-11 workstation pass)
+   An institutional research workstation. Light: bright white surfaces on a
+   cool canvas. Dark: navy and charcoal. One restrained emerald accent for
+   focus, selection and links; green and red only for gains and losses,
+   blue for Elliott Wave lines, violet for Fibonacci, amber for alternates.
+   Hierarchy comes from hairline borders and spacing, not shadows.
+   Type: Geist for interface and tabular numbers; Instrument Serif only for
+   page titles. Sentence case everywhere.
    ===================================================================== */
 :root {
   /* surfaces */
-  --bg: #F5F7FA;          /* canvas */
+  --bg: #F4F6F9;          /* canvas */
   --panel: #FFFFFF;       /* cards, tables, chart */
-  --panel-2: #F8FAFC;     /* quiet fills inside cards */
-  --hover: #F1F4F8;
-  --border: #E7EAF0;
-  --border-2: #D8DDE6;
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-border: rgba(255, 255, 255, 0.75);
+  --panel-2: #F8FAFB;     /* quiet fills inside cards, table heads */
+  --hover: #F1F4F7;
+  --border: #E2E7ED;
+  --border-2: #CFD6DF;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --glow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   /* text */
-  --text: #0E1220;
-  --text-2: #4B5368;
-  --text-3: #8A91A5;
+  --text: #0C1322;
+  --text-2: #475266;
+  --text-3: #7E889B;
 
   /* brand and action */
-  --ink: #0E1220;          /* primary buttons, active nav pill */
-  --ink-hover: #262B3D;
-  --brand: #2F6BF2;        /* the accent: links, focus, selection, Elliott Wave lines */
-  --brand-hover: #1F57D6;
-  --emerald: #12A15A;
-  --emerald-soft: #E3F6EC;
-  --brand-dark: #0E1220;
-  --near-black: #0E1220;
+  --ink: #0C1322;          /* primary buttons */
+  --ink-hover: #1E2738;
+  --brand: #0B8F69;        /* restrained emerald: links, focus, selection, active state */
+  --brand-hover: #087556;
+  --emerald: #0B8F69;
+  --emerald-soft: #E5F4EE;
+  --brand-dark: #0C1322;
+  --near-black: #0C1322;
   --gold: #F2C46D;
   --accent: var(--brand);
-  --sky-1: #CFE3FF;        /* hero sky, top */
-  --sky-2: #EAF2FF;
-  --sky-3: #F7FAFF;
-  --gradient-brand: linear-gradient(100deg, #0E1220 0%, #2F6BF2 70%, #7FB2FF 100%);
-  --gradient-brand-vertical: linear-gradient(180deg, #CFE3FF 0%, #EAF2FF 45%, #F7FAFF 100%);
+  --sky-1: #DCEFE8; --sky-2: #EEF6F3; --sky-3: #F7FAF9;
+  --gradient-brand: linear-gradient(100deg, #0C1322 0%, #0B8F69 75%, #3CCB97 100%);
+  --gradient-brand-vertical: linear-gradient(180deg, #E5F4EE 0%, #F4F6F9 100%);
   --ease-premium: cubic-bezier(.22, 1, .36, 1);
 
   /* meaning */
-  --pos: #0E8A4E;
+  --pos: #12804A;
   --pos-chart: #16A34A;
-  --neg: #D13C3C;
-  --neg-soft: #FDECEC;
-  --neutral: #737B90;
+  --neg: #CF3B3B;
+  --neg-soft: #FCEDED;
+  --neutral: #7B8497;
   --fib: #6E56CF;
   --fib-soft: #F0EDFC;
-  --wave: var(--brand);
-  --alt: #C27A12;
-  --alt-soft: #FCF3E3;
-  --warn: #C27A12;
+  --wave: #2F6BF2;
+  --alt: #B9740F;
+  --alt-soft: #FBF3E4;
+  --warn: #B9740F;
 
-  --pos-bg: #E6F6EE;
+  --pos-bg: #E7F5ED;
   --neg-bg: var(--neg-soft);
   --warn-bg: var(--alt-soft);
-  --accent-bg: #EAF1FF;
+  --accent-bg: #E5F4EE;
 
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
-  --shadow-md: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 30px -14px rgba(16, 24, 40, 0.12);
-  --shadow-lg: 0 2px 6px rgba(16, 24, 40, 0.05), 0 30px 60px -24px rgba(16, 24, 40, 0.22);
+  --shadow-sm: none;
+  --shadow-md: 0 1px 1px rgba(12, 19, 34, 0.03);
+  --shadow-lg: 0 1px 2px rgba(12, 19, 34, 0.05), 0 18px 40px -18px rgba(12, 19, 34, 0.2);
 
   /* shape and motion */
-  --r-sm: 8px;      /* chips, segmented items */
-  --r-md: 12px;     /* inputs, menu items */
-  --r-lg: 22px;     /* cards, menus, dialogs */
+  --r-sm: 6px;      /* chips, segmented items */
+  --r-md: 8px;      /* inputs, menu items */
+  --r-lg: 12px;     /* cards, menus, dialogs */
   --r-pill: 999px;  /* buttons, segmented controls, nav */
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --t-fast: 120ms;
@@ -77,49 +76,51 @@
 
   --font-sans-stack: "Geist Variable", "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-serif-stack: "Instrument Serif", "Iowan Old Style", Georgia, serif;
-  /* small labels share the sans; uppercase and tracked only at tiny sizes */
   --font-mono-stack: var(--font-sans-stack);
   --font-code-stack: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #0A0D14;
-  --panel: #11151F;
-  --panel-2: #151A26;
-  --hover: #1A2030;
-  --border: #222A3A;
-  --border-2: #2E3749;
-  --glass: rgba(20, 26, 40, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --text: #EEF1F7;
-  --text-2: #A9B1C4;
-  --text-3: #727B91;
-  --ink: #EEF1F7;
+  --bg: #090E17;
+  --panel: #0E1522;
+  --panel-2: #111A29;
+  --hover: #162033;
+  --border: #1C2638;
+  --border-2: #283549;
+  --glass: rgba(14, 21, 34, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --text: #E6EBF3;
+  --text-2: #A0AABD;
+  --text-3: #6B778D;
+  --ink: #E6EBF3;
   --ink-hover: #FFFFFF;
-  --brand: #6E9BFF;
-  --brand-hover: #8DB0FF;
-  --gradient-brand: linear-gradient(100deg, #EEF1F7 0%, #6E9BFF 70%, #A9C7FF 100%);
-  --gradient-brand-vertical: linear-gradient(180deg, #16233F 0%, #0F1626 60%, #0A0D14 100%);
-  --sky-1: #1A2A4A; --sky-2: #121C33; --sky-3: #0D1322;
-  --emerald: #35C47A;
-  --emerald-soft: #12291D;
+  --brand: #34C796;
+  --brand-hover: #5AD7AC;
+  --gradient-brand: linear-gradient(100deg, #E6EBF3 0%, #34C796 75%, #8CE6C6 100%);
+  --gradient-brand-vertical: linear-gradient(180deg, #0F2420 0%, #0C1520 60%, #090E17 100%);
+  --sky-1: #10241F; --sky-2: #0D1A1C; --sky-3: #0A1118;
+  --emerald: #34C796;
+  --emerald-soft: #0F2A22;
   --accent: var(--brand);
-  --pos: #35C47A;
-  --pos-chart: #35C47A;
-  --neg: #F0706D;
-  --neg-soft: #2C1617;
+  --pos: #3BC97E;
+  --pos-chart: #3BC97E;
+  --neg: #F0716C;
+  --neg-soft: #2A1517;
+  --wave: #7AA2FF;
   --fib: #A594F9;
-  --fib-soft: #1F1A3A;
-  --alt: #E8A84A;
-  --alt-soft: #2C2213;
-  --pos-bg: #12291D;
-  --neg-bg: #2C1617;
-  --warn-bg: #2C2213;
-  --accent-bg: #16213D;
+  --fib-soft: #1E1A38;
+  --alt: #E3A54A;
+  --alt-soft: #2A2113;
+  --warn: #E3A54A;
+  --pos-bg: #10261B;
+  --neg-bg: #2A1517;
+  --warn-bg: #2A2113;
+  --accent-bg: #0F2A22;
   --shadow-sm: none;
-  --shadow-md: 0 12px 32px -16px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 32px 64px -24px rgba(0, 0, 0, 0.7);
+  --shadow-md: none;
+  --shadow-lg: 0 24px 56px -20px rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }
 
@@ -198,7 +199,7 @@ textarea.font-mono, code, pre, samp { font-family: var(--font-code-stack); }
 .pill-badge { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); font-size: 12.5px; font-weight: 500; color: var(--text-2); box-shadow: var(--shadow-sm); }
 
 /* ---------------------------------------------------------------- surfaces */
-.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-md); min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--glow), var(--shadow-md); min-width: 0; }
 .f-card { background: var(--panel); border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-md); }
 .glass { background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
 .card-h { display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-bottom: 1px solid var(--border); min-height: 58px; flex-wrap: wrap; }
@@ -312,26 +313,6 @@ kbd { font: 500 10.5px var(--font-sans-stack); padding: 1px 6px; border: 1px sol
 .rule { height: 1px; background: var(--border); }
 }
 
-/* ---------------------------------------------------------------- Mission Control globe hero
-   A sky, not space: the gradient is set from the time of day at the city in view
-   (GlobeHero sets --sky-a/--sky-b/--sky-c), and the Earth rises from the bottom
-   edge as a horizon. */
-.globe-hero {
-  --sky-a: #BFDBFF; --sky-b: #E6F0FF; --sky-c: #F8FBFF;
-  background:
-    radial-gradient(60% 70% at 72% 92%, rgba(255,255,255,.75) 0%, transparent 70%),
-    linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 52%, var(--sky-c) 100%);
-  border: 1px solid var(--border);
-  transition: --sky-a 2s, --sky-b 2s, --sky-c 2s;
-}
-:root[data-theme="dark"] .globe-hero { border-color: var(--border); }
-@property --sky-a { syntax: "<color>"; inherits: true; initial-value: #BFDBFF; }
-@property --sky-b { syntax: "<color>"; inherits: true; initial-value: #E6F0FF; }
-@property --sky-c { syntax: "<color>"; inherits: true; initial-value: #F8FBFF; }
-/* soft, drifting clouds made of blurred ellipses */
-.globe-clouds { background:
-  radial-gradient(28% 12% at 18% 24%, rgba(255,255,255,.7), transparent 70%),
-  radial-gradient(22% 9% at 62% 14%, rgba(255,255,255,.55), transparent 70%),
-  radial-gradient(30% 11% at 86% 30%, rgba(255,255,255,.5), transparent 70%);
-  filter: blur(6px); animation: drift 60s linear infinite alternate; }
-@keyframes drift { from { transform: translateX(-2%); } to { transform: translateX(2%); } }
+
+/* Below-the-fold sections skip layout and paint until they scroll near the viewport. */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: auto 640px; }

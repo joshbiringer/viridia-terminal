@@ -19,6 +19,8 @@ import { WatchButton } from "@/components/WatchButton";
 import { TrackEvent } from "@/components/TrackEvent";
 import { WelcomeGuide } from "@/components/WelcomeGuide";
 import { DegreeProvider } from "@/components/analysis/DegreeContext";
+import { ResearchProvider } from "@/components/analysis/ResearchContext";
+import { ResearchRail } from "@/components/analysis/ResearchRail";
 import { StructureGlance } from "@/components/analysis/StructureGlance";
 import { SetupCard, type SetupCheck } from "@/components/analysis/SetupCard";
 import { getSymbolTrials, getSetupQuality, getTrackRecord } from "@/lib/analysis/track-record";
@@ -47,11 +49,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // Only sections that exist are shown; financials, earnings and ownership arrive with research data.
-const SECTIONS = [["summary", "Summary"], ["structure", "Structure"], ["candidates", "Candidates"], ["fibonacci", "Fibonacci"], ["evidence", "Evidence"], ["engine", "Engine details"]] as const;
+const SECTIONS = [["structure", "Chart and levels"], ["summary", "Summary"], ["candidates", "Candidates"], ["fibonacci", "Fibonacci"], ["evidence", "Evidence"], ["engine", "Engine details"]] as const;
 
 function Section({ id, title, note, children }: { id: string; title: string; note?: string; children: React.ReactNode }) {
+  // sections below the chart render lazily: skipped by layout and paint until scrolled near
+  const lazy = id !== "structure" && id !== "summary";
   return (
-    <section id={id} className="flex scroll-mt-[112px] flex-col gap-4" aria-labelledby={`${id}-h`}>
+    <section id={id} className={`flex scroll-mt-[112px] flex-col gap-4 ${lazy ? "cv-auto" : ""}`} aria-labelledby={`${id}-h`}>
       <div className="flex items-baseline gap-3 border-b border-line pb-1.5">
         <h2 id={`${id}-h`} className="font-mono text-[12px] text-fg-3 font-medium">{title}</h2>
         {note && <span className="text-[12px] text-fg-3">{note}</span>}
@@ -128,6 +132,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
     <>
       <TrackEvent event="analysis_viewed" props={{ symbol: sec.symbol }} />
       <DegreeProvider auto={swings?.glances.auto?.degree ?? null}>
+      <ResearchProvider>
       <header className="flex flex-col gap-5">
         <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
           <div className="min-w-0">
@@ -146,7 +151,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
                   {chg >= 0 ? "+" : "−"}{fmtChange(chg, sum!.last_close!)} ({chg >= 0 ? "+" : "−"}{(Math.abs(chgPct!) * 100).toFixed(2)}%)
                 </div>
               )}
-              <p className="mt-1 text-[12.5px] text-fg-3">Close, {fmtDate(sum!.last_ts)}</p>
+              <p className="mt-1 text-[12.5px] text-fg-3">End-of-day close, {fmtDate(sum!.last_ts)}</p>
             </div>
           )}
           <div className="ml-auto flex flex-wrap gap-2">
@@ -168,6 +173,13 @@ export default async function StockTerminal({ params, searchParams }: Props) {
 
       {welcome && <WelcomeGuide symbol={sec.symbol} />}
 
+      <Section id="structure" title="Chart and levels" note="Elliott Wave, Fibonacci, RSI, MACD and divergences on one chart; the levels rail follows it">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
+          <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[120px] xl:self-start"><ResearchRail /></div>
+        </div>
+      </Section>
+
       <Section id="summary" title="Structural summary" note="What is the structure, what changed, and what would invalidate it">
         <SignalsPanel
           symbol={sec.symbol} trials={trials}
@@ -183,12 +195,8 @@ export default async function StockTerminal({ params, searchParams }: Props) {
           symbol={sec.symbol} glances={swings?.glances ?? null} candidates={swings?.candidates ?? null}
           zones={swings?.fib?.zones ?? []} close={sum?.last_close ?? null} asOf={swings?.asOf} weekly={weekly}
         />
-        <RecentChanges events={changes} />
-      </Section>
-
-      <Section id="structure" title="Current structure" note="Price, swings and the preferred count on the chart">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <PriceChart symbol={sec.symbol} zones={swings?.fib?.zones ?? []} counts={swings?.candidates ?? null} />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <RecentChanges events={changes} />
           <StructureSummary snap={snap} swings={swings} />
         </div>
       </Section>
@@ -221,6 +229,7 @@ export default async function StockTerminal({ params, searchParams }: Props) {
           <SourceFooter source="Prices: Massive (end of day, split-adjusted). Listings: Nasdaq Trader, SEC" updated={fmtDateTime(sec.last_seen_at)} method="Security master, daily snapshot diff" />
         </div>
       </Section>
+      </ResearchProvider>
       </DegreeProvider>
     </>
   );

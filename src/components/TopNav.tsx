@@ -56,7 +56,7 @@ export function TopNav() {
       <div className="mx-auto flex h-[68px] max-w-[1600px] items-center gap-2 px-4 sm:px-6 lg:gap-4 lg:px-8">
         <Link href="/terminal" className="flex-none" aria-label="Viridia home"><ViridiaLockup /></Link>
 
-        <nav className="glass mx-auto hidden h-11 items-center gap-0.5 rounded-full px-1.5 shadow-[var(--shadow-sm)] lg:flex" aria-label="Sections">
+        <nav className="glass mx-auto hidden h-11 items-center gap-0.5 rounded-full px-1.5 shadow-[var(--shadow-sm)] xl:flex" aria-label="Sections">
           {HEADER_NAV.map((g) => {
             const active = g.items.some((it) => isActive(path, it.href));
             const cls = `relative inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[13.5px] font-[500] tracking-[-0.01em] transition-colors duration-200 xl:px-3.5 ${active ? "bg-ink text-panel shadow-[var(--shadow-sm)]" : "text-fg-2 hover:bg-hover hover:text-fg"}`;
@@ -96,7 +96,7 @@ export function TopNav() {
           })}
         </nav>
 
-        <div className="ml-auto flex flex-none items-center gap-1.5 lg:ml-0">
+        <div className="ml-auto flex flex-none items-center gap-1.5 xl:ml-0">
           <button
             className="hidden h-10 min-w-0 items-center gap-2.5 rounded-full border border-line bg-panel px-3.5 text-left text-[13px] text-fg-3 shadow-[var(--shadow-sm)] transition-colors duration-200 hover:border-line-2 hover:text-fg md:flex 2xl:w-[240px]"
             onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}
@@ -104,7 +104,7 @@ export function TopNav() {
           >
             <Icon name="search" />
             <span className="hidden min-w-0 flex-1 truncate 2xl:inline">Search or ask Viridia…</span>
-            <kbd>{mac ? "⌘K" : "Ctrl K"}</kbd>
+            <kbd className="hidden xl:inline">{mac ? "⌘K" : "Ctrl K"}</kbd>
           </button>
           <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg-2 transition-colors hover:bg-hover hover:text-fg md:hidden" aria-label="Search" onClick={() => window.dispatchEvent(new Event("viridia:open-palette"))}>
             <Icon name="search" className="h-[18px] w-[18px]" />
@@ -121,14 +121,14 @@ export function TopNav() {
             <Icon name={dark ? "sun" : "moon"} className="h-[17px] w-[17px]" />
           </button>
           <AccountMenu />
-          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg transition-colors hover:bg-hover lg:hidden" aria-label={mobile ? "Close menu" : "Open menu"} aria-expanded={mobile} onClick={() => setMobile((v) => !v)}>
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full text-fg transition-colors hover:bg-hover xl:hidden" aria-label={mobile ? "Close menu" : "Open menu"} aria-expanded={mobile} onClick={() => setMobile((v) => !v)}>
             <Icon name={mobile ? "x" : "menu"} className="h-[20px] w-[20px]" />
           </button>
         </div>
       </div>
 
       {mobile && (
-        <nav className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-line bg-bg px-4 pb-8 pt-2 sm:px-6 lg:hidden" aria-label="Sections">
+        <nav className="max-h-[calc(100vh-68px)] overflow-y-auto border-t border-line bg-bg px-4 pb-8 pt-2 sm:px-6 xl:hidden" aria-label="Sections">
           {HEADER_NAV.map((g) => (
             <div key={g.label} className="border-b border-line py-3">
               <p className="f-label pb-1">{g.label}</p>

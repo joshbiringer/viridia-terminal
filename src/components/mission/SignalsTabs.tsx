@@ -21,7 +21,7 @@ const DV = "dv=25000000";
  * Signal detail on Mission Control: five views of what the engine produced for liquid names,
  * each from stored engine output. Tickers open the drawer; "All" links open the full screen.
  */
-export function SignalsTabs({ events, data, day }: { events: StructureEvent[]; data: SignalsData; day: string | null }) {
+export function SignalsTabs({ events, data, day, bare = false }: { events: StructureEvent[]; data: SignalsData; day: string | null; bare?: boolean }) {
   const [tab, setTab] = useState<Tab>("changes");
   const more: Record<Tab, { href: string; label: string }> = {
     changes: { href: "/scanner?view=structure", label: "Scanner" },
@@ -31,7 +31,7 @@ export function SignalsTabs({ events, data, day }: { events: StructureEvent[]; d
     mtf: { href: `/setups?wk=with`, label: "Setups with the weekly" },
   };
   return (
-    <section className="card" aria-labelledby="sig-t">
+    <section className={bare ? "" : "card"} aria-labelledby="sig-t">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2">
         <h2 id="sig-t" className="card-t">Signal detail</h2>
         <div className="seg" role="tablist" aria-label="Signal views">

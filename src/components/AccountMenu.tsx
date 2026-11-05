@@ -29,7 +29,7 @@ export function AccountMenu({ onDark = false }: { onDark?: boolean }) {
     return (
       <div className="flex flex-none items-center gap-1.5">
         <Link href="/signin" className={`btn sm hidden sm:inline-flex ${onDark ? "light" : "ghost"}`}>Sign in</Link>
-        <Link href="/signup" className={`btn sm ${onDark ? "white" : "pri"}`}><span className="xl:hidden">Sign up</span><span className="hidden xl:inline">Create account</span></Link>
+        <Link href="/signup" className={`btn sm ${onDark ? "white" : "pri"}`}><span className="2xl:hidden">Sign up</span><span className="hidden 2xl:inline">Create account</span></Link>
       </div>
     );
   }

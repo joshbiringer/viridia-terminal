@@ -30,7 +30,25 @@ export const PULSE_GROUPS: { id: PulseGroupId; label: string; note: string; item
     { symbol: "UUP", label: "Dollar" }, { symbol: "GLD", label: "Gold" }, { symbol: "USO", label: "Oil" }, { symbol: "IBIT", label: "Bitcoin" },
   ]},
 ];
+/**
+ * Regional markets for the Global Market Pulse, each shown through its U.S.-listed country ETF
+ * (the plan covers U.S. listings only), paired with the exchange whose hours it follows.
+ */
+export const REGIONS: { hub: "ny" | "london" | "frankfurt" | "tokyo" | "hongkong"; symbol: string; label: string }[] = [
+  { hub: "ny", symbol: "SPY", label: "United States" },
+  { hub: "london", symbol: "EWU", label: "United Kingdom" },
+  { hub: "frankfurt", symbol: "EWG", label: "Germany" },
+  { hub: "tokyo", symbol: "EWJ", label: "Japan" },
+  { hub: "hongkong", symbol: "EWH", label: "Hong Kong" },
+];
+/** Broad international and credit gauges shown under the indices. */
+export const GLOBAL_GAUGES: PulseItem[] = [
+  { symbol: "EFA", label: "Developed ex-U.S.", hint: "iShares MSCI EAFE ETF" },
+  { symbol: "EEM", label: "Emerging markets", hint: "iShares MSCI Emerging Markets ETF" },
+  { symbol: "HYG", label: "High yield credit", hint: "iShares iBoxx High Yield Corporate Bond ETF" },
+];
 export const PULSE_SYMBOLS = PULSE_GROUPS.flatMap((g) => g.items.map((i) => i.symbol));
+export const ALL_PULSE_SYMBOLS = [...new Set([...PULSE_SYMBOLS, ...REGIONS.map((r) => r.symbol), ...GLOBAL_GAUGES.map((g) => g.symbol)])];
 export const pulseLabel = (symbol: string) => PULSE_GROUPS.flatMap((g) => g.items).find((i) => i.symbol === symbol)?.label ?? symbol;
 
 const ret = (a: number | null | undefined, b: number | null | undefined) => (a != null && b != null && b > 0 ? a / b - 1 : null);
