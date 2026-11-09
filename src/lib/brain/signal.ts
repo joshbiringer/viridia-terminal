@@ -31,6 +31,8 @@ export interface ValueInputs {
   ps?: number | null; sectorPs?: number | null;
   pb?: number | null; fcfYield?: number | null; netCashToCap?: number | null;
   opMargin?: number | null; sectorOpMargin?: number | null; growth?: number | null;
+  /** The reader's own screens, evaluated for this company. */
+  screens?: { name: string; philosophy: string; passed: boolean; met: number; total: number }[];
 }
 
 export interface Component { score: number; reasons: string[] }
@@ -125,6 +127,12 @@ export function valueComponent(v: ValueInputs | null): Component | null {
   if (v.opMargin != null && v.sectorOpMargin != null) {
     const s = clip((v.opMargin - v.sectorOpMargin) / 0.15);
     parts.push({ s, w: 0.6, why: `Operating margin ${(v.opMargin * 100).toFixed(0)}% vs sector ${(v.sectorOpMargin * 100).toFixed(0)}%` });
+  }
+  for (const sc of v.screens ?? []) {
+    if (sc.total === 0) continue;
+    const valueLike = sc.philosophy === "value" || sc.philosophy === "quality";
+    if (sc.passed) parts.push({ s: valueLike ? 0.9 : 0.5, w: valueLike ? 1.2 : 0.6, why: `Passes your ${sc.name} screen` });
+    else if (valueLike && sc.met >= sc.total - 1) parts.push({ s: 0.35, w: 0.6, why: `Meets ${sc.met} of ${sc.total} criteria in your ${sc.name} screen` });
   }
   if (!parts.length) return null;
   const w = parts.reduce((a, p) => a + p.w, 0);

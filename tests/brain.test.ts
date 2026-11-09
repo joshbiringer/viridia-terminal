@@ -81,3 +81,44 @@ describe("brain signal", () => {
     expect(cheap.score).toBeGreaterThan(dear.score);
   });
 });
+
+import { evaluate, runScreens, SHARED_SCREENS, type CompanyFigures, type Screen } from "../src/lib/brain/screens";
+
+const screen = (i: number): Screen => ({ ...SHARED_SCREENS[i], id: String(i), active: true });
+const deepValue: CompanyFigures = {
+  symbol: "CHEAP", market_cap: 1_000, net_income: 100, equity: 800, debt: 200, revenue: 900,
+  assets_current: 600, liabilities_current: 300, operating_cash_flow: 180, capex: -40,
+  eps: 2.0, eps_prior: 1.8, eps_5y_ago: 1.0,
+};
+
+describe("brain screens", () => {
+  it("passes a deep-value company through the Graham screen and shows each check", () => {
+    const r = evaluate(screen(0), deepValue);
+    expect(r.passed).toBe(true);
+    expect(r.met).toBe(5);
+    expect(r.checks.find((c) => c.metric === "p_fcf")!.actual).toBeCloseTo(1000 / 140);
+  });
+  it("never passes a criterion it can't check", () => {
+    const r = evaluate(screen(0), { symbol: "X", market_cap: 1000, net_income: 100 });
+    expect(r.passed).toBe(false);
+    expect(r.checks.filter((c) => c.ok === null).length).toBe(4);
+  });
+  it("fails a loss-maker on P/E and treats growth from a loss as unknown", () => {
+    expect(evaluate(screen(0), { ...deepValue, net_income: -5 }).checks[0].ok).toBeNull();
+    expect(evaluate(screen(2), { symbol: "Y", eps: 1, eps_prior: -0.5 }).checks[0].actual).toBeNull();
+  });
+  it("computes 5-year EPS growth as an annual rate for the Buffett screen", () => {
+    const r = evaluate(screen(1), deepValue);
+    expect(r.checks[0].actual).toBeCloseTo(Math.pow(2, 0.2) - 1);
+    expect(r.passed).toBe(false); // ROE 12.5% < 15%
+  });
+  it("runs every active screen over a universe", () => {
+    const res = runScreens([screen(0), screen(1)], [deepValue, { symbol: "DEAR", market_cap: 5000, net_income: 50, equity: 500 }]);
+    expect(res[0].passing.map((p) => p.f.symbol)).toEqual(["CHEAP"]);
+  });
+  it("feeds screen passes into the value third", () => {
+    const v = valueComponent({ screens: [{ name: "Graham Value", philosophy: "value", passed: true, met: 5, total: 5 }] })!;
+    expect(v.score).toBeGreaterThan(0.8);
+    expect(v.reasons[0]).toBe("Passes your Graham Value screen");
+  });
+});

@@ -14,7 +14,7 @@ export async function BrainCard({ symbol }: { symbol: string }) {
   const brain = await getBrain().catch(() => null);
   if (!brain?.signedIn) return null;
   const live = brain.theses.filter((t) => t.status === "active" || t.status === "watching");
-  const { signals } = await brainSignals(live, [symbol]).catch(() => ({ signals: [] }));
+  const { signals } = await brainSignals(live, [symbol], brain.screens, { screenPasses: false }).catch(() => ({ signals: [] }));
   const s = signals.find((x) => x.symbol === symbol.toUpperCase());
   return (
     <section className="card flex flex-col gap-3 p-4" aria-labelledby="brain-t">

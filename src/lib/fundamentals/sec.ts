@@ -27,6 +27,11 @@ export const FRAME_CONCEPTS: { taxonomy: "us-gaap" | "dei"; tag: string; unit: s
   { taxonomy: "us-gaap", tag: "CashAndCashEquivalentsAtCarryingValue", unit: "USD", instant: true },
   { taxonomy: "us-gaap", tag: "NetCashProvidedByUsedInOperatingActivities", unit: "USD" },
   { taxonomy: "us-gaap", tag: "PaymentsToAcquirePropertyPlantAndEquipment", unit: "USD" },
+  // screen inputs: liquidity, short-term debt, per-share earnings
+  { taxonomy: "us-gaap", tag: "AssetsCurrent", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "LiabilitiesCurrent", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "LongTermDebtCurrent", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "EarningsPerShareDiluted", unit: "USD-per-shares" },
 ];
 
 export const isFramePeriod = (p: string) => /^CY\d{4}(Q[1-4]I?)?$/.test(p);

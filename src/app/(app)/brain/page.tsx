@@ -7,6 +7,8 @@ import { Icon } from "@/components/Icon";
 import { brainSignals, getBrain } from "@/lib/brain/server";
 import { SIGNAL_TONE, thesisWeight, type BrainSignal, type Component, type Thesis } from "@/lib/brain/signal";
 import { fmtPrice } from "@/lib/market-data/bars";
+import { fmtCriterion } from "@/lib/brain/screens";
+import type { ScreenRun } from "@/lib/brain/server";
 
 export const metadata: Metadata = { title: "Brain" };
 export const dynamic = "force-dynamic";
@@ -113,9 +115,11 @@ export default async function BrainPage() {
   if (!brain.signedIn) redirect("/signin?next=/brain");
   const live = brain.theses.filter((t) => t.status === "active" || t.status === "watching");
   const past = brain.theses.filter((t) => t.status === "retired" || t.status === "invalidated");
-  const { signals, valueLive } = await brainSignals(live).catch(() => ({ signals: [], valueLive: false }));
+  const { signals, valueLive, runs } = await brainSignals(live, [], brain.screens).catch(() => ({ signals: [], valueLive: false, runs: [] as ScreenRun[] }));
   const conflicts = signals.filter((s) => s.conflict).length;
-  const stats: [string, number][] = [["Active theses", live.filter((t) => t.status === "active").length], ["Watching", live.filter((t) => t.status === "watching").length], ["Sources", brain.sources.length], ["Securities touched", signals.length], ["Conflicts", conflicts]];
+  const stats: [string, number][] = [["Active theses", live.filter((t) => t.status === "active").length], ["Screens", brain.screens.filter((x) => x.active).length], ["Sources", brain.sources.length], ["Securities signalled", signals.length], ["Conflicts", conflicts]];
+  const bySym = new Map(signals.map((x) => [x.symbol, x]));
+  const PHIL = { value: "Value", quality: "Quality", growth: "Growth", income: "Income", momentum: "Momentum" } as const;
 
   return (
     <DrawerProvider>
@@ -147,13 +151,49 @@ export default async function BrainPage() {
           </>
         ) : (
           <p className="px-4 py-6 text-[13px] leading-relaxed text-fg-2">
-            No signals yet. Share a newsletter, report, company deck or your own note with Viridia in chat; each idea is filed here as a thesis linked to the stocks, ETFs or sectors it bears on, and signals appear for every one of them.
+            No signals yet. Share a newsletter, report, company deck, screener or your own note with Viridia in chat; each idea is filed here as a thesis or screen linked to the stocks, ETFs or sectors it bears on, and signals appear for every one of them.
           </p>
         )}
         <p className="border-t border-line px-4 py-2.5 text-[11.5px] leading-relaxed text-fg-3">
           {valueLive ? "Value compares earnings, sales and cash flow with sector peers from SEC filings." : "The value third is off until company fundamentals from SEC filings are loaded; until then signals use your theses and technicals."} Prices are end-of-day closes. Research signals, not investment advice.
         </p>
       </section>
+
+
+      {brain.screens.length > 0 && (
+        <section aria-labelledby="scr-t" className="flex flex-col gap-3">
+          <h2 id="scr-t" className="serif text-[26px] leading-none">Screens</h2>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {brain.screens.map((sc) => {
+              const run = runs.find((r) => r.screen.id === sc.id);
+              return (
+                <article key={sc.id} className="card flex flex-col gap-2.5 p-4">
+                  <header className="flex items-baseline gap-2">
+                    <h3 className="text-[15px] font-[620]">{sc.name}</h3>
+                    <span className="chip">{PHIL[sc.philosophy]}</span>
+                    {!sc.active && <span className="text-[11.5px] text-fg-3">paused</span>}
+                  </header>
+                  {sc.notes && <p className="text-[12.5px] leading-snug text-fg-2">{sc.notes}</p>}
+                  <ul className="flex flex-wrap gap-1.5">{sc.criteria.map((c) => <li key={c.metric + c.op} className="chip">{fmtCriterion(c)}</li>)}</ul>
+                  {valueLive && run ? (
+                    <div className="border-t border-line pt-2">
+                      <p className="text-[12px] text-fg-3"><span className="num font-medium text-fg">{run.passing.length}</span> pass of <span className="num">{run.checkable}</span> companies with every figure on file</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {run.passing.slice(0, 18).map((sym) => {
+                          const sg = bySym.get(sym);
+                          return <span key={sym} className="chip gap-1"><TickerButton symbol={sym} className="tk hover:text-brand" />{sg && <span className="text-[11px] font-medium" style={{ color: SIGNAL_TONE[sg.label] }}>{sg.label}</span>}</span>;
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="border-t border-line pt-2 text-[12px] leading-snug text-fg-3">Runs once company fundamentals from SEC filings are loaded. Until then it can&apos;t be checked, so nothing is shown as passing.</p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {live.length > 0 && (
         <section aria-labelledby="th-t" className="flex flex-col gap-3">

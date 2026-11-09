@@ -84,8 +84,22 @@ begin
     end loop;
   end loop;
   foreach t in array array['EntityCommonStockSharesOutstanding', 'StockholdersEquity', 'LongTermDebtNoncurrent', 'LongTermDebt',
-                           'CashAndCashEquivalentsAtCarryingValue'] loop
+                           'CashAndCashEquivalentsAtCarryingValue', 'AssetsCurrent', 'LiabilitiesCurrent', 'LongTermDebtCurrent'] loop
     foreach p in array array['CY2025Q4I', 'CY2026Q1I', 'CY2026Q2I', 'CY2026Q3I'] loop
+      insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=' || t || '&period=' || p)
+      on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
+      v_frames := v_frames + 1;
+    end loop;
+  end loop;
+  -- per-share earnings: six fiscal years for 5-year growth, and the latest quarters against a year earlier
+  foreach p in array array['CY2020', 'CY2021', 'CY2024', 'CY2025', 'CY2025Q2', 'CY2025Q3', 'CY2026Q2', 'CY2026Q3'] loop
+    insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=EarningsPerShareDiluted&period=' || p)
+    on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
+    v_frames := v_frames + 1;
+  end loop;
+  -- quarterly revenue for sales growth, quarter against the same quarter a year earlier
+  foreach t in array array['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet'] loop
+    foreach p in array array['CY2025Q2', 'CY2025Q3', 'CY2026Q2', 'CY2026Q3'] loop
       insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=' || t || '&period=' || p)
       on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
       v_frames := v_frames + 1;
@@ -251,6 +265,77 @@ $$;
 grant execute on function public.sector_medians() to anon, authenticated;
 
 grant execute on function public.get_fundamentals(text[]) to anon, authenticated;
+
+-- Screen inputs for every single-class company with filings: the figures src/lib/brain/screens.ts
+-- turns into P/E, P/B, P/FCF, current ratio, debt/equity, ROE, margins and growth rates.
+-- Annual periods are CYyyyy; quarters CYyyyyQn; balance-sheet instants CYyyyyQnI.
+create or replace function public.fundamentals_universe()
+returns table(symbol text, name text, sector text, market_cap float8, revenue float8, net_income float8,
+              equity float8, debt float8, cash float8, assets_current float8, liabilities_current float8,
+              operating_cash_flow float8, capex float8, eps float8, eps_prior float8, eps_5y_ago float8,
+              eps_q float8, eps_q_year_ago float8, revenue_q float8, revenue_q_year_ago float8)
+language sql stable security definer set search_path = public as $$
+  with base as (
+    select s.id, s.symbol, s.name, s.sector, nullif(ltrim(s.cik, '0'), '')::bigint cik
+    from securities s
+    where s.is_active and s.asset_type = 'stock' and s.coverage is not null and s.cik ~ '^\d+$'
+  ),
+  single as (select cik from base group by cik having count(*) = 1),
+  latest as (  -- latest value of a concept per company, by period kind
+    select f.cik, f.concept, f.period, f.val,
+           row_number() over (partition by f.cik, f.concept,
+             case when f.period ~ 'Q\dI$' then 'i' when f.period ~ 'Q\d$' then 'q' else 'y' end order by f.period desc) rn,
+           case when f.period ~ 'Q\dI$' then 'i' when f.period ~ 'Q\d$' then 'q' else 'y' end pk
+    from sec_facts f join single using (cik)
+  ),
+  pick as (
+    select cik,
+      max(val) filter (where concept = 'EntityCommonStockSharesOutstanding' and pk = 'i' and rn = 1) shares,
+      max(val) filter (where concept = 'NetIncomeLoss' and pk = 'y' and rn = 1) ni,
+      max(val) filter (where concept = 'StockholdersEquity' and pk = 'i' and rn = 1) eq,
+      coalesce(max(val) filter (where concept = 'LongTermDebt' and pk = 'i' and rn = 1),
+               max(val) filter (where concept = 'LongTermDebtNoncurrent' and pk = 'i' and rn = 1)
+                 + coalesce(max(val) filter (where concept = 'LongTermDebtCurrent' and pk = 'i' and rn = 1), 0)) debt,
+      max(val) filter (where concept = 'CashAndCashEquivalentsAtCarryingValue' and pk = 'i' and rn = 1) cash,
+      max(val) filter (where concept = 'AssetsCurrent' and pk = 'i' and rn = 1) ac,
+      max(val) filter (where concept = 'LiabilitiesCurrent' and pk = 'i' and rn = 1) lc,
+      max(val) filter (where concept = 'NetCashProvidedByUsedInOperatingActivities' and pk = 'y' and rn = 1) ocf,
+      max(val) filter (where concept = 'PaymentsToAcquirePropertyPlantAndEquipment' and pk = 'y' and rn = 1) capex,
+      max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2025') eps,
+      max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2024') eps_prior,
+      max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2020') eps_5y,
+      coalesce(max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2026Q3'),
+               max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2026Q2')) eps_q,
+      case when max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2026Q3') is not null
+           then max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2025Q3')
+           else max(val) filter (where concept = 'EarningsPerShareDiluted' and period = 'CY2025Q2') end eps_q_ya
+    from latest group by cik
+  ),
+  rev as (  -- revenue under whichever concept the company files, annual and latest quarter vs a year earlier
+    select cik,
+      (array_agg(val order by period desc, cpos) filter (where pk = 'y'))[1] revenue,
+      (array_agg(val order by period desc, cpos) filter (where period in ('CY2026Q3', 'CY2026Q2')))[1] rq,
+      (array_agg(period order by period desc, cpos) filter (where period in ('CY2026Q3', 'CY2026Q2')))[1] rq_period,
+      jsonb_object_agg(period || ':' || concept, val) filter (where pk = 'q') qmap
+    from (select cik, concept, period, val, pk,
+                 array_position(array['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet'], concept) cpos
+          from latest where concept in ('Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet')) r
+    group by cik
+  )
+  select b.symbol, b.name, b.sector,
+    case when p.shares > 0 and sn.close > 0 then p.shares * sn.close end,
+    rev.revenue, p.ni, p.eq, p.debt, p.cash, p.ac, p.lc, p.ocf, p.capex,
+    p.eps, p.eps_prior, p.eps_5y, p.eps_q, p.eps_q_ya,
+    rev.rq,
+    coalesce((rev.qmap ->> ('CY2025' || substr(rev.rq_period, 7) || ':Revenues'))::float8,
+             (rev.qmap ->> ('CY2025' || substr(rev.rq_period, 7) || ':RevenueFromContractWithCustomerExcludingAssessedTax'))::float8,
+             (rev.qmap ->> ('CY2025' || substr(rev.rq_period, 7) || ':SalesRevenueNet'))::float8)
+  from base b join single using (cik)
+  join security_snapshot sn on sn.security_id = b.id
+  left join pick p on p.cik = b.cik
+  left join rev on rev.cik = b.cik
+$$;
+grant execute on function public.fundamentals_universe() to anon, authenticated;
 revoke all on function public.sec_tick(int), public.sec_seed(), public.sec_apply_sectors() from public, anon, authenticated;
 
 create index if not exists sec_facts_cik_idx on public.sec_facts (cik, concept, period desc);
