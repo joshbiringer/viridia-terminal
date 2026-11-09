@@ -1,4 +1,4 @@
--- Ready to apply (SEC_UA now carries the owner's contact email; SEC rejects anonymous clients). Not yet applied: awaiting approval.
+-- Applied Nov 9 2026 (via SQL after the migration prompt expired) once SEC_UA carried the owner's contact email; SEC rejects anonymous clients.
 
 -- Fundamentals from SEC EDGAR (Cycle 5, phase 2). Public data only:
 --   * XBRL frames: revenue, net income, operating income, gross profit (fiscal years nearest
