@@ -417,6 +417,39 @@ export const CONCEPTS: Concept[] = [
     see: { label: "Compare current and target weights in Portfolio X-Ray", href: "/portfolio#holdings" },
   },
   {
+    id: "zigzag", title: "Zigzag (Elliott Wave correction)", match: /\bzig ?zag|\bc\s*=\s*a\b|kiss goodbye|throwback/i,
+    text: {
+      professional: "A zigzag is a sharp 5-3-5 correction labeled A-B-C. Wave B retraces less than all of A, and C most often equals A (1.618 when extended). A channel drawn through the start and the end of B, with a parallel through A, often marks C's end; a break of the lower line followed by a retest from the other side signals the correction is over.",
+      client: "A zigzag is a sharp pullback that moves in three steps against the main trend. When it finishes, the main trend usually resumes.",
+      beginner: "Picture a quick move against the trend: down, a small bounce, then down again by about the same distance. That three-step move is a zigzag.",
+      technical: "A(5)-B(3)-C(5). Rule: B < 100% of A. Guideline: C beyond the end of A. Fibonacci: C = A, 0.618 A or 1.618 A; B commonly retraces 38.2% to 85.4% of A.",
+    },
+    see: { label: "Lesson: zigzags and channels", href: "/analysis/learn#zigzag-channel" },
+    related: ["elliott_wave", "fibonacci"],
+  },
+  {
+    id: "wave_degree", title: "Wave degree", match: /\bwave degrees?\b|\bdegrees? of (a |the )?waves?\b|what is (a |the )?(grand )?supercycle/i,
+    text: {
+      professional: "Degree ranks waves by size and duration: Grand Supercycle, Supercycle, Cycle, Primary, Intermediate, Minor, Minute and smaller. Waves nest, so one turning point can end waves at several degrees. Notation distinguishes them: circled, parenthesized and plain labels alternate down the scale.",
+      client: "Elliott waves come in sizes, from multi-decade trends down to moves lasting hours. The label style tells you which size an analyst means.",
+      beginner: "Big waves are made of smaller waves, which are made of even smaller ones. 'Degree' is the name for each size.",
+      technical: "Each wave subdivides into waves of the next lower degree: motive into 5, corrective into 3 (or 5 for triangles). Viridia counts at primary, intermediate and minor degree.",
+    },
+    see: { label: "Lesson: degree", href: "/analysis/learn#degree" },
+    related: ["elliott_wave"],
+  },
+  {
+    id: "previous_fourth", title: "Previous fourth wave", match: /previous (4th|fourth) wave|prior (4th|fourth) wave|\balternation\b/i,
+    text: {
+      professional: "Corrections, especially fourth waves, tend to end in the span of the previous fourth wave of one lesser degree, most often near its end; after a five-wave move completes, that span is the usual first target for the countertrend move. Waves 2 and 4 also tend to alternate in form.",
+      client: "When a long move finishes, the bounce that follows often reaches back to a level where the move paused earlier. That gives a reasonable first target.",
+      beginner: "After five steps in one direction, prices often snap back to where step four ended.",
+      technical: "Target: the price range of wave (4) within the completed five-wave sequence. Alternation: if wave 2 is sharp (zigzag), wave 4 is likely sideways (flat, triangle or combination), and vice versa. Viridia scores alternation; it does not score the previous-fourth-wave target.",
+    },
+    see: { label: "Lesson: the previous fourth wave", href: "/analysis/learn#previous-fourth-wave" },
+    related: ["elliott_wave", "fibonacci"],
+  },
+  {
     id: "elliott_wave", title: "Elliott Wave Principle", match: /elliott wave|wave (principle|theory)|\bwave count/i,
     text: {
       professional: "The Elliott Wave Principle describes market prices as moving in a five-wave motive pattern with the trend and three-wave corrections against it, nested across degrees. Viridia applies its hard rules strictly (wave 2 never retraces all of wave 1; wave 3 is never the shortest; wave 4 doesn't overlap wave 1 in an impulse) and ranks the valid counts.",
@@ -424,8 +457,8 @@ export const CONCEPTS: Concept[] = [
       beginner: "Markets often move in five steps forward and three steps back. Elliott Wave gives those steps names and rules.",
       technical: "Motive: 1-2-3-4-5 (impulse or diagonal). Corrective: A-B-C (zigzag 5-3-5, flat 3-3-5) and A-B-C-D-E (triangle). Degrees nest: each wave subdivides at the next lower degree.",
     },
-    see: { label: "Read the rulebook", href: "/analysis/rulebook" },
-    related: ["fibonacci", "invalidation"],
+    see: { label: "Learn from worked examples", href: "/analysis/learn" },
+    related: ["fibonacci", "invalidation", "zigzag", "wave_degree"],
   },
   {
     id: "fibonacci", title: "Fibonacci retracements and confluence", match: /fibonacci|\bfib\b|confluence zone|retracement/i,

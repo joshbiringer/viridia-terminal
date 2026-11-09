@@ -14,6 +14,7 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
     { label: "Company Research", href: "/research", icon: "research", live: true, keywords: "company search" },
     { label: "Fibonacci", href: "/analysis/fibonacci", icon: "fib", live: true, keywords: "confluence zones retracement" },
     { label: "Rulebook", href: "/analysis/rulebook", icon: "rulebook", live: true, keywords: "elliott wave rules guidelines" },
+    { label: "Learn", href: "/analysis/learn", icon: "learn", live: true, keywords: "lessons education examples case studies zigzag degree sentiment ewff tutorial" },
   ]},
   { group: "Markets", items: [
     { label: "Markets", href: "/markets", icon: "markets", live: true, keywords: "overview breadth indices most active activity" },
@@ -50,6 +51,7 @@ export const NAV_BLURB: Record<string, string> = {
   "/research": "Search any covered company",
   "/analysis/fibonacci": "Confluence zones across the market",
   "/analysis/rulebook": "The Elliott Wave rules Viridia enforces",
+  "/analysis/learn": "Lessons from worked Elliott Wave examples",
   "/markets": "Breadth, regime and activity",
   "/markets/stocks": "Every covered U.S. stock",
   "/markets/etfs": "Every covered ETF",
