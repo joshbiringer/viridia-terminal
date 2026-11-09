@@ -1,5 +1,7 @@
 /**
- * Learn: Elliott Wave lessons built from worked examples in published analysis.
+ * Learn: lessons built from worked examples, in two tracks. Elliott Wave lessons come from published
+ * Elliott Wave analysis; market-context lessons cover the macro, credit, breadth and fundamental ideas
+ * that frame a wave count.
  *
  * Each lesson states a principle in Viridia's own words, summarizes how a published source applied it
  * (credited, paraphrased, no charts or passages reproduced), says how to recognize it, how Viridia's
@@ -11,14 +13,20 @@
 
 export interface LessonSource {
   id: string;
+  /** publication: a dated research issue; company: a company's own published material; history: well-documented market history. */
+  kind: "publication" | "company" | "history";
   title: string;
   publisher: string;
-  authors: string;
+  authors?: string;
   issue: string;
-  /** Data the issue covers through. */
-  asOf: string;
-  url: string;
+  /** Data the source covers through. */
+  asOf?: string;
+  url?: string;
+  /** Where the source's own figures come from, when it cites someone else. */
+  cites?: string;
 }
+
+export type Track = "Elliott Wave" | "Market context";
 
 export interface Diagram {
   /** Polyline in a 240 × 140 box, y grows downward. */
@@ -33,7 +41,8 @@ export interface Diagram {
 export interface Lesson {
   id: string;
   title: string;
-  topic: "Patterns" | "Fibonacci" | "Degree and labels" | "Personality" | "Sentiment" | "Breadth";
+  track: Track;
+  topic: "Patterns" | "Fibonacci" | "Degree and labels" | "Personality" | "Sentiment" | "Breadth" | "Credit" | "Rotation" | "Fundamentals";
   source: string;
   /** The principle, one paragraph, Viridia's words. */
   principle: string;
@@ -51,12 +60,29 @@ export interface Lesson {
 export const SOURCES: LessonSource[] = [
   {
     id: "ewff-2026-11",
+    kind: "publication",
     title: "The Elliott Wave Financial Forecast",
     publisher: "Elliott Wave International",
     authors: "Steven Hochberg and Peter Kendall",
     issue: "November 2026",
     asOf: "2026-11-05",
     url: "https://www.elliottwave.com",
+  },
+  {
+    id: "nexgen-uranium",
+    kind: "company",
+    title: "NexGen Energy investor presentation",
+    publisher: "NexGen Energy",
+    issue: "\u201cThe Market: Uranium\u2019s Moment\u201d",
+    url: "https://www.nexgenenergy.ca",
+    cites: "World Nuclear Association, The Nuclear Fuel Report (September 2025 edition), upper scenario",
+  },
+  {
+    id: "history",
+    kind: "history",
+    title: "Market history",
+    publisher: "Viridia",
+    issue: "Well-documented episodes",
   },
 ];
 
@@ -65,6 +91,7 @@ export const LESSONS: Lesson[] = [
     id: "zigzag-channel",
     title: "Zigzags: C equals A, at the channel line",
     topic: "Patterns",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "A zigzag is a sharp three-wave correction that subdivides 5-3-5. Wave C most often equals wave A in length. Drawing a line through the start of the zigzag and the end of wave B, then a parallel through the end of wave A, gives a channel whose upper edge often marks where C finishes. Because a zigzag moves against the larger trend, a decisive break of its lower channel line says the correction is over and the larger trend has resumed. Price often returns once to the underside of the broken line before moving away from it.",
@@ -105,6 +132,7 @@ export const LESSONS: Lesson[] = [
     id: "five-down-three-up",
     title: "The right look of a new trend: five waves, then three",
     topic: "Patterns",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "A trend change at a meaningful degree announces itself with a five-wave move in the new direction, followed by a three-wave move back. The five confirms the new trend; the three is wave 2, which is often deep and choppy and may be a double zigzag (w-x-y). Wave 2 can never move beyond the start of wave 1, so the top of the old trend becomes the level that would prove the count wrong.",
@@ -141,6 +169,7 @@ export const LESSONS: Lesson[] = [
     id: "previous-fourth-wave",
     title: "The previous fourth wave: where corrections tend to end",
     topic: "Fibonacci",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "Corrections, especially fourth waves, tend to end within the price span of the previous fourth wave of one lesser degree, most often near its end. When a five-wave sequence finishes, the move that follows typically retraces at least into that area, which gives a first target. Wave 2 and wave 4 also tend to alternate in form: if one is a sharp or simple correction, the other is usually sideways or complex.",
@@ -176,6 +205,7 @@ export const LESSONS: Lesson[] = [
     id: "degree",
     title: "Degree: one turn can end waves at several sizes",
     topic: "Degree and labels",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "Every wave belongs to a degree, and waves nest: each one subdivides into waves of the next lower degree. Labels show the degree: Grand Supercycle and Primary use circles, Supercycle and Intermediate parentheses, Cycle and Minor plain characters. A single turning point can end waves at several degrees at once, which is why one high can matter far more than its size on a daily chart suggests. A good count always names its degree and its next-best alternative.",
@@ -202,6 +232,7 @@ export const LESSONS: Lesson[] = [
     id: "rolling-peaks",
     title: "Rolling peaks: when leadership narrows",
     topic: "Breadth",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "Late in an advance, fewer stocks and sectors carry the averages. Indexes and sectors peak one after another instead of together, and defensive groups often make the last new highs as investors seek safety. In Elliott terms, fifth waves commonly show weaker breadth than third waves. Non-confirmation between related averages is a warning, not a timing signal.",
@@ -232,6 +263,7 @@ export const LESSONS: Lesson[] = [
     id: "wave-personality",
     title: "Wave personality: gaps, air pockets and falling on good news",
     topic: "Personality",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "Waves have characteristic behavior. Third waves are strong and broad and often show price gaps as the trend becomes obvious. An island reversal (a gap up, a period of trading, then a gap down below the first gap) marks a decisive turn. When prices fall on good news, the trend has changed: mood leads and fundamentals follow, so news gets interpreted through the new mood.",
@@ -261,6 +293,7 @@ export const LESSONS: Lesson[] = [
     id: "sentiment-corroborates",
     title: "Sentiment corroborates the count",
     topic: "Sentiment",
+    track: "Elliott Wave",
     source: "ewff-2026-11",
     principle:
       "The wave count says where a pattern may be complete; sentiment says whether the crowd is positioned for a turn. Major lows come with widespread pessimism and major highs with widespread optimism. When the structure looks finished but positioning is not yet extreme, the correction may still have further to run. Magazine covers on a long trend are a classic sign of exhaustion.",
@@ -287,7 +320,206 @@ export const LESSONS: Lesson[] = [
       why: "Sentiment that hasn't reached an extreme is a reason to wait for more evidence, not proof the count is wrong.",
     },
   },
+  {
+    id: "supply-gap",
+    title: "Reading a supply gap: scenario, scope and who is presenting",
+    track: "Market context",
+    topic: "Fundamentals",
+    source: "nexgen-uranium",
+    principle:
+      "A supply-and-demand gap chart compares projected requirements with projected supply. Before accepting the conclusion, check three things: which scenario is shown (upper, reference or lower), what counts as supply (primary mine output alone, or secondary sources such as inventories, recycled material and enrichment underfeeding too), and who is presenting it. When new supply takes 15 to 20 years from discovery to production, it can't respond quickly, so prices have to rise and stay high long enough to fund new mines. That is the mechanism behind commodity bull markets, and also why they tend to overshoot.",
+    example:
+      "A NexGen Energy presentation, citing the World Nuclear Association's upper scenario, shows reactor requirements rising to about 530 million pounds of U\u2083O\u2088 a year by 2040 against roughly 200 million of expected primary supply. It sizes the gap at 42 million pounds (16.5%) in 2030, 109 million (28.7%) in 2035 and 335 million (63%) in 2040, and concludes that mine supply would need to more than triple and that prices must stay higher for longer. NexGen is a uranium developer that benefits from that conclusion, and the upper scenario is the most bullish of the WNA's cases.",
+    recognize: [
+      "The scenario named in the footnote: upper, reference or lower.",
+      "Supply defined as primary production only, which makes the gap look larger.",
+      "Long lead times that make supply slow to respond to price.",
+      "A presenter with a stake in the conclusion.",
+    ],
+    inViridia:
+      "Viridia has no commodity supply or demand data. Use the chart to see what the market is already pricing in uranium miners and physical-uranium vehicles, and the wave count to judge where that trend stands.",
+    wrong:
+      "Demand tracking the lower scenario, reactor delays, secondary supply filling more of the gap, or faster permitting would shrink the deficit. Prices falling while the story is unchanged would say the market had already priced it in.",
+    tryIt: [
+      { label: "Uranium miners (URNM)", href: "/terminal/URNM" },
+      { label: "Cameco (CCJ)", href: "/terminal/CCJ" },
+      { label: "NexGen (NXE)", href: "/terminal/NXE" },
+    ],
+    check: {
+      q: "A company slide shows a supply gap using the upper demand scenario and primary supply only. What should you check first?",
+      options: ["Whether the gap holds under the reference scenario with secondary supply included", "The company's share price", "Nothing; the source is cited"],
+      answer: 0,
+      why: "A cited source can still be its most favorable case. The reference scenario and the full supply picture tell you how much of the gap is assumption.",
+    },
+    diagram: {
+      path: [[20, 96], [120, 62], [220, 24]],
+      labels: [{ at: 0, text: "2030" }, { at: 1, text: "2035" }, { at: 2, text: "2040" }],
+      lines: [{ from: [20, 106], to: [232, 112], tone: "neutral", dashed: true, label: "primary supply" }],
+      caption: "Projected requirements (line) pull away from expected primary supply (dashed): the gap is the space between them, and it depends on the scenario chosen.",
+    },
+  },
+  {
+    id: "defensive-rotation",
+    title: "Defensive rotation: when staples lead discretionary",
+    track: "Market context",
+    topic: "Rotation",
+    source: "history",
+    principle:
+      "When investors turn cautious they move from economically sensitive groups toward defensive ones: consumer staples, health care, utilities. The ratio of consumer staples to consumer discretionary is a simple gauge. A sharp, sustained rise in staples' relative strength has tended to accompany or precede broad market declines; small wiggles in the ratio are noise. Treat it as a condition that raises the bar for bullish counts, not as a timing signal.",
+    example:
+      "Through 2007 and into 2008, consumer staples steadily outperformed consumer discretionary as housing and consumer credit weakened, and the ratio kept rising through the bear market. In 2000\u201302, defensive groups held up while the technology-led indexes fell.",
+    recognize: [
+      "Staples and health care making new highs while discretionary and technology lag.",
+      "A steep, persistent rise in the staples-to-discretionary ratio, not a brief one.",
+      "The same rotation showing up across several defensive groups at once.",
+    ],
+    inViridia:
+      "Open the staples and discretionary ETFs side by side and compare their trends and counts. Viridia doesn't plot ratio charts yet. The Elliott Wave lesson on rolling peaks covers the same behavior from the wave side.",
+    wrong:
+      "Discretionary and technology regaining leadership while breadth widens would say the move into defensives was a pause, not a change of regime.",
+    tryIt: [
+      { label: "Consumer Staples (XLP)", href: "/terminal/XLP" },
+      { label: "Consumer Discretionary (XLY)", href: "/terminal/XLY" },
+      { label: "Lesson: rolling peaks", href: "/analysis/learn#rolling-peaks" },
+    ],
+    check: {
+      q: "The staples-to-discretionary ratio rises steeply for several months. The best reading is:",
+      options: ["A buy signal for discretionary", "A sign of growing caution that often accompanies market declines", "Proof a recession has started"],
+      answer: 1,
+      why: "It shows where money is hiding. It often accompanies weakness, but it neither times a top nor proves a recession.",
+    },
+  },
+  {
+    id: "credit-leads",
+    title: "Credit often moves first",
+    track: "Market context",
+    topic: "Credit",
+    source: "history",
+    principle:
+      "Bondholders get paid only if companies survive, so credit markets often register stress before stock markets. Watch high-yield spreads (the extra yield over Treasuries), the weakest tier (CCC) against stronger high yield (BB), and leveraged loans. When stocks fall but high-yield spreads fail to reach new wides, the selloff is less likely to be a credit event. When the weakest credits deteriorate while stocks sit near highs, risk is building beneath the surface.",
+    example:
+      "In 2007, high-yield spreads began widening in the summer as subprime losses spread, while the S&P 500 went on to make its final high in October before the 2007\u201309 bear market.",
+    recognize: [
+      "Spreads widening while equity indexes hold near highs.",
+      "CCC credit weakening faster than BB credit.",
+      "Equities falling without a matching widening in spreads, which argues for positioning, not credit stress.",
+    ],
+    inViridia:
+      "Viridia doesn't track credit spreads. The Global Market Pulse shows high-yield credit through HYG, and comparing HYG with investment-grade (LQD) and Treasury ETFs gives a rough proxy for stress.",
+    wrong:
+      "Spreads tightening while stocks fall says the equity move isn't being driven by deteriorating credit.",
+    tryIt: [
+      { label: "High yield (HYG)", href: "/terminal/HYG" },
+      { label: "Investment grade (LQD)", href: "/terminal/LQD" },
+      { label: "Global market pulse", href: "/terminal" },
+    ],
+    check: {
+      q: "Stocks drop sharply but high-yield spreads don't widen beyond their recent range. This suggests:",
+      options: ["A credit crisis is underway", "The selloff is less likely to be a credit event", "Bonds are about to default"],
+      answer: 1,
+      why: "Credit not confirming the equity move points to positioning or sentiment rather than solvency stress.",
+    },
+  },
+  {
+    id: "breadth-highs-lows",
+    title: "Breadth: new highs, new lows and the hidden average",
+    track: "Market context",
+    topic: "Breadth",
+    source: "history",
+    principle:
+      "Cap-weighted indexes are dominated by their largest companies and can hide what most stocks are doing. Count new 52-week highs and lows, and compare the index with an equal-weighted or small-cap version. New lows expanding while the index holds up, or lower highs in the count of new highs during an advance, show participation narrowing.",
+    example:
+      "The NYSE advance-decline line peaked in April 1998 and fell for nearly two years while the large-cap indexes kept rising into early 2000.",
+    recognize: [
+      "The index near highs while new 52-week lows rise.",
+      "Each push higher in the index accompanied by fewer new highs.",
+      "Small caps or equal-weight indexes lagging the cap-weighted index.",
+    ],
+    inViridia:
+      "Mission Control's regime card shows the share of Viridia's universe above its 50- and 200-day averages and advancers versus decliners at the last close. New-high and new-low counts aren't shown yet.",
+    wrong:
+      "New highs expanding, new lows shrinking and small caps keeping pace would say participation is broad.",
+    tryIt: [
+      { label: "Market regime and breadth", href: "/terminal" },
+      { label: "Small caps (IWM)", href: "/terminal/IWM" },
+      { label: "Nasdaq-100 (QQQ)", href: "/terminal/QQQ" },
+    ],
+    check: {
+      q: "The S&P 500 sits near a high while new 52-week lows keep rising. This is:",
+      options: ["Confirmation of the advance", "A breadth divergence", "A Fibonacci retracement"],
+      answer: 1,
+      why: "The average is being carried by fewer stocks while more of them break down.",
+    },
+  },
+  {
+    id: "selling-exhaustion",
+    title: "Selling exhaustion: a bounce is not a bottom",
+    track: "Market context",
+    topic: "Sentiment",
+    source: "history",
+    principle:
+      "A selloff often ends with a burst of forced selling, visible as several extremes at once: price several days outside its lower Bollinger band, RSI at a rare oversold reading, very heavy volume, put volume exceeding call volume. Such clusters usually mark exhaustion and produce a sharp rebound, often toward a widely watched average such as the 200-day. They don't by themselves end a bear market: the rebound can be a wave 2 or wave B rally inside a larger decline.",
+    example:
+      "On March 16, 2020 the VIX closed at a record 82.69 amid record trading volume; the S&P 500's low came a week later and a rapid rebound followed. By contrast, the forced selling of October 2008 produced a sharp rally, but the final low didn't come until March 2009.",
+    recognize: [
+      "Several oversold measures at extremes on the same days.",
+      "Volume and option activity far above normal.",
+      "A count that places the low at the end of a five-wave decline, which gives the low more weight than one in the middle of a third wave.",
+    ],
+    inViridia:
+      "The levels rail shows RSI and MACD state and the latest divergence, and the chart shows volume. Viridia doesn't compute Bollinger bands or read options data. Use the count to decide whether an exhaustion low ends a pattern or only a wave within it.",
+    wrong:
+      "A rebound that fails quickly, followed by new lows on expanding downside momentum, says the selling wasn't exhausted.",
+    tryIt: [
+      { label: "S&P 500 (SPY)", href: "/terminal/SPY" },
+      { label: "Lesson: five waves, then three", href: "/analysis/learn#five-down-three-up" },
+    ],
+    check: {
+      q: "A stock shows record volume, a rare oversold RSI and several days below its lower Bollinger band. The most defensible expectation is:",
+      options: ["A rebound, which may or may not be the final low", "The bear market is over", "Further immediate collapse is guaranteed"],
+      answer: 0,
+      why: "Exhaustion clusters usually produce rebounds; whether the low is final depends on the larger pattern.",
+    },
+    diagram: {
+      path: [[14, 22], [60, 48], [80, 40], [130, 92], [146, 84], [168, 124], [196, 70], [214, 80], [230, 66]],
+      labels: [{ at: 5, text: "exhaustion low", below: true }],
+      lines: [{ from: [14, 60], to: [232, 60], tone: "fib", dashed: true, label: "200-day average" }],
+      caption: "A steep decline ends in a cluster of extremes; the rebound often heads toward the 200-day average, which may or may not be the end of the decline.",
+    },
+  },
+  {
+    id: "ratio-charts",
+    title: "Ratio charts: seeing a change in leadership",
+    track: "Market context",
+    topic: "Rotation",
+    source: "history",
+    principle:
+      "A ratio chart divides one market by another and shows which is leading. Long ratio trends reveal changes of regime that single charts hide: energy against technology, gold miners against the Nasdaq-100, value against growth. Ratios can be wave-counted like prices, and a clear five-wave advance in a ratio says leadership has changed rather than paused.",
+    example:
+      "Energy's weight in the S&P 500 fell from about 16% in mid-2008 to under 3% in 2020 as technology led, then roughly doubled during 2021\u201322 as energy outperformed in the inflation shock.",
+    recognize: [
+      "A multi-year downtrend in a ratio that breaks and holds above its downtrend line.",
+      "A ratio advance that subdivides into five waves.",
+      "Leadership changing while the overall index goes sideways.",
+    ],
+    inViridia:
+      "Viridia doesn't plot ratio charts yet. Open both sides and compare their trends and counts; a market in a five-wave advance against one in a correction is the single-chart version of the same reading.",
+    wrong:
+      "A ratio breakout that falls back inside its prior range says the old leader is still in charge.",
+    tryIt: [
+      { label: "Energy (XLE)", href: "/terminal/XLE" },
+      { label: "Technology (XLK)", href: "/terminal/XLK" },
+      { label: "Gold miners (GDX)", href: "/terminal/GDX" },
+    ],
+    check: {
+      q: "A multi-year decline in the energy-to-technology ratio breaks out and advances in five waves. This suggests:",
+      options: ["A change in leadership", "Both sectors are rising", "Technology is about to make a new high"],
+      answer: 0,
+      why: "A ratio measures relative performance; a motive advance in it says the numerator is taking over leadership.",
+    },
+  },
 ];
 
+export const TRACKS: Track[] = ["Elliott Wave", "Market context"];
 export const TOPICS = [...new Set(LESSONS.map((l) => l.topic))];
 export const sourceOf = (id: string) => SOURCES.find((s) => s.id === id)!;

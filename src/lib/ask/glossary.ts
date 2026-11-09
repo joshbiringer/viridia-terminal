@@ -417,6 +417,30 @@ export const CONCEPTS: Concept[] = [
     see: { label: "Compare current and target weights in Portfolio X-Ray", href: "/portfolio#holdings" },
   },
   {
+    id: "credit_spread", title: "Credit spread", match: /\b(what is|what are|what's|explain|define|meaning of|how do)\b.*\b(credit spreads?|high[- ]yield spreads?|oas|junk[- ]bond spreads?)\b/i,
+    text: {
+      professional: "A credit spread is the extra yield a corporate bond pays over a Treasury of similar maturity, usually quoted as option-adjusted spread (OAS) in basis points. High-yield and especially CCC spreads widen as default risk is repriced, and they often turn before equities do.",
+      client: "It's the extra interest investors demand to lend to companies instead of the government. When it rises quickly, lenders are getting nervous about defaults.",
+      beginner: "If a Treasury pays 4% and a company bond pays 7%, the 3% difference is the spread: the reward for taking the company's risk.",
+      technical: "Spread = corporate yield − Treasury yield (matched maturity); OAS strips out embedded options. Compare tiers (CCC vs BB) and markets (US high yield vs European crossover) for the source of stress.",
+    },
+    formula: "Spread = Corporate bond yield − Treasury yield",
+    calc: { title: "Spread", inputs: [["Corporate bond yield", "7.0%"], ["Treasury yield", "4.0%"]], formula: "7.0% − 4.0%", result: "3.0% (300 bp)" },
+    see: { label: "Lesson: credit often moves first", href: "/analysis/learn#credit-leads" },
+    related: ["bond_yield"],
+  },
+  {
+    id: "market_breadth", title: "Market breadth", match: /\b(what is|what's|explain|define|meaning of|how do)\b.*\b(market breadth|breadth|advance[- ]decline( line)?)\b/i,
+    text: {
+      professional: "Breadth measures how many stocks participate in a move: advancers versus decliners, the share above key moving averages, and new 52-week highs versus lows. Narrowing breadth under a rising cap-weighted index is a classic late-cycle divergence.",
+      client: "Breadth tells you whether most stocks are rising or only a few big ones. A rally carried by a handful of names is more fragile.",
+      beginner: "If the index goes up but most stocks in it go down, breadth is weak.",
+      technical: "Common gauges: cumulative advance-decline line, % of constituents above the 50- and 200-day SMA, new highs minus new lows, equal-weight vs cap-weight ratio.",
+    },
+    see: { label: "Lesson: breadth", href: "/analysis/learn#breadth-highs-lows" },
+    related: ["elliott_wave"],
+  },
+  {
     id: "zigzag", title: "Zigzag (Elliott Wave correction)", match: /\bzig ?zag|\bc\s*=\s*a\b|kiss goodbye|throwback/i,
     text: {
       professional: "A zigzag is a sharp 5-3-5 correction labeled A-B-C. Wave B retraces less than all of A, and C most often equals A (1.618 when extended). A channel drawn through the start and the end of B, with a parallel through A, often marks C's end; a break of the lower line followed by a retest from the other side signals the correction is over.",

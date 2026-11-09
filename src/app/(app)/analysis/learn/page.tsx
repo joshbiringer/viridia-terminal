@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LessonDiagram } from "@/components/learn/LessonDiagram";
 import { SelfCheck } from "@/components/learn/SelfCheck";
-import { LESSONS, SOURCES, TOPICS, sourceOf } from "@/lib/learn/lessons";
+import { LESSONS, SOURCES, TRACKS, sourceOf, type LessonSource } from "@/lib/learn/lessons";
 
 export const metadata: Metadata = {
   title: "Learn",
-  description: "Elliott Wave lessons built from worked examples in published analysis: the principle, the example, how to recognize it and what would prove it wrong.",
+  description: "Elliott Wave and market-context lessons built from worked examples: the principle, the example, how to recognize it and what would prove it wrong.",
 };
+
+const exampleLabel = (s: LessonSource) =>
+  s.kind === "history" ? "From market history" : s.kind === "company" ? `The example · ${s.publisher}, ${s.issue}` : `The example · ${s.title}, ${s.issue}`;
 
 const fmt = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
@@ -22,34 +25,37 @@ export default function LearnPage() {
     <>
       <PageHeader
         title={<>Learn from <em>worked examples</em></>}
-        description="Each lesson takes one Elliott Wave idea, shows how a published analyst applied it to real markets, and tells you how to recognize it yourself, how Viridia checks it and what would prove the reading wrong."
+        description="Each lesson takes one idea, shows it at work in real markets, and tells you how to recognize it yourself, how Viridia checks it and what would prove the reading wrong. Elliott Wave lessons cover the patterns; market-context lessons cover the macro, credit, breadth and fundamental backdrop a count sits in."
       />
 
       <section className="card flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-start sm:gap-6" aria-label="Sources">
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-medium text-fg-3">Source</p>
-          {SOURCES.map((s) => (
+          <p className="text-[12px] font-medium text-fg-3">Sources</p>
+          {SOURCES.filter((s) => s.kind !== "history").map((s) => (
             <p key={s.id} className="mt-0.5 text-[13.5px]">
-              <span className="font-[600]">{s.title}</span>, {s.issue} · {s.publisher}, edited by {s.authors} · data through {fmt(s.asOf)}
+              <span className="font-[600]">{s.title}</span>, {s.issue} · {s.publisher}{s.authors ? `, edited by ${s.authors}` : ""}{s.asOf ? ` · data through ${fmt(s.asOf)}` : ""}
+              {s.cites && <span className="block text-[12px] text-fg-3">Figures from {s.cites}</span>}
             </p>
           ))}
         </div>
         <p className="max-w-[560px] text-[12px] leading-relaxed text-fg-3">
-          Lessons are written by Viridia. The examples paraphrase the source&apos;s published reading on its date, with credit; no charts or passages are reproduced, and the diagrams are schematics. The forecasts in them are the source&apos;s, not Viridia signals, and they can be wrong. Research output, not investment advice.
+          Lessons are written by Viridia. Examples paraphrase each source on its date, with credit; no charts or passages are reproduced, and the diagrams are schematics. Market-context lessons use general ideas and well-documented market history. Forecasts in the examples belong to their sources, are not Viridia signals and can be wrong. Research output, not investment advice.
         </p>
       </section>
 
-      <nav className="flex flex-wrap gap-2" aria-label="Lessons">
-        {TOPICS.map((t) => (
+      <nav className="flex flex-col gap-2" aria-label="Lessons">
+        {TRACKS.map((t) => (
           <div key={t} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-fg-3">{t}</span>
-            {LESSONS.filter((l) => l.topic === t).map((l) => <a key={l.id} href={`#${l.id}`} className="chip hover:border-line-2">{l.title.split(":")[0]}</a>)}
+            <a href={`#track-${t === "Elliott Wave" ? "ew" : "context"}`} className="mr-1 text-[12.5px] font-medium text-fg-2 hover:text-fg">{t}</a>
+            {LESSONS.filter((l) => l.track === t).map((l) => <a key={l.id} href={`#${l.id}`} className="chip hover:border-line-2">{l.title.split(":")[0]}</a>)}
           </div>
         ))}
       </nav>
 
-      <div className="flex flex-col gap-4">
-        {LESSONS.map((l, i) => {
+      {TRACKS.map((track) => (
+      <section key={track} id={`track-${track === "Elliott Wave" ? "ew" : "context"}`} className="flex scroll-mt-24 flex-col gap-4" aria-label={track}>
+        <h2 className="serif mt-2 text-[28px] leading-none">{track === "Elliott Wave" ? <>Elliott <em>Wave</em></> : <>Market <em>context</em></>}</h2>
+        {LESSONS.filter((l) => l.track === track).map((l, i) => {
           const src = sourceOf(l.source);
           return (
             <article key={l.id} id={l.id} className="card scroll-mt-24 overflow-hidden" aria-labelledby={`${l.id}-t`}>
@@ -65,7 +71,7 @@ export default function LearnPage() {
                     <p className="mt-1 text-[14px] leading-relaxed">{l.principle}</p>
                   </section>
                   <section className="rounded-[var(--r-md)] border-l-2 border-[var(--wave)] bg-panel-2 px-4 py-3">
-                    <h3 className="text-[12px] font-medium text-fg-3">The example · {src.title}, {src.issue}</h3>
+                    <h3 className="text-[12px] font-medium text-fg-3">{exampleLabel(src)}</h3>
                     <p className="mt-1 text-[13.5px] leading-relaxed text-fg-2">{l.example}</p>
                   </section>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -96,10 +102,11 @@ export default function LearnPage() {
             </article>
           );
         })}
-      </div>
+      </section>
+      ))}
 
       <p className="text-[12px] text-fg-3">
-        Lessons cite <a href="https://www.elliottwave.com" className="underline hover:text-fg" rel="noopener noreferrer" target="_blank">Elliott Wave International</a>. For the rules Viridia enforces, see the <Link href="/analysis/rulebook" className="underline hover:text-fg">Rulebook</Link>.
+        Elliott Wave lessons cite <a href="https://www.elliottwave.com" className="underline hover:text-fg" rel="noopener noreferrer" target="_blank">Elliott Wave International</a>. For the rules Viridia enforces, see the <Link href="/analysis/rulebook" className="underline hover:text-fg">Rulebook</Link>.
       </p>
     </>
   );

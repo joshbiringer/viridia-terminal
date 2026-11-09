@@ -36,6 +36,12 @@ describe("Ask Viridia learns the lesson concepts", () => {
     expect(findConcept("explain wave degrees")?.id).toBe("wave_degree");
     expect(findConcept("what is the previous fourth wave")?.id).toBe("previous_fourth");
   });
+  it("explains credit spreads and breadth, but leaves live market questions to market research", () => {
+    expect(findConcept("what is a credit spread")?.id).toBe("credit_spread");
+    expect(findConcept("explain market breadth")?.see?.href).toBe("/analysis/learn#breadth-highs-lows");
+    expect(route("How is breadth today?").intent).toBe("MARKET_RESEARCH");
+    expect(findConcept("how is breadth today")).toBeNull();
+  });
   it("leaves security questions about a wave alone", () => {
     expect(route("What is QCOM's current wave structure?").intent).toBe("VIRIDIA_STRUCTURE");
     expect(findConcept("what primary wave is NVDA in")).toBeNull();
