@@ -3,7 +3,7 @@
  * concept for every filer in one period) and company submissions (SIC code). SEC asks automated
  * clients to identify themselves and stay under 10 requests a second.
  */
-export const SEC_UA = "Viridia Terminal research app joshbiringer@users.noreply.github.com";
+export const SEC_UA = "Viridia Terminal joshuabiringer99@gmail.com";
 
 export async function secJson<T>(url: string): Promise<T> {
   const r = await fetch(url, { headers: { "User-Agent": SEC_UA, "Accept": "application/json" }, cache: "no-store" });
