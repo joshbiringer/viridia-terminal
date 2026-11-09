@@ -126,6 +126,7 @@ export default async function BrainPage() {
       <PageHeader
         title={<>Your <em>brain</em></>}
         description="Everything you've shared, filed as theses with a stance, conviction, horizon and the level that would prove it wrong, and turned into research signals for the stocks and ETFs they touch. Private to your account."
+        actions={<Link href="/brain/portfolio" className="btn pri">Daily buy list</Link>}
       />
 
       <section className="card grid grid-cols-2 gap-px overflow-hidden bg-line sm:grid-cols-5" aria-label="Summary">

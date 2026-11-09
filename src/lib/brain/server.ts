@@ -7,6 +7,7 @@ import { ratios } from "@/lib/fundamentals/model";
 import { unstable_cache } from "next/cache";
 import { brainSignal, thesisUniverse, type BrainSignal, type MarketRow, type Thesis, type ValueInputs } from "./signal";
 import { evaluate, runScreens, type CompanyFigures, type Screen } from "./screens";
+import { sectorCandidates } from "./portfolio";
 
 export interface BrainSource { id: string; kind: string; title: string; publisher: string | null; author: string | null; published_on: string | null; summary: string | null; created_at: string }
 export interface Brain { signedIn: boolean; theses: Thesis[]; sources: BrainSource[]; screens: Screen[] }
@@ -28,7 +29,9 @@ export async function getBrain(): Promise<Brain> {
 async function valueInputs(symbols: string[]): Promise<Map<string, ValueInputs>> {
   const out = new Map<string, ValueInputs>();
   if (!FUNDAMENTALS_LIVE || !symbols.length) return out;
-  const [funds, medians] = await Promise.all([getFundamentals(symbols).catch(() => []), getSectorMedians().catch(() => [])]);
+  const chunks = Array.from({ length: Math.ceil(symbols.length / 60) }, (_, i) => symbols.slice(i * 60, i * 60 + 60));
+  const [lists, medians] = await Promise.all([Promise.all(chunks.map((c) => getFundamentals(c).catch(() => []))), getSectorMedians().catch(() => [])]);
+  const funds = lists.flat();
   for (const f of funds) {
     const r = ratios(f);
     const m = medians.find((x) => x.sector === f.sector);
@@ -46,9 +49,13 @@ async function valueInputs(symbols: string[]): Promise<Map<string, ValueInputs>>
 
 export async function marketRows(symbols: string[]): Promise<MarketRow[]> {
   if (!symbols.length) return [];
-  const { data, error } = await withTimeout(db().rpc("brain_market", { p_symbols: symbols.slice(0, 200) }), 8_000, "brain market");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as MarketRow[];
+  const chunks = Array.from({ length: Math.ceil(symbols.length / 200) }, (_, i) => symbols.slice(i * 200, i * 200 + 200));
+  const out = await Promise.all(chunks.map(async (c) => {
+    const { data, error } = await withTimeout(db().rpc("brain_market", { p_symbols: c }), 8_000, "brain market");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as MarketRow[];
+  }));
+  return out.flat();
 }
 
 /** Screen inputs for every company with filings; the same for every reader, so cached for six hours. */
@@ -76,9 +83,10 @@ export async function runBrainScreens(screens: Screen[]): Promise<{ runs: Screen
  * Signals for every security the theses touch, every company passing one of the reader's screens
  * (largest first, up to 25 per screen) and any extra symbols asked for.
  */
-export async function brainSignals(theses: Thesis[], extra: string[] = [], screens: Screen[] = [], opts: { screenPasses?: boolean } = {}): Promise<{ signals: (BrainSignal & { row: MarketRow })[]; valueLive: boolean; runs: ScreenRun[] }> {
-  const { runs, universe: figs } = screens.length ? await runBrainScreens(screens) : { runs: [] as ScreenRun[], universe: new Map<string, CompanyFigures>() };
-  const universe = [...new Set([...thesisUniverse(theses), ...(opts.screenPasses === false ? [] : runs.flatMap((r) => r.passing.slice(0, 25))), ...extra.map((s) => s.toUpperCase())])];
+export async function brainSignals(theses: Thesis[], extra: string[] = [], screens: Screen[] = [], opts: { screenPasses?: boolean; sectorPicks?: boolean } = {}): Promise<{ signals: (BrainSignal & { row: MarketRow })[]; valueLive: boolean; runs: ScreenRun[] }> {
+  const { runs, universe: figs } = screens.length || opts.sectorPicks ? await runBrainScreens(screens) : { runs: [] as ScreenRun[], universe: new Map<string, CompanyFigures>() };
+  const picks = opts.sectorPicks ? sectorCandidates(theses, [...figs.values()]) : [];
+  const universe = [...new Set([...thesisUniverse(theses), ...(opts.screenPasses === false ? [] : runs.flatMap((r) => r.passing.slice(0, 25))), ...picks, ...extra.map((s) => s.toUpperCase())])];
   const [rows, values] = await Promise.all([marketRows(universe).catch(() => []), valueInputs(universe)]);
   const active = screens.filter((s) => s.active);
   const signals = rows.map((row) => {
