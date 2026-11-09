@@ -18,5 +18,6 @@ export const getSectorMedians = unstable_cache(async (): Promise<SectorMedian[]>
   if (!FUNDAMENTALS_LIVE) return [];
   const { data, error } = await db().rpc("sector_medians");
   if (error) throw new Error(error.message);
-  return (data ?? []) as SectorMedian[];
-}, ["sector-medians-v1"], { revalidate: 21_600 });
+  if (!data?.length) throw new Error("sector medians empty");
+  return data as SectorMedian[];
+}, ["sector-medians-v2"], { revalidate: 21_600 });

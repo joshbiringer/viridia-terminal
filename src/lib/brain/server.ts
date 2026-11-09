@@ -61,10 +61,18 @@ export async function marketRows(symbols: string[]): Promise<MarketRow[]> {
 /** Screen inputs for every company with filings; the same for every reader, so cached for six hours. */
 const screenUniverse = unstable_cache(async (): Promise<CompanyFigures[]> => {
   if (!FUNDAMENTALS_LIVE) return [];
-  const { data, error } = await db().rpc("fundamentals_universe");
-  if (error) throw new Error(error.message);
-  return (data ?? []) as CompanyFigures[];
-}, ["fundamentals-universe-v1"], { revalidate: 21_600 });
+  // The API returns at most 1,000 rows per request, so page through
+  const out: CompanyFigures[] = [];
+  for (let from = 0; from < 20_000; from += 1000) {
+    const { data, error } = await db().rpc("fundamentals_universe").range(from, from + 999);
+    if (error) throw new Error(error.message);
+    out.push(...((data ?? []) as CompanyFigures[]));
+    if (!data || data.length < 1000) break;
+  }
+  // Never cache an empty universe: it would hide every screen for six hours
+  if (!out.length) throw new Error("fundamentals universe empty");
+  return out;
+}, ["fundamentals-universe-v2"], { revalidate: 21_600 });
 
 export interface ScreenRun { screen: Screen; passing: string[]; checkable: number }
 
