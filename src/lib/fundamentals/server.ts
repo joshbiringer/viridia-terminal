@@ -2,8 +2,8 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/supabase";
 import type { Fundamentals, SectorMedian } from "./model";
 
-/** Off until the SEC pipeline is enabled (supabase/pending/0023_fundamentals.sql); callers show "not loaded yet". */
-export const FUNDAMENTALS_LIVE = false;
+/** On since Nov 9 2026, when the SEC EDGAR load (migration 0040) completed. */
+export const FUNDAMENTALS_LIVE = true;
 
 export async function getFundamentals(symbols: string[]): Promise<Fundamentals[]> {
   if (!FUNDAMENTALS_LIVE) throw new Error("fundamentals not enabled");
