@@ -8,6 +8,8 @@ export interface Fundamentals {
   revenue: number | null; revenue_prior: number | null; net_income: number | null; operating_income: number | null;
   gross_profit: number | null; shares: number | null; shares_as_of: string | null; market_cap: number | null;
   multi_class: boolean | null; revenue_concept: string | null;
+  /** Value inputs; absent until the extended SEC frames are loaded. */
+  equity?: number | null; debt?: number | null; cash?: number | null; operating_cash_flow?: number | null; capex?: number | null;
 }
 
 export interface SectorMedian { sector: string; n: number; pe: number | null; ps: number | null; op_margin: number | null; growth: number | null }

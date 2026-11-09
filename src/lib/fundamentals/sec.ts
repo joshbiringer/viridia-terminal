@@ -20,6 +20,13 @@ export const FRAME_CONCEPTS: { taxonomy: "us-gaap" | "dei"; tag: string; unit: s
   { taxonomy: "us-gaap", tag: "OperatingIncomeLoss", unit: "USD" },
   { taxonomy: "us-gaap", tag: "GrossProfit", unit: "USD" },
   { taxonomy: "dei", tag: "EntityCommonStockSharesOutstanding", unit: "shares", instant: true },
+  // value inputs: balance sheet (instant) and cash flow (duration)
+  { taxonomy: "us-gaap", tag: "StockholdersEquity", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "LongTermDebtNoncurrent", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "LongTermDebt", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "CashAndCashEquivalentsAtCarryingValue", unit: "USD", instant: true },
+  { taxonomy: "us-gaap", tag: "NetCashProvidedByUsedInOperatingActivities", unit: "USD" },
+  { taxonomy: "us-gaap", tag: "PaymentsToAcquirePropertyPlantAndEquipment", unit: "USD" },
 ];
 
 export const isFramePeriod = (p: string) => /^CY\d{4}(Q[1-4]I?)?$/.test(p);

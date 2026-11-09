@@ -75,17 +75,21 @@ create or replace function public.sec_seed()
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_frames int := 0; v_sic int := 0; t text; p text; batch text;
 begin
-  foreach t in array array['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet', 'NetIncomeLoss', 'OperatingIncomeLoss', 'GrossProfit'] loop
+  foreach t in array array['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'SalesRevenueNet', 'NetIncomeLoss', 'OperatingIncomeLoss', 'GrossProfit',
+                           'NetCashProvidedByUsedInOperatingActivities', 'PaymentsToAcquirePropertyPlantAndEquipment'] loop
     foreach p in array array['CY2024', 'CY2025'] loop
       insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=' || t || '&period=' || p)
       on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
       v_frames := v_frames + 1;
     end loop;
   end loop;
-  foreach p in array array['CY2025Q4I', 'CY2026Q1I', 'CY2026Q2I'] loop
-    insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=EntityCommonStockSharesOutstanding&period=' || p)
-    on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
-    v_frames := v_frames + 1;
+  foreach t in array array['EntityCommonStockSharesOutstanding', 'StockholdersEquity', 'LongTermDebtNoncurrent', 'LongTermDebt',
+                           'CashAndCashEquivalentsAtCarryingValue'] loop
+    foreach p in array array['CY2025Q4I', 'CY2026Q1I', 'CY2026Q2I', 'CY2026Q3I'] loop
+      insert into sec_jobs (kind, path) values ('frame', '/api/sec/frames?tag=' || t || '&period=' || p)
+      on conflict (path) do update set status = 'pending', tries = 0, request_id = null, note = null;
+      v_frames := v_frames + 1;
+    end loop;
   end loop;
   for batch in
     select string_agg(cik::text, ',' order by cik)
@@ -171,7 +175,8 @@ $$;
 create or replace function public.get_fundamentals(p_symbols text[])
 returns table(symbol text, sector text, industry text, fy_end date, revenue float8, revenue_prior float8,
               net_income float8, operating_income float8, gross_profit float8, shares float8, shares_as_of date,
-              market_cap float8, multi_class boolean, revenue_concept text)
+              market_cap float8, multi_class boolean, revenue_concept text,
+              equity float8, debt float8, cash float8, operating_cash_flow float8, capex float8)
 language sql stable security definer set search_path = public as $$
   with s as (
     select s.id, s.symbol, s.sector, s.industry, nullif(ltrim(s.cik, '0'), '')::bigint cik
@@ -193,13 +198,20 @@ language sql stable security definer set search_path = public as $$
     ni.val, oi.val, gp.val, sh.val, sh.end_date,
     case when mc.n = 1 and sh.val > 0 and sn.close > 0 then sh.val * sn.close end,
     mc.n > 1,
-    rev.concept
+    rev.concept,
+    eq.val, coalesce(ltd.val, ltd2.val), cash.val, ocf.val, capex.val
   from s
   left join rev on rev.cik = s.cik
   left join lateral (select val, end_date from sec_facts where cik = s.cik and concept = 'NetIncomeLoss' order by period desc limit 1) ni on true
   left join lateral (select val from sec_facts where cik = s.cik and concept = 'OperatingIncomeLoss' order by period desc limit 1) oi on true
   left join lateral (select val from sec_facts where cik = s.cik and concept = 'GrossProfit' order by period desc limit 1) gp on true
   left join lateral (select val, end_date from sec_facts where cik = s.cik and concept = 'EntityCommonStockSharesOutstanding' order by period desc limit 1) sh on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'StockholdersEquity' order by period desc limit 1) eq on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'LongTermDebtNoncurrent' order by period desc limit 1) ltd on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'LongTermDebt' order by period desc limit 1) ltd2 on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'CashAndCashEquivalentsAtCarryingValue' order by period desc limit 1) cash on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'NetCashProvidedByUsedInOperatingActivities' order by period desc limit 1) ocf on true
+  left join lateral (select val from sec_facts where cik = s.cik and concept = 'PaymentsToAcquirePropertyPlantAndEquipment' order by period desc limit 1) capex on true
   left join lateral (select count(*) n from securities x where x.is_active and x.asset_type = 'stock' and x.cik ~ '^\d+$'
                      and nullif(ltrim(x.cik, '0'), '')::bigint = s.cik) mc on true
   left join security_snapshot sn on sn.security_id = s.id

@@ -21,6 +21,7 @@ import { WelcomeGuide } from "@/components/WelcomeGuide";
 import { DegreeProvider } from "@/components/analysis/DegreeContext";
 import { ResearchProvider } from "@/components/analysis/ResearchContext";
 import { ResearchRail } from "@/components/analysis/ResearchRail";
+import { BrainCard } from "@/components/brain/BrainCard";
 import { StructureGlance } from "@/components/analysis/StructureGlance";
 import { SetupCard, type SetupCheck } from "@/components/analysis/SetupCard";
 import { getSymbolTrials, getSetupQuality, getTrackRecord } from "@/lib/analysis/track-record";
@@ -197,7 +198,10 @@ export default async function StockTerminal({ params, searchParams }: Props) {
         />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           <RecentChanges events={changes} />
-          <StructureSummary snap={snap} swings={swings} />
+          <div className="flex min-w-0 flex-col gap-4">
+            <BrainCard symbol={sec.symbol} />
+            <StructureSummary snap={snap} swings={swings} />
+          </div>
         </div>
       </Section>
 

@@ -31,6 +31,7 @@ export const SIDEBAR: { group: string | null; items: NavItem[] }[] = [
   ]},
   { group: "Workspace", items: [
     { label: "Watchlist", href: "/watchlist", icon: "watchlist", live: true, auth: true, keywords: "favorites saved" },
+    { label: "Brain", href: "/brain", icon: "brain", live: true, auth: true, keywords: "theses thesis ideas notes newsletters research memory signals buy sell value investing" },
   ]},
   { group: "Ask", items: [
     { label: "Ask Viridia", href: "/ask", icon: "sparkle", live: true, keywords: "ai copilot question chat research explain compare screen" },
@@ -52,6 +53,7 @@ export const NAV_BLURB: Record<string, string> = {
   "/analysis/fibonacci": "Confluence zones across the market",
   "/analysis/rulebook": "The Elliott Wave rules Viridia enforces",
   "/analysis/learn": "Lessons from worked Elliott Wave examples",
+  "/brain": "Your theses and the signals they drive",
   "/markets": "Breadth, regime and activity",
   "/markets/stocks": "Every covered U.S. stock",
   "/markets/etfs": "Every covered ETF",
