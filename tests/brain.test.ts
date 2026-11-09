@@ -23,6 +23,11 @@ describe("thesis weight", () => {
     expect(thesisWeight(thesis({ expires_on: "2026-11-01" }), NOW)).toBe(0);
     expect(thesisWeight(thesis({ horizon: "weeks", created_at: "2026-08-01T00:00:00Z" }), NOW)).toBeLessThan(0.8);
   });
+  it("ages from the source's publication date, not the filing date", () => {
+    const old = { title: "Belkin", publisher: null, kind: "newsletter", published_on: "2026-07-27" };
+    expect(thesisWeight(thesis({ horizon: "weeks", source: old }), NOW)).toBe(0);
+    expect(thesisWeight(thesis({ horizon: "months", source: old }), NOW)).toBeCloseTo(0.8);
+  });
 });
 
 describe("thesis component", () => {

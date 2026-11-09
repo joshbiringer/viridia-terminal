@@ -56,11 +56,15 @@ const sign = (s: Stance) => (s === "bullish" ? 1 : s === "bearish" ? -1 : 0);
 const HORIZON_DAYS: Record<Horizon, number> = { weeks: 42, months: 180, year: 400, "multi-year": 1100 };
 const pct = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(0)}%`;
 
-/** A thesis fades as it ages past its horizon; expired, retired or invalidated theses count for nothing. */
-export function thesisWeight(t: Pick<Thesis, "status" | "conviction" | "horizon" | "created_at" | "expires_on">, now = new Date()): number {
+/**
+ * A thesis fades as it ages past its horizon; expired, retired or invalidated theses count for nothing.
+ * Age runs from the source's publication date when known (a July report filed in November is already old).
+ */
+export function thesisWeight(t: Pick<Thesis, "status" | "conviction" | "horizon" | "created_at" | "expires_on"> & { source?: Pick<NonNullable<Thesis["source"]>, "published_on"> | null }, now = new Date()): number {
   if (t.status === "retired" || t.status === "invalidated") return 0;
   if (t.expires_on && Date.parse(t.expires_on + "T23:59:59Z") < now.getTime()) return 0;
-  const age = (now.getTime() - Date.parse(t.created_at)) / 86_400_000;
+  const born = t.source?.published_on ? Date.parse(t.source.published_on + "T00:00:00Z") : Date.parse(t.created_at);
+  const age = Math.max(0, (now.getTime() - born) / 86_400_000);
   const h = HORIZON_DAYS[t.horizon];
   const decay = age <= h ? 1 : Math.max(0, 1 - (age - h) / h);
   return (t.conviction / 5) * decay * (t.status === "watching" ? 0.5 : 1);
