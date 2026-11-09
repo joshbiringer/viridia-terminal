@@ -1,4 +1,4 @@
--- Daily model portfolio from the Brain (Nov 9 2026). PENDING: not yet applied, awaiting Supabase approval.
+-- Daily model portfolio from the Brain. Applied Nov 9 2026.
 -- /api/brain/daily route to build the owner's list. The route reads the owner's private theses and screens
 -- through keyed security-definer functions (the key lives only in this database, sent in a header), and
 -- saves the list here. The owner reads it at /brain/portfolio and in the 8:30 AM email. Nothing places orders.
