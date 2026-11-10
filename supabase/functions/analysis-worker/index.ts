@@ -84,8 +84,8 @@ Deno.serve(async (req) => {
         const { data, error } = await db.rpc("analysis_batch", { p_timeframe: tf, p_version: ANALYSIS_VERSION, p_limit: BATCH });
         if (error) throw new Error(`analysis_batch ${tf}: ${error.message}`);
         const rows = (data ?? []) as BatchRow[];
-        if (rows.length < BATCH) active.delete(tf);
-        if (!rows.length) continue;
+        // The database caps each batch (5 securities / ~5 s, migration 0045), so only an empty batch means done.
+        if (!rows.length) { active.delete(tf); continue; }
 
         const out = rows.map((r) => {
           const bars: PivotBar[] = r.bars.map(([ts, open, high, low, close, volume]) => ({ ts, open, high, low, close, volume }));

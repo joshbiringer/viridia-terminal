@@ -1,6 +1,9 @@
 -- Applied Nov 10 2026. analysis_batch(…, 15) took ~9 s after a new session: cold bar reads run ~0.6 s each on the
 -- throttled disk, past the API role's 8 s statement timeout, so every analysis run failed. Each call now returns at
--- most 5 securities and stops after ~5 s; the worker keeps calling within its time budget.
+-- most 15 securities and stops after ~6.5 s. The deployed worker ends its run on a short batch, so pg_cron now runs it
+-- every minute (was every 10). The worker source no longer stops on a short batch (index.ts); redeploy it with the
+-- Supabase CLI, then the cron can return to */2.
+select cron.alter_job((select jobid from cron.job where jobname = 'viridia-analysis-worker'), schedule => '* * * * *');
 create or replace function public.analysis_batch(p_timeframe text, p_version text, p_limit integer default 50)
 returns jsonb language plpgsql security definer set search_path to 'public' as $function$
 declare
@@ -25,9 +28,9 @@ begin
            or (p_timeframe <> '1d' and a.source_last_ts is distinct from c.last_ts
                and (extract(isodow from c.last_ts) = 5 or c.last_ts - a.source_last_ts >= interval '7 days')))
     order by (a.security_id is null) desc, sn.adv20 desc nulls last, s.id
-    limit least(greatest(p_limit, 1), 5)
+    limit least(greatest(p_limit, 1), 15)
   loop
-    exit when clock_timestamp() - v_t0 > interval '5 seconds';
+    exit when clock_timestamp() - v_t0 > interval '6.5 seconds';
     select coalesce(jsonb_agg(jsonb_build_array(b.ts, b.open, b.high, b.low, b.close, b.volume) order by b.ts), '[]'::jsonb)
       into v_bars from get_bars(r.symbol, p_timeframe, v_lim) b;
     v_out := v_out || jsonb_build_object('security_id', r.id, 'symbol', r.symbol,
