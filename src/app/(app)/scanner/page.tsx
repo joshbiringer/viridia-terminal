@@ -21,7 +21,7 @@ const STRUCTURE = [
   ["near_invalidation", "Near invalidation", "Within 3% of the level that breaks the preferred count"],
 ] as const;
 const DIRS = [["", "Any direction"], ["up", "Up"], ["down", "Down"]] as const;
-const SCORES = [["", "Any"], ["58", "Medium or higher (58+)"], ["70", "High (70+)"]] as const;
+const SCORES = [["", "Any"], ["58", "Pattern Confidence 58+"], ["70", "Pattern Confidence 70+"]] as const;
 const TRENDS = [["", "Any trend"], ["uptrend", "Uptrend"], ["mixed", "Mixed"], ["downtrend", "Downtrend"]] as const;
 const EXCHANGES = ["XNAS", "XNYS", "ARCX", "BATS", "XASE"];
 const TYPES = [["", "Stocks and ETFs"], ["common", "Stocks"], ["etf", "ETFs"]] as const;
