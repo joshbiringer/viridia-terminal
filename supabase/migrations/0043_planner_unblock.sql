@@ -1,4 +1,4 @@
--- PENDING (Nov 10 2026): written, awaiting Supabase approval. Ingest stalled Nov 7-10: the planner ran the weekly coverage refresh inline, under the
+-- Applied Nov 10 2026. Ingest stalled Nov 7-10: the planner ran the weekly coverage refresh inline, under the
 -- worker's 8 s statement timeout. Once the refresh was due (7 days after Oct 31) every plan timed out and no new
 -- sessions were queued. The refresh now runs in its own weekly pg_cron job, outside the API role's limit.
 

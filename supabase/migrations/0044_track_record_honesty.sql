@@ -1,4 +1,4 @@
--- PENDING: awaiting Supabase approval.
+-- Applied Nov 10 2026.
 -- Phase 2, step 1-2 (Nov 10 2026): what the track-record page needs to be honest about itself.
 --   backtest_freshness()      when the replay last ran, the signal window, and whether the job is on
 --   backtest_score_buckets()  outcomes by Pattern Confidence bucket and side, so the page can show whether
